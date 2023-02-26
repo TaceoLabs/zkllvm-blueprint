@@ -117,7 +117,7 @@ namespace nil {
 
                 template<typename BlueprintFieldType, typename ArithmetizationParams, typename CurveType>
                     typename plonk_curve_element_decomposed_variable_base_scalar_mul<BlueprintFieldType, ArithmetizationParams, CurveType>::result_type 
-                        generate_assignments(
+                        generate_assignments_decomposed_vbsm(
                             const plonk_curve_element_decomposed_variable_base_scalar_mul<BlueprintFieldType, ArithmetizationParams, CurveType> &component,
                             assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &assignment,
                             const typename plonk_curve_element_decomposed_variable_base_scalar_mul<BlueprintFieldType, ArithmetizationParams, CurveType>::input_type instance_input,
@@ -146,11 +146,11 @@ namespace nil {
 
 
                         typename vbsm_component::input_type vbsm_input = {{instance_input.T.x, instance_input.T.y}, instance_input.b1};
-                        typename vbsm_component::result_type vbsm_res = generate_assignments(vbsm_instance, assignment, vbsm_input, row);
+                        typename vbsm_component::result_type vbsm_res = generate_assignments_vbsm(vbsm_instance, assignment, vbsm_input, row);
                         row += vbsm_component::rows_amount;
 
                         typename vbsm_component::input_type vbsm_input_2 = {{instance_input.T.x, instance_input.T.y}, var(component.C(0), start_row_index, false, var::column_type::constant)};
-                        typename vbsm_component::result_type const_vbsm_res = generate_assignments(vbsm_instance, assignment, vbsm_input_2, row);
+                        typename vbsm_component::result_type const_vbsm_res = generate_assignments_vbsm(vbsm_instance, assignment, vbsm_input_2, row);
                         row += vbsm_component::rows_amount;
 
                         typename mul_field_component::input_type x_input = {const_vbsm_res.X, instance_input.b2};
@@ -162,7 +162,7 @@ namespace nil {
                         row += mul_field_component::rows_amount;
 
                         typename add_component::input_type add_input = {{x.output, y.output}, {vbsm_res.X, vbsm_res.Y}};
-                        typename add_component::result_type final_res = generate_assignments(unified_addition_instance, assignment, add_input, row);
+                        typename add_component::result_type final_res = generate_assignments_unified_addition(unified_addition_instance, assignment, add_input, row);
                         row += add_component::rows_amount;
 
                         return typename plonk_curve_element_decomposed_variable_base_scalar_mul<BlueprintFieldType, ArithmetizationParams, CurveType>::result_type(component, start_row_index);
@@ -170,7 +170,7 @@ namespace nil {
 
                 template<typename BlueprintFieldType, typename ArithmetizationParams, typename CurveType>
                     typename plonk_curve_element_decomposed_variable_base_scalar_mul<BlueprintFieldType, ArithmetizationParams, CurveType>::result_type 
-                        generate_circuit(
+                        generate_circuit_decomposed_vbsm(
                             const plonk_curve_element_decomposed_variable_base_scalar_mul<BlueprintFieldType, ArithmetizationParams, CurveType> &component,
                             circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
                             assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &assignment,
@@ -202,11 +202,11 @@ namespace nil {
 
 
                         typename vbsm_component::input_type vbsm_input = {{instance_input.T.x, instance_input.T.y}, instance_input.b1};
-                        typename vbsm_component::result_type vbsm_res = generate_circuit(vbsm_instance, bp, assignment, vbsm_input, row);
+                        typename vbsm_component::result_type vbsm_res = generate_circuit_vbsm(vbsm_instance, bp, assignment, vbsm_input, row);
                         row += vbsm_component::rows_amount;
 
                         typename vbsm_component::input_type vbsm_input_2 = {{instance_input.T.x, instance_input.T.y}, var(component.C(0), start_row_index, false, var::column_type::constant)};
-                        typename vbsm_component::result_type const_vbsm_res = generate_circuit(vbsm_instance, bp, assignment, vbsm_input_2, row);
+                        typename vbsm_component::result_type const_vbsm_res = generate_circuit_vbsm(vbsm_instance, bp, assignment, vbsm_input_2, row);
                         row += vbsm_component::rows_amount;
 
                         typename mul_field_component::input_type x_input = {const_vbsm_res.X, instance_input.b2};
@@ -218,7 +218,7 @@ namespace nil {
                         row += mul_field_component::rows_amount;
 
                         typename add_component::input_type add_input = {{x.output, y.output}, {vbsm_res.X, vbsm_res.Y}};
-                        typename add_component::result_type final_res = generate_circuit(unified_addition_instance, bp, assignment, add_input, row);
+                        typename add_component::result_type final_res = generate_circuit_unified_addition(unified_addition_instance, bp, assignment, add_input, row);
                         row += add_component::rows_amount;
 
                         return typename plonk_curve_element_decomposed_variable_base_scalar_mul<BlueprintFieldType, ArithmetizationParams, CurveType>::result_type(component, start_row_index);

@@ -112,7 +112,7 @@ namespace nil {
 
             template<typename BlueprintFieldType, typename ArithmetizationParams, typename CurveType>
             typename plonk_native_unified_addition<BlueprintFieldType, ArithmetizationParams, CurveType, 11>::result_type
-                generate_assignments(
+                generate_assignments_unified_addition(
                     const plonk_native_unified_addition<BlueprintFieldType, ArithmetizationParams, CurveType, 11> &component,
                     assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &assignment,
                     const typename plonk_native_unified_addition<BlueprintFieldType, ArithmetizationParams, CurveType, 11>::input_type instance_input,
@@ -276,7 +276,7 @@ namespace nil {
 
             template<typename BlueprintFieldType, typename ArithmetizationParams, typename CurveType>
             typename plonk_native_unified_addition<BlueprintFieldType, ArithmetizationParams, CurveType, 11>::result_type
-                generate_circuit(
+                generate_circuit_unified_addition(
                     const plonk_native_unified_addition<BlueprintFieldType, ArithmetizationParams, CurveType, 11> &component,
                     circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
                     assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &assignment,

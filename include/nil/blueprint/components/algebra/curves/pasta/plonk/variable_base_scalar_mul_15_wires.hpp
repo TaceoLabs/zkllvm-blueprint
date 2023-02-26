@@ -156,7 +156,7 @@ namespace nil {
 
                     template<typename BlueprintFieldType, typename ArithmetizationParams, typename CurveType>
                     typename plonk_curve_element_variable_base_scalar_mul<BlueprintFieldType, ArithmetizationParams, CurveType>::result_type 
-                        generate_assignments(
+                        generate_assignments_vbsm(
                             const plonk_curve_element_variable_base_scalar_mul<BlueprintFieldType, ArithmetizationParams, CurveType> &component,
                             assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &assignment,
                             const typename plonk_curve_element_variable_base_scalar_mul<BlueprintFieldType, ArithmetizationParams, CurveType>::input_type instance_input,
@@ -193,7 +193,7 @@ namespace nil {
                                                                                {instance_input.T.x, instance_input.T.y}};
 
                         typename unified_addition<ArithmetizationType, CurveType, 11>::result_type addition_res = 
-                            generate_assignments(unified_addition_instance, assignment, addition_input, start_row_index);
+                            generate_assignments_unified_addition(unified_addition_instance, assignment, addition_input, start_row_index);
 
 
                         typename CurveType::template g1_type<crypto3::algebra::curves::coordinates::affine>::value_type
@@ -288,7 +288,7 @@ namespace nil {
 
                     template<typename BlueprintFieldType, typename ArithmetizationParams, typename CurveType>
                     typename plonk_curve_element_variable_base_scalar_mul<BlueprintFieldType, ArithmetizationParams, CurveType>::result_type 
-                        generate_circuit(
+                        generate_circuit_vbsm(
                             const plonk_curve_element_variable_base_scalar_mul<BlueprintFieldType, ArithmetizationParams, CurveType> &component,
                             circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
                             assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &assignment,
@@ -320,7 +320,7 @@ namespace nil {
                                     component.W(5), component.W(6), component.W(7), component.W(8), component.W(9), 
                                         component.W(10)},{},{});
 
-                        generate_circuit(unified_addition_instance, bp, assignment, addition_input, start_row_index);
+                        generate_circuit_unified_addition(unified_addition_instance, bp, assignment, addition_input, start_row_index);
 
                         generate_copy_constraints(component, bp, assignment, instance_input, start_row_index);
                         return typename plonk_curve_element_variable_base_scalar_mul<BlueprintFieldType, ArithmetizationParams, CurveType>::result_type(component, start_row_index);
