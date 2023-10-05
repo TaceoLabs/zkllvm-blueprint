@@ -15,6 +15,10 @@ namespace nil {
 
             // Input: x, y as Fixedpoint numbers with \Delta_x = \Delta_y
             // Output: z = Rescale(x * y) with \Delta_z = \Delta_x = \Delta_y
+
+            // Works by proving z = round(x*y/\Delta) via 2xy + \Delta = 2z\Delta + 2q and proving 0 <= q < \Delta via a
+            // lookup table
+
             template<typename ArithmetizationType, typename FieldType, typename NonNativePolicyType>
             class mul_rescale;
 
@@ -41,10 +45,9 @@ namespace nil {
                     return manifest;
                 }
 
-                // TACEO_TODO replace 3 with actual witness numbers
                 static manifest_type get_manifest() {
                     static manifest_type manifest =
-                        manifest_type(std::shared_ptr<manifest_param>(new manifest_single_value_param(3)), false);
+                        manifest_type(std::shared_ptr<manifest_param>(new manifest_single_value_param(4)), false);
                     return manifest;
                 }
 
@@ -108,11 +111,22 @@ namespace nil {
 
                 const std::size_t j = start_row_index;
 
-                // TACEO_TODO extend
+                // TACEO_TODO should be constants or inputs
+                typename BlueprintFieldType::value_type delta_2 = (1 << 15);
+                typename BlueprintFieldType::value_type delta = (delta_2 << 1);
+
+                typename BlueprintFieldType::value_type tmp =
+                    var_value(assignment, instance_input.x) * var_value(assignment, instance_input.y) + delta_2;
+
+                typename BlueprintFieldType::value_type z = tmp / delta;
+                typename BlueprintFieldType::value_type q = tmp % delta;
+
+                // | x | y | z | q |
                 assignment.witness(component.W(0), j) = var_value(assignment, instance_input.x);
                 assignment.witness(component.W(1), j) = var_value(assignment, instance_input.y);
-                assignment.witness(component.W(2), j) =
-                    var_value(assignment, instance_input.x) * var_value(assignment, instance_input.y);
+                assignment.witness(component.W(2), j) = z;
+                assignment.witness(component.W(3), j) = q;
+
                 return typename plonk_fixedpoint_mul_rescale<BlueprintFieldType, ArithmetizationParams>::result_type(
                     component, start_row_index);
             }
