@@ -80,7 +80,7 @@ void test_components(int i, int j) {
 }
 
 template<typename FieldType>
-void test_5_components_on_random_data() {
+void test_components_on_random_data() {
     nil::crypto3::random::algebraic_engine<FieldType> generate_random;
     boost::random::mt19937 seed_seq;
     generate_random.seed(seed_seq);

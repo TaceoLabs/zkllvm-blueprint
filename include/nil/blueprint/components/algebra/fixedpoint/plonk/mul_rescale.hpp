@@ -9,6 +9,8 @@
 #include <nil/blueprint/manifest.hpp>
 #include <nil/blueprint/basic_non_native_policy.hpp>
 
+#include "nil/blueprint/components/algebra/fixedpoint/type.hpp"
+
 namespace nil {
     namespace blueprint {
         namespace components {
@@ -110,21 +112,16 @@ namespace nil {
 
                 const std::size_t j = start_row_index;
 
-                // TACEO_TODO should be constants or inputs
-                typename BlueprintFieldType::value_type delta_2 = (1 << 15);
-                typename BlueprintFieldType::value_type delta = (delta_2 << 1);
-
                 typename BlueprintFieldType::value_type tmp =
-                    var_value(assignment, instance_input.x) * var_value(assignment, instance_input.y) + delta_2;
+                    var_value(assignment, instance_input.x) * var_value(assignment, instance_input.y);
 
-                typename BlueprintFieldType::value_type z = tmp / delta;
-                typename BlueprintFieldType::value_type q = tmp % delta;
+                DivMod<BlueprintFieldType> res = FixedPoint<BlueprintFieldType>::rescale(tmp);
 
                 // | x | y | z | q |
                 assignment.witness(component.W(0), j) = var_value(assignment, instance_input.x);
                 assignment.witness(component.W(1), j) = var_value(assignment, instance_input.y);
-                assignment.witness(component.W(2), j) = z;
-                assignment.witness(component.W(3), j) = q;
+                assignment.witness(component.W(2), j) = res.quotient;
+                assignment.witness(component.W(3), j) = res.remainder;
 
                 return typename plonk_fixedpoint_mul_rescale<BlueprintFieldType, ArithmetizationParams>::result_type(
                     component, start_row_index);
@@ -142,14 +139,12 @@ namespace nil {
 
                 using var = typename plonk_fixedpoint_mul_rescale<BlueprintFieldType, ArithmetizationParams>::var;
 
-                // TACEO_TODO should be constants or inputs
-                typename BlueprintFieldType::value_type delta = (1 << 16);
-
                 // 2xy + \Delta = 2z\Delta + 2q and proving
                 auto constraint_1 = bp.add_constraint((var(component.W(0), 0) * var(component.W(1), 0) -
-                                                       var(component.W(2), 0) * delta - var(component.W(3), 0)) *
+                                                       var(component.W(2), 0) * FixedPoint<BlueprintFieldType>::DELTA -
+                                                       var(component.W(3), 0)) *
                                                           2 +
-                                                      delta);
+                                                      FixedPoint<BlueprintFieldType>::DELTA);
 
                 // TACEO_TODO extend for lookup constraint
                 bp.add_gate(first_selector_index, {constraint_1});
