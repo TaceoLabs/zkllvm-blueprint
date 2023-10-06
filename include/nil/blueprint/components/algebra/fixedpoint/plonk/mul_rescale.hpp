@@ -56,15 +56,14 @@ namespace nil {
                     return 1;
                 }
 
-                // TACEO_TODO replace
                 constexpr static const std::size_t gates_amount = 1;
                 const std::size_t rows_amount = get_rows_amount(this->witness_amount(), 0);
+
                 struct input_type {
                     var x = var(0, 0, false);
                     var y = var(0, 0, false);
                 };
 
-                // TACEO_TODO replace
                 struct result_type {
                     var output = var(0, 0, false);
                     result_type(const mul_rescale &component, std::uint32_t start_row_index) {
@@ -143,10 +142,16 @@ namespace nil {
 
                 using var = typename plonk_fixedpoint_mul_rescale<BlueprintFieldType, ArithmetizationParams>::var;
 
-                // TACEO_TODO extend
-                auto constraint_1 =
-                    bp.add_constraint(var(component.W(0), 0) * var(component.W(1), 0) - var(component.W(2), 0));
+                // TACEO_TODO should be constants or inputs
+                typename BlueprintFieldType::value_type delta = (1 << 16);
 
+                // 2xy + \Delta = 2z\Delta + 2q and proving
+                auto constraint_1 = bp.add_constraint((var(component.W(0), 0) * var(component.W(1), 0) -
+                                                       var(component.W(2), 0) * delta - var(component.W(3), 0)) *
+                                                          2 +
+                                                      delta);
+
+                // TACEO_TODO extend for lookup constraint
                 bp.add_gate(first_selector_index, {constraint_1});
             }
 
@@ -162,7 +167,7 @@ namespace nil {
 
                 using var = typename plonk_fixedpoint_mul_rescale<BlueprintFieldType, ArithmetizationParams>::var;
 
-                // TACEO_TODO extend
+                // TACEO_TODO extend for lookup?
                 const std::size_t j = start_row_index;
                 var component_x = var(component.W(0), static_cast<int>(j), false);
                 var component_y = var(component.W(1), static_cast<int>(j), false);
@@ -181,7 +186,7 @@ namespace nil {
                         &instance_input,
                     const std::size_t start_row_index) {
 
-                // TACEO_TODO extend
+                // TACEO_TODO extend for lookup?
                 auto selector_iterator = assignment.find_selector(component);
                 std::size_t first_selector_index;
 
