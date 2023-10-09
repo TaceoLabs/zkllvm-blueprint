@@ -56,6 +56,11 @@ void test_fixedpoint_mul_rescale(std::vector<typename FieldType::value_type> pub
         std::cout << "expected: " << expected_res.data << "\n";
         std::cout << "real    : " << var_value(assignment, real_res.output).data << "\n\n";
 #endif
+        if (expected_res != var_value(assignment, real_res.output)) {
+            std::cout << "expected: " << expected_res.data << "\n";
+            std::cout << "real    : " << var_value(assignment, real_res.output).data << "\n\n";
+            abort();
+        }
         assert(expected_res == var_value(assignment, real_res.output));
     };
 
