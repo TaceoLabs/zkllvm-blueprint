@@ -30,7 +30,10 @@ namespace nil {
 
                 static DivMod<BlueprintFieldType> rescale(const value_type &);
 
+                // Initiliaze from real values
                 FixedPoint(double x);
+                FixedPoint(uint64_t x);
+                // Initialize from Fixedpoint representation
                 FixedPoint(const value_type &value, uint16_t scale);
                 virtual ~FixedPoint() = default;
                 FixedPoint(const FixedPoint &) = default;
@@ -38,10 +41,17 @@ namespace nil {
 
                 FixedPoint operator+(const FixedPoint &other);
                 double to_double() const;
+                value_type get_value() const;
+                uint16_t get_scale() const;
             };
 
             template<typename BlueprintFieldType>
             FixedPoint<BlueprintFieldType>::FixedPoint(double x) : scale(SCALE) {
+                value = x * DELTA;
+            }
+
+            template<typename BlueprintFieldType>
+            FixedPoint<BlueprintFieldType>::FixedPoint(uint64_t x) : scale(SCALE) {
                 value = x * DELTA;
             }
 
@@ -63,6 +73,7 @@ namespace nil {
 
             template<typename BluePrintFieldType>
             double FixedPoint<BluePrintFieldType>::to_double() const {
+                // TACEO_TODO This does not work
                 double val = value;
                 return val / ((uint64_t)1 << scale);
             }
@@ -70,8 +81,20 @@ namespace nil {
             template<typename BlueprintFieldType>
             FixedPoint<BlueprintFieldType>
                 FixedPoint<BlueprintFieldType>::operator+(const FixedPoint<BlueprintFieldType> &other) {
-                assert(scale == other.scale);
+                if (scale != other.scale) {
+                    abort();
+                }
                 return FixedPoint<BlueprintFieldType>(value + other.value, scale);
+            }
+
+            template<typename BlueprintFieldType>
+            typename BlueprintFieldType::value_type FixedPoint<BlueprintFieldType>::get_value() const {
+                return value;
+            }
+
+            template<typename BlueprintFieldType>
+            uint16_t FixedPoint<BlueprintFieldType>::get_scale() const {
+                return scale;
             }
 
         }    // namespace components

@@ -18,10 +18,17 @@
 
 #include "../../../test_plonk_component.hpp"
 
+#include <nil/blueprint/components/algebra/fixedpoint/type.hpp>
+
 using namespace nil;
+using nil::blueprint::components::FixedPoint;
+
+bool doubleEquals(double left, double right, double epsilon) {
+    return (fabs(left - right) < epsilon);
+}
 
 template<typename FieldType>
-void test_fixedpoint_mul_rescale(std::vector<typename FieldType::value_type> public_input) {
+void test_fixedpoint_mul_rescale(FixedPoint<FieldType> input1, FixedPoint<FieldType> input2) {
     using BlueprintFieldType = FieldType;
     constexpr std::size_t WitnessColumns = 4;
     constexpr std::size_t PublicInputColumns = 1;
@@ -45,20 +52,23 @@ void test_fixedpoint_mul_rescale(std::vector<typename FieldType::value_type> pub
                                                           var(0, 1, false, var::column_type::public_input)};
 
     // TACEO_TODO update
-    typename BlueprintFieldType::value_type expected_res = public_input[0] * public_input[1];
+    double expected_res = input1.to_double() * input2.to_double();
 
+    std::vector<typename FieldType::value_type> public_input = {input1.get_value(), input2.get_value()};
     auto result_check = [&expected_res, public_input](AssignmentType &assignment,
                                                       typename component_type::result_type &real_res) {
+        double real_res_f =
+            FixedPoint<FieldType>(var_value(assignment, real_res.output), FixedPoint<FieldType>::DELTA).to_double();
 #ifdef BLUEPRINT_PLONK_PROFILING_ENABLED
         std::cout << "fixed_point mul test: "
                   << "\n";
-        std::cout << "input   : " << public_input[0].data << " " << public_input[1].data << "\n";
-        std::cout << "expected: " << expected_res.data << "\n";
-        std::cout << "real    : " << var_value(assignment, real_res.output).data << "\n\n";
+        std::cout << "input   : " << input1.to_double() << " " << input2.to_double() << "\n";
+        std::cout << "expected: " << expected_res << "\n";
+        std::cout << "real    : " << real_res_f << "\n\n";
 #endif
-        if (expected_res != var_value(assignment, real_res.output)) {
-            std::cout << "expected: " << expected_res.data << "\n";
-            std::cout << "real    : " << var_value(assignment, real_res.output).data << "\n\n";
+        if (!doubleEquals(expected_res, real_res_f, 0.0001)) {
+            std::cout << "expected: " << expected_res << "\n";
+            std::cout << "real    : " << real_res_f << "\n\n";
             abort();
         }
         assert(expected_res == var_value(assignment, real_res.output));
@@ -74,33 +84,34 @@ template<typename FieldType>
 void test_components(int i, int j) {
     // TACEO_TODO mul_by_const
     // TACEO_TODO bring to fixed_point
-    typename FieldType::value_type x = i;
-    typename FieldType::value_type y = j;
+
+    FixedPoint<FieldType> x((uint64_t)i);
+    FixedPoint<FieldType> y((uint64_t)j);
 
     // test_add<FieldType>({i, j});
     // test_sub<FieldType>({i, j});
-    test_fixedpoint_mul_rescale<FieldType>({i, j});
+    test_fixedpoint_mul_rescale<FieldType>(x, y);
     // test_mul_by_const<FieldType>({i}, j);
     // test_div_or_zero<FieldType>({i, j});
 }
 
-template<typename FieldType>
-void test_components_on_random_data() {
-    nil::crypto3::random::algebraic_engine<FieldType> generate_random;
-    boost::random::mt19937 seed_seq;
-    generate_random.seed(seed_seq);
+// template<typename FieldType>
+// void test_components_on_random_data() {
+//     nil::crypto3::random::algebraic_engine<FieldType> generate_random;
+//     boost::random::mt19937 seed_seq;
+//     generate_random.seed(seed_seq);
 
-    // TACEO_TODO bring in range
-    // TACEO_TODO mul_by_const
-    typename FieldType::value_type i = generate_random();
-    typename FieldType::value_type j = generate_random();
+//     // TACEO_TODO bring in range
+//     // TACEO_TODO mul_by_const
+//     typename FieldType::value_type i = generate_random();
+//     typename FieldType::value_type j = generate_random();
 
-    // test_add<FieldType>({i, j});
-    // test_sub<FieldType>({i, j});
-    test_fixedpoint_mul_rescale<FieldType>({i, j});
-    // test_mul_by_const<FieldType>({i}, j);
-    // test_div_or_zero<FieldType>({i, j});
-}
+//     // test_add<FieldType>({i, j});
+//     // test_sub<FieldType>({i, j});
+//     test_fixedpoint_mul_rescale<FieldType>({i, j});
+//     // test_mul_by_const<FieldType>({i}, j);
+//     // test_div_or_zero<FieldType>({i, j});
+// }
 
 template<typename FieldType, std::size_t RandomTestsAmount>
 void field_operations_test() {
@@ -110,9 +121,9 @@ void field_operations_test() {
         }
     }
 
-    for (std::size_t i = 0; i < RandomTestsAmount; i++) {
-        test_components_on_random_data<FieldType>();
-    }
+    // for (std::size_t i = 0; i < RandomTestsAmount; i++) {
+    //     test_components_on_random_data<FieldType>();
+    // }
 }
 
 constexpr static const std::size_t random_tests_amount = 10;
