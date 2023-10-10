@@ -121,12 +121,12 @@ namespace nil {
 
                 modular_backend delta;
                 delta.limbs()[0] = DELTA;
-                auto tmp = val + DELTA_2;
+                auto tmp = val;    // No + Delta_2 since eval_divide seems to round
                 bool sign = abs(tmp);
                 modular_backend out = field_to_backend(tmp);
 
                 modular_backend out_;
-                eval_divide(out_, out, delta);
+                eval_divide(out_, out, delta);    // Seems to already include rounding
 
                 res.quotient = backend_to_field(out_);
                 if (sign) {
@@ -134,6 +134,10 @@ namespace nil {
                 }
                 // // res.remainder = (val + DELTA_2) % DELTA;
                 res.remainder = (val + DELTA_2) - res.quotient * DELTA;
+                if (res.remainder >= DELTA) {
+                    std::cout << "Remainder is too large\n";
+                    abort();
+                }
                 return res;
             }
 
