@@ -34,6 +34,7 @@ namespace nil {
                 static constexpr uint16_t SCALE = 16;
                 static constexpr uint64_t DELTA = (1 << SCALE);
                 static constexpr uint64_t DELTA_2 = (1 << (SCALE - 1));
+                static constexpr value_type P_HALF = BlueprintFieldType::modulus / 2;
 
                 static DivMod<BlueprintFieldType> rescale(const value_type &);
 
@@ -58,6 +59,8 @@ namespace nil {
                 // Transforms from/to montgomery representation
                 static modular_backend field_to_backend(const value_type &);
                 static value_type backend_to_field(const modular_backend &);
+
+                static bool abs(value_type &);    // Returns true if sign was changed
             };
 
             template<typename BlueprintFieldType>
@@ -75,6 +78,16 @@ namespace nil {
                 out.data.backend().base_data() = x;
                 BlueprintFieldType::modulus_params.adjust_modular(out.data.backend().base_data());
                 return out;
+            }
+
+            template<typename BlueprintFieldType>
+            bool FixedPoint<BlueprintFieldType>::abs(value_type &x) {
+                bool sign = false;
+                if (x > P_HALF) {
+                    x = -x;
+                    sign = true;
+                }
+                return sign;
             }
 
             template<typename BlueprintFieldType>
@@ -108,26 +121,26 @@ namespace nil {
 
                 modular_backend delta;
                 delta.limbs()[0] = DELTA;
-                modular_backend out = field_to_backend(val + DELTA_2);
+                auto tmp = val + DELTA_2;
+                bool sign = abs(tmp);
+                modular_backend out = field_to_backend(tmp);
 
                 modular_backend out_;
                 eval_divide(out_, out, delta);
 
                 res.quotient = backend_to_field(out_);
+                if (sign) {
+                    res.quotient = -res.quotient;
+                }
                 // // res.remainder = (val + DELTA_2) % DELTA;
                 res.remainder = (val + DELTA_2) - res.quotient * DELTA;
                 return res;
             }
 
-            template<typename BluePrintFieldType>
-            double FixedPoint<BluePrintFieldType>::to_double() const {
-                auto half = BluePrintFieldType::modulus / 2;
-                bool sign = false;
+            template<typename BlueprintFieldType>
+            double FixedPoint<BlueprintFieldType>::to_double() const {
                 auto tmp = value;
-                if (value > half) {
-                    tmp = -value;
-                    sign = true;
-                }
+                bool sign = abs(tmp);
 
                 modular_backend out = field_to_backend(tmp);
                 if (out.sign()) {
