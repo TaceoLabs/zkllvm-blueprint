@@ -29,9 +29,9 @@ namespace nil {
                               BlueprintFieldType, NonNativePolicyType>
                 : public plonk_component<BlueprintFieldType, ArithmetizationParams, 0, 0> {
 
+            public:
                 using component_type = plonk_component<BlueprintFieldType, ArithmetizationParams, 0, 0>;
 
-            public:
                 using var = typename component_type::var;
                 using manifest_type = plonk_component_manifest;
 
@@ -49,7 +49,7 @@ namespace nil {
 
                 static manifest_type get_manifest() {
                     static manifest_type manifest =
-                        manifest_type(std::shared_ptr<manifest_param>(new manifest_single_value_param(4)), false);
+                        manifest_type(std::shared_ptr<manifest_param>(new manifest_single_value_param(3)), false);
                     return manifest;
                 }
 
@@ -64,6 +64,10 @@ namespace nil {
                 struct input_type {
                     var x = var(0, 0, false);
                     var y = var(0, 0, false);
+
+                    std::vector<var> all_vars() const {
+                        return {x, y};
+                    }
                 };
 
                 struct result_type {
@@ -75,10 +79,14 @@ namespace nil {
                     result_type(const mul_rescale &component, std::size_t start_row_index) {
                         output = var(component.W(2), start_row_index, false, var::column_type::witness);
                     }
+
+                    std::vector<var> all_vars() const {
+                        return {output};
+                    }
                 };
 
                 template<typename ContainerType>
-                mul_rescale(ContainerType witness) : component_type(witness, {}, {}, get_manifest()) {};
+                explicit mul_rescale(ContainerType witness) : component_type(witness, {}, {}, get_manifest()) {};
 
                 template<typename WitnessContainerType, typename ConstantContainerType,
                          typename PublicInputContainerType>
@@ -94,7 +102,6 @@ namespace nil {
                                 public_inputs) :
                     component_type(witnesses, constants, public_inputs, get_manifest()) {};
             };
-
             template<typename BlueprintFieldType, typename ArithmetizationParams>
             using plonk_fixedpoint_mul_rescale =
                 mul_rescale<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
@@ -128,26 +135,24 @@ namespace nil {
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
-            void generate_gates(
+            std::size_t generate_gates(
                 const plonk_fixedpoint_mul_rescale<BlueprintFieldType, ArithmetizationParams> &component,
                 circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
                 assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                     &assignment,
                 const typename plonk_fixedpoint_mul_rescale<BlueprintFieldType, ArithmetizationParams>::input_type
-                    &instance_input,
-                const std::size_t first_selector_index) {
+                    &instance_input) {
 
                 using var = typename plonk_fixedpoint_mul_rescale<BlueprintFieldType, ArithmetizationParams>::var;
-
                 // 2xy + \Delta = 2z\Delta + 2q and proving
-                auto constraint_1 = bp.add_constraint((var(component.W(0), 0) * var(component.W(1), 0) -
+                auto constraint_1 = var(component.W(0), 0) * var(component.W(1), 0) -
                                                        var(component.W(2), 0) * FixedPoint<BlueprintFieldType>::DELTA -
                                                        var(component.W(3), 0)) *
                                                           2 +
-                                                      FixedPoint<BlueprintFieldType>::DELTA);
+                                                      FixedPoint<BlueprintFieldType>::DELTA;
 
                 // TACEO_TODO extend for lookup constraint
-                bp.add_gate(first_selector_index, {constraint_1});
+                return bp.add_gate(constraint_1);
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
@@ -162,7 +167,6 @@ namespace nil {
 
                 using var = typename plonk_fixedpoint_mul_rescale<BlueprintFieldType, ArithmetizationParams>::var;
 
-                // TACEO_TODO extend for lookup?
                 const std::size_t j = start_row_index;
                 var component_x = var(component.W(0), static_cast<int>(j), false);
                 var component_y = var(component.W(1), static_cast<int>(j), false);
@@ -182,17 +186,9 @@ namespace nil {
                     const std::size_t start_row_index) {
 
                 // TACEO_TODO extend for lookup?
-                auto selector_iterator = assignment.find_selector(component);
-                std::size_t first_selector_index;
+                std::size_t selector_index = generate_gates(component, bp, assignment, instance_input);
 
-                if (selector_iterator == assignment.selectors_end()) {
-                    first_selector_index = assignment.allocate_selector(component, component.gates_amount);
-                    generate_gates(component, bp, assignment, instance_input, first_selector_index);
-                } else {
-                    first_selector_index = selector_iterator->second;
-                }
-
-                assignment.enable_selector(first_selector_index, start_row_index);
+                assignment.enable_selector(selector_index, start_row_index);
 
                 generate_copy_constraints(component, bp, assignment, instance_input, start_row_index);
 
