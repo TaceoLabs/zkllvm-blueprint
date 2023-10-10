@@ -145,7 +145,7 @@ namespace nil {
 
                 using var = typename plonk_fixedpoint_mul_rescale<BlueprintFieldType, ArithmetizationParams>::var;
                 // 2xy + \Delta = 2z\Delta + 2q and proving
-                auto constraint_1 = var(component.W(0), 0) * var(component.W(1), 0) -
+                auto constraint_1 = (var(component.W(0), 0) * var(component.W(1), 0) -
                                                        var(component.W(2), 0) * FixedPoint<BlueprintFieldType>::DELTA -
                                                        var(component.W(3), 0)) *
                                                           2 +
