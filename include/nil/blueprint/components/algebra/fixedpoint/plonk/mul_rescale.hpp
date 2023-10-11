@@ -150,7 +150,7 @@ namespace nil {
                 DivMod<BlueprintFieldType> res =
                     FixedPointHelper<BlueprintFieldType>::round_div_mod(tmp, component.get_scale());
 
-                // | x | y | z | q |
+                // | x | y | z | q0 | ... |
                 assignment.witness(component.W(0), j) = var_value(assignment, instance_input.x);
                 assignment.witness(component.W(1), j) = var_value(assignment, instance_input.y);
                 assignment.witness(component.W(2), j) = res.quotient;

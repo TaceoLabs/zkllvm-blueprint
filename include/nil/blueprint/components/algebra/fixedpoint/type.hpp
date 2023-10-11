@@ -60,7 +60,7 @@ namespace nil {
                 static constexpr uint8_t M_1 = M1;
                 static constexpr uint8_t M_2 = M1;
                 static constexpr uint16_t SCALE = 16 * M2;
-                static constexpr uint64_t DELTA = (1 << SCALE);
+                static constexpr uint64_t DELTA = (1ULL << SCALE);
 
                 // Initiliaze from real values
                 FixedPoint(double x);

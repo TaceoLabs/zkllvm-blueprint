@@ -61,6 +61,7 @@ void test_fixedpoint_mul_rescale(FixedType input1, FixedType input2) {
         std::cout << "fixed_point mul test: "
                   << "\n";
         std::cout << "input   : " << input1.to_double() << " " << input2.to_double() << "\n";
+        std::cout << "input_f : " << input1.get_value().data << " " << input2.get_value().data << "\n";
         std::cout << "expected: " << expected_res << "\n";
         std::cout << "real    : " << real_res_f << "\n\n";
 #endif
@@ -139,16 +140,19 @@ BOOST_AUTO_TEST_SUITE(blueprint_plonk_test_suite)
 BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_mul_rescale_test_vesta) {
     using field_type = typename crypto3::algebra::curves::vesta::base_field_type;
     field_operations_test<FixedPoint16_16<field_type>, random_tests_amount>();
+    field_operations_test<FixedPoint32_32<field_type>, random_tests_amount>();
 }
 
 BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_mul_rescale_tes_pallas) {
     using field_type = typename crypto3::algebra::curves::pallas::base_field_type;
     field_operations_test<FixedPoint16_16<field_type>, random_tests_amount>();
+    field_operations_test<FixedPoint32_32<field_type>, random_tests_amount>();
 }
 
 BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_mul_rescale_tes_bls12) {
     using field_type = typename crypto3::algebra::fields::bls12_fr<381>;
     field_operations_test<FixedPoint16_16<field_type>, random_tests_amount>();
+    field_operations_test<FixedPoint32_32<field_type>, random_tests_amount>();
 }
 
 BOOST_AUTO_TEST_SUITE_END()
