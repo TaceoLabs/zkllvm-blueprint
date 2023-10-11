@@ -5,6 +5,7 @@
 #include <cmath>
 
 #include <nil/blueprint/assert.hpp>
+#include <nil/crypto3/multiprecision/cpp_int/divide.hpp>
 
 namespace nil {
     namespace blueprint {
@@ -147,7 +148,7 @@ namespace nil {
                 for (auto i = 0; i < tmp.size(); i++) {
                     for (auto j = 0; j < 4; j++) {
                         output.push_back(tmp.limbs()[i] & 0xFFFF);
-                        tmp.limbs()[i] >>= 0xFFFF;
+                        tmp.limbs()[i] >>= 16;
                     }
                 }
 
@@ -164,19 +165,24 @@ namespace nil {
 
                 modular_backend mod_;
                 mod_.limbs()[0] = mod;
-                auto tmp = val;    // No + mod/2 since eval_divide seems to round
+                auto tmp = val + (mod >> 1);
                 bool sign = abs(tmp);
                 modular_backend out = field_to_backend(tmp);
 
                 modular_backend out_;
-                eval_divide(out_, out, mod_);    // Seems to already include rounding
+                eval_divide(out_, out, mod_);
 
                 res.quotient = backend_to_field(out_);
                 if (sign) {
                     res.quotient = -res.quotient;
                 }
                 // res.remainder = (val + mod/2) % mod;
-                res.remainder = val - res.quotient * mod + (mod >> 1);
+                res.remainder = val + (mod >> 1) - res.quotient * mod;
+                if (res.remainder > mod) {
+                    // negative? artifact of eval_divide?
+                    res.remainder += mod;
+                    res.quotient -= 1;
+                }
                 BLUEPRINT_RELEASE_ASSERT(res.remainder < mod);
                 return res;
             }

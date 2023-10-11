@@ -10,7 +10,8 @@
 #include <nil/crypto3/algebra/fields/arithmetic_params/pallas.hpp>
 
 #include <nil/crypto3/hash/keccak.hpp>
-#include <nil/crypto3/random/algebraic_engine.hpp>
+#include <boost/random/uniform_int_distribution.hpp>
+#include <boost/random/mersenne_twister.hpp>
 
 #include <nil/blueprint/blueprint/plonk/assignment.hpp>
 #include <nil/blueprint/blueprint/plonk/circuit.hpp>
@@ -87,10 +88,52 @@ void test_fixedpoint_mul_rescale(FixedType input1, FixedType input2) {
         component_instance, public_input, result_check, instance_input);
 }
 
+template<typename FieldType, typename RngType>
+FieldType generate_random_for_fixedpoint(uint8_t m1, uint8_t m2, RngType &rng) {
+    using distribution = boost::random::uniform_int_distribution<uint64_t>;
+
+    BLUEPRINT_RELEASE_ASSERT(m1 > 0 && m1 < 3);
+    BLUEPRINT_RELEASE_ASSERT(m2 > 0 && m2 < 3);
+    auto m = m1 + m2;
+
+    uint64_t max = 0;
+    if (m == 4) {
+        max = -1;
+    } else {
+        max = (1ull << (16 * m)) - 1;
+    }
+
+    distribution dist = distribution(0, max);
+    uint64_t x = dist(rng);
+    distribution dist_bool = distribution(0, 1);
+    bool sign = dist_bool(rng) == 1;
+    if (sign) {
+        return -FieldType(x);
+    } else {
+        return FieldType(x);
+    }
+}
+
+template<typename FixedType, typename RngType>
+void test_components_on_random_data(RngType &rng) {
+    // TACEO_TODO mul_by_const
+
+    // We don't care about overflows so far, so we can use M1 and M2
+    FixedType x(generate_random_for_fixedpoint<typename FixedType::value_type>(FixedType::M_1, FixedType::M_2, rng),
+                FixedType::SCALE);
+    FixedType y(generate_random_for_fixedpoint<typename FixedType::value_type>(FixedType::M_1, FixedType::M_2, rng),
+                FixedType::SCALE);
+
+    // test_add<FieldType>({i, j});
+    // test_sub<FieldType>({i, j});
+    test_fixedpoint_mul_rescale<FixedType>(x, y);
+    // test_mul_by_const<FieldType>({i}, j);
+    // test_div_or_zero<FieldType>({i, j});
+}
+
 template<typename FixedType>
 void test_components(int i, int j) {
     // TACEO_TODO mul_by_const
-    // TACEO_TODO bring to fixed_point
 
     FixedType x((int64_t)i);
     FixedType y((int64_t)j);
@@ -102,24 +145,6 @@ void test_components(int i, int j) {
     // test_div_or_zero<FieldType>({i, j});
 }
 
-// template<typename FieldType>
-// void test_components_on_random_data() {
-//     nil::crypto3::random::algebraic_engine<FieldType> generate_random;
-//     boost::random::mt19937 seed_seq;
-//     generate_random.seed(seed_seq);
-
-//     // TACEO_TODO bring in range
-//     // TACEO_TODO mul_by_const
-//     typename FieldType::value_type i = generate_random();
-//     typename FieldType::value_type j = generate_random();
-
-//     // test_add<FieldType>({i, j});
-//     // test_sub<FieldType>({i, j});
-//     test_fixedpoint_mul_rescale<FieldType>({i, j});
-//     // test_mul_by_const<FieldType>({i}, j);
-//     // test_div_or_zero<FieldType>({i, j});
-// }
-
 template<typename FixedType, std::size_t RandomTestsAmount>
 void field_operations_test() {
     for (int i = -2; i < 3; i++) {
@@ -128,9 +153,10 @@ void field_operations_test() {
         }
     }
 
-    // for (std::size_t i = 0; i < RandomTestsAmount; i++) {
-    //     test_components_on_random_data<FieldType>();
-    // }
+    boost::random::mt19937 seed_seq(0);
+    for (std::size_t i = 0; i < RandomTestsAmount; i++) {
+        test_components_on_random_data<FixedType>(seed_seq);
+    }
 }
 
 constexpr static const std::size_t random_tests_amount = 10;

@@ -33,11 +33,10 @@ namespace nil {
                 uint8_t m2;    // Post-comma 16-bit limbs
 
                 static uint8_t M2(uint8_t m2) {
-                    if (m2 > 0 && m2 < 3) {
-                        return m2;
-                    } else {
+                    if (m2 == 0 || m2 > 2) {
                         BLUEPRINT_RELEASE_ASSERT(false);
                     }
+                    return m2;
                 }
 
             public:
