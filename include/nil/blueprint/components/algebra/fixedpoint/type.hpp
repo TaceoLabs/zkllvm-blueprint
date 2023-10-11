@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <cmath>
 
+#include <nil/blueprint/assert.hpp>
+
 namespace nil {
     namespace blueprint {
         namespace components {
@@ -15,6 +17,26 @@ namespace nil {
                 value_type remainder;
             };
 
+            template<typename BlueprintFieldType>
+            class FixedPointHelper {
+            public:
+                using field_type = BlueprintFieldType;
+                using value_type = typename BlueprintFieldType::value_type;
+                using modular_backend = typename BlueprintFieldType::modular_backend;
+
+                static constexpr value_type P_HALF = BlueprintFieldType::modulus / 2;
+
+                // M2 is the number of post-comma 16-bit limbs
+                static DivMod<BlueprintFieldType> round_div_mod(const value_type &, uint64_t mod);
+
+                // Transforms from/to montgomery representation
+                static modular_backend field_to_backend(const value_type &);
+                static value_type backend_to_field(const modular_backend &);
+
+                static bool abs(value_type &);    // Returns true if sign was changed
+                static bool decompose(const value_type &, std::vector<uint16_t> &);    // Returns sign
+            };
+
             // FieldType is the representation of the proof system, whereas M1 is the number of pre-comma 16-bit limbs
             // and M2 the number of post-comma 16-bit limbs
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
@@ -24,6 +46,7 @@ namespace nil {
                 static_assert(M2 > 0 && M2 < 3, "Only allow one or two post-comma linbs");
 
             public:
+                using helper = FixedPointHelper<BlueprintFieldType>;
                 using field_type = BlueprintFieldType;
                 using value_type = typename BlueprintFieldType::value_type;
                 using modular_backend = typename BlueprintFieldType::modular_backend;
@@ -34,12 +57,10 @@ namespace nil {
                 uint16_t scale;
 
             public:
+                static constexpr uint8_t M_1 = M1;
+                static constexpr uint8_t M_2 = M1;
                 static constexpr uint16_t SCALE = 16 * M2;
                 static constexpr uint64_t DELTA = (1 << SCALE);
-                static constexpr uint64_t DELTA_2 = (1 << (SCALE - 1));
-                static constexpr value_type P_HALF = BlueprintFieldType::modulus / 2;
-
-                static DivMod<BlueprintFieldType> rescale(const value_type &);
 
                 // Initiliaze from real values
                 FixedPoint(double x);
@@ -58,12 +79,6 @@ namespace nil {
                 uint16_t get_scale() const {
                     return scale;
                 }
-
-                // Transforms from/to montgomery representation
-                static modular_backend field_to_backend(const value_type &);
-                static value_type backend_to_field(const modular_backend &);
-
-                static bool abs(value_type &);    // Returns true if sign was changed
             };
 
             // TypeDefs
@@ -72,25 +87,25 @@ namespace nil {
             template<typename BlueprintFieldType>
             using FixedPoint32_32 = FixedPoint<BlueprintFieldType, 2, 2>;
 
-            template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
-            typename FixedPoint<BlueprintFieldType, M1, M2>::modular_backend
-                FixedPoint<BlueprintFieldType, M1, M2>::field_to_backend(const value_type &x) {
+            template<typename BlueprintFieldType>
+            typename FixedPointHelper<BlueprintFieldType>::modular_backend
+                FixedPointHelper<BlueprintFieldType>::field_to_backend(const value_type &x) {
                 modular_backend out;
                 BlueprintFieldType::modulus_params.adjust_regular(out, x.data.backend().base_data());
                 return out;
             }
 
-            template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
-            typename FixedPoint<BlueprintFieldType, M1, M2>::value_type
-                FixedPoint<BlueprintFieldType, M1, M2>::backend_to_field(const modular_backend &x) {
+            template<typename BlueprintFieldType>
+            typename FixedPointHelper<BlueprintFieldType>::value_type
+                FixedPointHelper<BlueprintFieldType>::backend_to_field(const modular_backend &x) {
                 value_type out;
                 out.data.backend().base_data() = x;
                 BlueprintFieldType::modulus_params.adjust_modular(out.data.backend().base_data());
                 return out;
             }
 
-            template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
-            bool FixedPoint<BlueprintFieldType, M1, M2>::abs(value_type &x) {
+            template<typename BlueprintFieldType>
+            bool FixedPointHelper<BlueprintFieldType>::abs(value_type &x) {
                 bool sign = false;
                 if (x > P_HALF) {
                     x = -x;
@@ -121,45 +136,58 @@ namespace nil {
             FixedPoint<BlueprintFieldType, M1, M2>::FixedPoint(const value_type &value, uint16_t scale) :
                 value(value), scale(SCALE) {};
 
+            template<typename BlueprintFieldType>
+            bool FixedPointHelper<BlueprintFieldType>::decompose(const value_type &inp, std::vector<uint16_t> &output) {
+                auto tmp_ = inp;
+                bool sign = abs(tmp_);
+
+                output.clear();
+
+                auto tmp = field_to_backend(tmp_);
+                for (auto i = 0; i < tmp.size(); i++) {
+                    for (auto j = 0; j < 4; j++) {
+                        output.push_back(tmp.limbs()[i] & 0xFFFF);
+                        tmp.limbs()[i] >>= 0xFFFF;
+                    }
+                }
+
+                return sign;
+            }
+
             // res.quotient = Round(val / Delta)
             // remainder required for proof
-            template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
+            template<typename BlueprintFieldType>
             DivMod<BlueprintFieldType>
-                FixedPoint<BlueprintFieldType, M1, M2>::rescale(const typename BlueprintFieldType::value_type &val) {
+                FixedPointHelper<BlueprintFieldType>::round_div_mod(const typename BlueprintFieldType::value_type &val,
+                                                                    uint64_t mod) {
                 DivMod<BlueprintFieldType> res;
 
-                modular_backend delta;
-                delta.limbs()[0] = DELTA;
-                auto tmp = val;    // No + Delta_2 since eval_divide seems to round
+                modular_backend mod_;
+                mod_.limbs()[0] = mod;
+                auto tmp = val;    // No + mod/2 since eval_divide seems to round
                 bool sign = abs(tmp);
                 modular_backend out = field_to_backend(tmp);
 
                 modular_backend out_;
-                eval_divide(out_, out, delta);    // Seems to already include rounding
+                eval_divide(out_, out, mod_);    // Seems to already include rounding
 
                 res.quotient = backend_to_field(out_);
                 if (sign) {
                     res.quotient = -res.quotient;
                 }
-                // // res.remainder = (val + DELTA_2) % DELTA;
-                res.remainder = (val + DELTA_2) - res.quotient * DELTA;
-                if (res.remainder >= DELTA) {
-                    std::cout << "Remainder is too large\n";
-                    abort();
-                }
+                // res.remainder = (val + mod/2) % mod;
+                res.remainder = val - res.quotient * mod + (mod >> 1);
+                BLUEPRINT_RELEASE_ASSERT(res.remainder < mod);
                 return res;
             }
 
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
             double FixedPoint<BlueprintFieldType, M1, M2>::to_double() const {
                 auto tmp = value;
-                bool sign = abs(tmp);
+                bool sign = helper::abs(tmp);
 
-                modular_backend out = field_to_backend(tmp);
-                if (out.sign()) {
-                    std::cout << "Sign in a field is always positive\n";
-                    abort();
-                }
+                modular_backend out = helper::field_to_backend(tmp);
+                BLUEPRINT_RELEASE_ASSERT(!out.sign());
                 auto limbs_ptr = out.limbs();
                 auto size = out.size();
 
@@ -178,9 +206,7 @@ namespace nil {
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
             FixedPoint<BlueprintFieldType, M1, M2>
                 FixedPoint<BlueprintFieldType, M1, M2>::operator+(const FixedPoint<BlueprintFieldType, M1, M2> &other) {
-                if (scale != other.scale) {
-                    abort();
-                }
+                BLUEPRINT_RELEASE_ASSERT(scale == other.scale);
                 return FixedPoint(value + other.value, scale);
             }
 

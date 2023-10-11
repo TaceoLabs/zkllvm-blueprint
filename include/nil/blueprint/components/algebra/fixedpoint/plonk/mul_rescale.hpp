@@ -29,7 +29,26 @@ namespace nil {
                               BlueprintFieldType, NonNativePolicyType>
                 : public plonk_component<BlueprintFieldType, ArithmetizationParams, 0, 0> {
 
+            private:
+                uint8_t m2;    // Post-comma 16-bit limbs
+
+                static uint8_t M2(uint8_t m2) {
+                    if (m2 > 0 && m2 < 3) {
+                        return m2;
+                    } else {
+                        BLUEPRINT_RELEASE_ASSERT(false);
+                    }
+                }
+
             public:
+                uint8_t get_m2() const {
+                    return m2;
+                }
+
+                uint64_t get_scale() const {
+                    return 1ULL << (16 * m2);
+                }
+
                 using component_type = plonk_component<BlueprintFieldType, ArithmetizationParams, 0, 0>;
 
                 using var = typename component_type::var;
@@ -47,9 +66,10 @@ namespace nil {
                     return manifest;
                 }
 
-                static manifest_type get_manifest() {
-                    static manifest_type manifest =
-                        manifest_type(std::shared_ptr<manifest_param>(new manifest_single_value_param(3)), false);
+                // TACEO_TODO Update to lookup tables
+                static manifest_type get_manifest(uint8_t m2) {
+                    static manifest_type manifest = manifest_type(
+                        std::shared_ptr<manifest_param>(new manifest_single_value_param(3 + M2(m2))), false);
                     return manifest;
                 }
 
@@ -86,22 +106,27 @@ namespace nil {
                 };
 
                 template<typename ContainerType>
-                explicit mul_rescale(ContainerType witness) : component_type(witness, {}, {}, get_manifest()) {};
+                explicit mul_rescale(ContainerType witness, uint8_t m2) :
+                    component_type(witness, {}, {}, get_manifest(m2)), m2(M2(m2)) {};
 
                 template<typename WitnessContainerType, typename ConstantContainerType,
                          typename PublicInputContainerType>
                 mul_rescale(WitnessContainerType witness, ConstantContainerType constant,
-                            PublicInputContainerType public_input) :
-                    component_type(witness, constant, public_input, get_manifest()) {};
+                            PublicInputContainerType public_input, uint8_t m2) :
+                    component_type(witness, constant, public_input, get_manifest(m2)),
+                    m2(M2(m2)) {};
 
                 mul_rescale(std::initializer_list<typename component_type::witness_container_type::value_type>
                                 witnesses,
                             std::initializer_list<typename component_type::constant_container_type::value_type>
                                 constants,
                             std::initializer_list<typename component_type::public_input_container_type::value_type>
-                                public_inputs) :
-                    component_type(witnesses, constants, public_inputs, get_manifest()) {};
+                                public_inputs,
+                            uint8_t m2) :
+                    component_type(witnesses, constants, public_inputs, get_manifest(m2)),
+                    m2(M2(m2)) {};
             };
+
             template<typename BlueprintFieldType, typename ArithmetizationParams>
             using plonk_fixedpoint_mul_rescale =
                 mul_rescale<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
@@ -122,14 +147,25 @@ namespace nil {
                 typename BlueprintFieldType::value_type tmp =
                     var_value(assignment, instance_input.x) * var_value(assignment, instance_input.y);
 
-                // TACEO_TODO 16_16 is hardcoded here
-                DivMod<BlueprintFieldType> res = FixedPoint16_16<BlueprintFieldType>::rescale(tmp);
+                DivMod<BlueprintFieldType> res =
+                    FixedPointHelper<BlueprintFieldType>::round_div_mod(tmp, component.get_scale());
 
                 // | x | y | z | q |
                 assignment.witness(component.W(0), j) = var_value(assignment, instance_input.x);
                 assignment.witness(component.W(1), j) = var_value(assignment, instance_input.y);
                 assignment.witness(component.W(2), j) = res.quotient;
-                assignment.witness(component.W(3), j) = res.remainder;
+
+                if (component.get_m2() == 1) {
+                    assignment.witness(component.W(3), j) = res.remainder;
+                } else {
+                    std::vector<uint16_t> decomp;
+                    bool sign = FixedPointHelper<BlueprintFieldType>::decompose(res.remainder, decomp);
+                    BLUEPRINT_RELEASE_ASSERT(!sign);
+                    BLUEPRINT_RELEASE_ASSERT(decomp.size() >= component.get_m2());
+                    for (auto i = 0; i < component.get_m2(); i++) {
+                        assignment.witness(component.W(3 + i), j) = decomp[i];
+                    }
+                }
 
                 return typename plonk_fixedpoint_mul_rescale<BlueprintFieldType, ArithmetizationParams>::result_type(
                     component, start_row_index);
@@ -145,13 +181,17 @@ namespace nil {
                     &instance_input) {
 
                 using var = typename plonk_fixedpoint_mul_rescale<BlueprintFieldType, ArithmetizationParams>::var;
-                // 2xy + \Delta = 2z\Delta + 2q and proving
-                // TACEO_TODO 16_16 is hardcoded here
-                auto constraint_1 =
-                    (var(component.W(0), 0) * var(component.W(1), 0) -
-                     var(component.W(2), 0) * FixedPoint16_16<BlueprintFieldType>::DELTA - var(component.W(3), 0)) *
-                        2 +
-                    FixedPoint16_16<BlueprintFieldType>::DELTA;
+                // 2xy + \Delta = 2z\Delta + 2q and proving 0 <= q < \Delta via a lookup table. Delta is a multiple of
+                // 2^16, hence q could be decomposed into 16-bit limbs
+                auto delta = component.get_scale();
+                auto constraint_1 = var(component.W(0), 0) * var(component.W(1), 0) - var(component.W(2), 0) * delta -
+                                    var(component.W(3), 0);
+
+                for (auto i = 1; i < component.get_m2(); i++) {
+                    constraint_1 -= var(component.W(3 + i), 0) * (1ULL << (16 * i));
+                }
+
+                constraint_1 = (constraint_1) * 2 + delta;
 
                 // TACEO_TODO extend for lookup constraint
                 return bp.add_gate(constraint_1);

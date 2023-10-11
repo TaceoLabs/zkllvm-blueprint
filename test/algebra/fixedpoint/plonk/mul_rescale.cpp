@@ -31,7 +31,7 @@ bool doubleEquals(double left, double right, double epsilon) {
 template<typename FixedType>
 void test_fixedpoint_mul_rescale(FixedType input1, FixedType input2) {
     using BlueprintFieldType = typename FixedType::field_type;
-    constexpr std::size_t WitnessColumns = 4;
+    constexpr std::size_t WitnessColumns = 3 + FixedType::M_2;
     constexpr std::size_t PublicInputColumns = 1;
     constexpr std::size_t ConstantColumns = 0;
     constexpr std::size_t SelectorColumns = 1;
@@ -52,7 +52,6 @@ void test_fixedpoint_mul_rescale(FixedType input1, FixedType input2) {
     typename component_type::input_type instance_input = {var(0, 0, false, var::column_type::public_input),
                                                           var(0, 1, false, var::column_type::public_input)};
 
-    // TACEO_TODO update
     double expected_res = input1.to_double() * input2.to_double();
 
     auto result_check = [&expected_res, input1, input2](AssignmentType &assignment,
@@ -73,7 +72,14 @@ void test_fixedpoint_mul_rescale(FixedType input1, FixedType input2) {
         assert(expected_res == var_value(assignment, real_res.output));
     };
 
-    component_type component_instance({0, 1, 2, 3}, {}, {});
+    std::vector<std::uint32_t> witness_list;
+    witness_list.reserve(3 + FixedType::M_2);
+    for (auto i = 0; i < 3 + FixedType::M_2; i++) {
+        witness_list.push_back(i);
+    }
+    // Is done by the manifest in a real circuit
+    component_type component_instance(
+        witness_list, std::array<std::uint32_t, 0>(), std::array<std::uint32_t, 0>(), FixedType::M_2);
 
     std::vector<typename BlueprintFieldType::value_type> public_input = {input1.get_value(), input2.get_value()};
     nil::crypto3::test_component<component_type, BlueprintFieldType, ArithmetizationParams, hash_type, Lambda>(
