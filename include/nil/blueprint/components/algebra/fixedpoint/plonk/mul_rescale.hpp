@@ -122,7 +122,8 @@ namespace nil {
                 typename BlueprintFieldType::value_type tmp =
                     var_value(assignment, instance_input.x) * var_value(assignment, instance_input.y);
 
-                DivMod<BlueprintFieldType> res = FixedPoint<BlueprintFieldType>::rescale(tmp);
+                // TACEO_TODO 16_16 is hardcoded here
+                DivMod<BlueprintFieldType> res = FixedPoint16_16<BlueprintFieldType>::rescale(tmp);
 
                 // | x | y | z | q |
                 assignment.witness(component.W(0), j) = var_value(assignment, instance_input.x);
@@ -145,11 +146,12 @@ namespace nil {
 
                 using var = typename plonk_fixedpoint_mul_rescale<BlueprintFieldType, ArithmetizationParams>::var;
                 // 2xy + \Delta = 2z\Delta + 2q and proving
-                auto constraint_1 = (var(component.W(0), 0) * var(component.W(1), 0) -
-                                                       var(component.W(2), 0) * FixedPoint<BlueprintFieldType>::DELTA -
-                                                       var(component.W(3), 0)) *
-                                                          2 +
-                                                      FixedPoint<BlueprintFieldType>::DELTA;
+                // TACEO_TODO 16_16 is hardcoded here
+                auto constraint_1 =
+                    (var(component.W(0), 0) * var(component.W(1), 0) -
+                     var(component.W(2), 0) * FixedPoint16_16<BlueprintFieldType>::DELTA - var(component.W(3), 0)) *
+                        2 +
+                    FixedPoint16_16<BlueprintFieldType>::DELTA;
 
                 // TACEO_TODO extend for lookup constraint
                 return bp.add_gate(constraint_1);

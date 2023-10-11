@@ -15,14 +15,18 @@ namespace nil {
                 value_type remainder;
             };
 
-            template<typename BlueprintFieldType>
+            // FieldType is the representation of the proof system, whereas M1 is the number of pre-comma 16-bit limbs
+            // and M2 the number of post-comma 16-bit limbs
+            template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
             class FixedPoint {
+
+                static_assert(M1 > 0 && M1 < 3, "Only allow one or two pre-comma linbs");
+                static_assert(M2 > 0 && M2 < 3, "Only allow one or two post-comma linbs");
+
+            public:
+                using field_type = BlueprintFieldType;
                 using value_type = typename BlueprintFieldType::value_type;
                 using modular_backend = typename BlueprintFieldType::modular_backend;
-
-                // TACEO_TODO something along the lines of the following for template asserts
-                //  static_assert(MinBits, "number of bits should be defined");
-                // static_assert(is_fixed_precision<Backend>::value, "fixed precision backend should be used");
 
             private:
                 // I need a field element to deal with larger scales, such as the one as output from exp
@@ -30,8 +34,7 @@ namespace nil {
                 uint16_t scale;
 
             public:
-                // TACEO_TODO this is hardcoded here
-                static constexpr uint16_t SCALE = 16;
+                static constexpr uint16_t SCALE = 16 * M2;
                 static constexpr uint64_t DELTA = (1 << SCALE);
                 static constexpr uint64_t DELTA_2 = (1 << (SCALE - 1));
                 static constexpr value_type P_HALF = BlueprintFieldType::modulus / 2;
@@ -63,25 +66,31 @@ namespace nil {
                 static bool abs(value_type &);    // Returns true if sign was changed
             };
 
+            // TypeDefs
             template<typename BlueprintFieldType>
-            typename FixedPoint<BlueprintFieldType>::modular_backend
-                FixedPoint<BlueprintFieldType>::field_to_backend(const value_type &x) {
+            using FixedPoint16_16 = FixedPoint<BlueprintFieldType, 1, 1>;
+            template<typename BlueprintFieldType>
+            using FixedPoint32_32 = FixedPoint<BlueprintFieldType, 2, 2>;
+
+            template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
+            typename FixedPoint<BlueprintFieldType, M1, M2>::modular_backend
+                FixedPoint<BlueprintFieldType, M1, M2>::field_to_backend(const value_type &x) {
                 modular_backend out;
                 BlueprintFieldType::modulus_params.adjust_regular(out, x.data.backend().base_data());
                 return out;
             }
 
-            template<typename BlueprintFieldType>
-            typename FixedPoint<BlueprintFieldType>::value_type
-                FixedPoint<BlueprintFieldType>::backend_to_field(const modular_backend &x) {
+            template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
+            typename FixedPoint<BlueprintFieldType, M1, M2>::value_type
+                FixedPoint<BlueprintFieldType, M1, M2>::backend_to_field(const modular_backend &x) {
                 value_type out;
                 out.data.backend().base_data() = x;
                 BlueprintFieldType::modulus_params.adjust_modular(out.data.backend().base_data());
                 return out;
             }
 
-            template<typename BlueprintFieldType>
-            bool FixedPoint<BlueprintFieldType>::abs(value_type &x) {
+            template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
+            bool FixedPoint<BlueprintFieldType, M1, M2>::abs(value_type &x) {
                 bool sign = false;
                 if (x > P_HALF) {
                     x = -x;
@@ -90,8 +99,8 @@ namespace nil {
                 return sign;
             }
 
-            template<typename BlueprintFieldType>
-            FixedPoint<BlueprintFieldType>::FixedPoint(double x) : scale(SCALE) {
+            template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
+            FixedPoint<BlueprintFieldType, M1, M2>::FixedPoint(double x) : scale(SCALE) {
                 if (x < 0) {
                     value = -value_type(static_cast<int64_t>(-x * DELTA));
                 } else {
@@ -99,8 +108,8 @@ namespace nil {
                 }
             }
 
-            template<typename BlueprintFieldType>
-            FixedPoint<BlueprintFieldType>::FixedPoint(int64_t x) : scale(SCALE) {
+            template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
+            FixedPoint<BlueprintFieldType, M1, M2>::FixedPoint(int64_t x) : scale(SCALE) {
                 if (x < 0) {
                     value = -value_type(-x * DELTA);
                 } else {
@@ -108,15 +117,15 @@ namespace nil {
                 }
             }
 
-            template<typename BlueprintFieldType>
-            FixedPoint<BlueprintFieldType>::FixedPoint(const value_type &value, uint16_t scale) :
+            template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
+            FixedPoint<BlueprintFieldType, M1, M2>::FixedPoint(const value_type &value, uint16_t scale) :
                 value(value), scale(SCALE) {};
 
             // res.quotient = Round(val / Delta)
             // remainder required for proof
-            template<typename BlueprintFieldType>
+            template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
             DivMod<BlueprintFieldType>
-                FixedPoint<BlueprintFieldType>::rescale(const typename BlueprintFieldType::value_type &val) {
+                FixedPoint<BlueprintFieldType, M1, M2>::rescale(const typename BlueprintFieldType::value_type &val) {
                 DivMod<BlueprintFieldType> res;
 
                 modular_backend delta;
@@ -141,8 +150,8 @@ namespace nil {
                 return res;
             }
 
-            template<typename BlueprintFieldType>
-            double FixedPoint<BlueprintFieldType>::to_double() const {
+            template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
+            double FixedPoint<BlueprintFieldType, M1, M2>::to_double() const {
                 auto tmp = value;
                 bool sign = abs(tmp);
 
@@ -166,13 +175,13 @@ namespace nil {
                 return val / pow(2., scale);
             }
 
-            template<typename BlueprintFieldType>
-            FixedPoint<BlueprintFieldType>
-                FixedPoint<BlueprintFieldType>::operator+(const FixedPoint<BlueprintFieldType> &other) {
+            template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
+            FixedPoint<BlueprintFieldType, M1, M2>
+                FixedPoint<BlueprintFieldType, M1, M2>::operator+(const FixedPoint<BlueprintFieldType, M1, M2> &other) {
                 if (scale != other.scale) {
                     abort();
                 }
-                return FixedPoint<BlueprintFieldType>(value + other.value, scale);
+                return FixedPoint(value + other.value, scale);
             }
 
         }    // namespace components

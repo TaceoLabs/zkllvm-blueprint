@@ -21,15 +21,16 @@
 #include <nil/blueprint/components/algebra/fixedpoint/type.hpp>
 
 using namespace nil;
-using nil::blueprint::components::FixedPoint;
+using nil::blueprint::components::FixedPoint16_16;
+using nil::blueprint::components::FixedPoint32_32;
 
 bool doubleEquals(double left, double right, double epsilon) {
     return (fabs(left - right) < epsilon);
 }
 
-template<typename FieldType>
-void test_fixedpoint_mul_rescale(FixedPoint<FieldType> input1, FixedPoint<FieldType> input2) {
-    using BlueprintFieldType = FieldType;
+template<typename FixedType>
+void test_fixedpoint_mul_rescale(FixedType input1, FixedType input2) {
+    using BlueprintFieldType = typename FixedType::field_type;
     constexpr std::size_t WitnessColumns = 4;
     constexpr std::size_t PublicInputColumns = 1;
     constexpr std::size_t ConstantColumns = 0;
@@ -56,8 +57,7 @@ void test_fixedpoint_mul_rescale(FixedPoint<FieldType> input1, FixedPoint<FieldT
 
     auto result_check = [&expected_res, input1, input2](AssignmentType &assignment,
                                                         typename component_type::result_type &real_res) {
-        double real_res_f =
-            FixedPoint<FieldType>(var_value(assignment, real_res.output), FixedPoint<FieldType>::SCALE).to_double();
+        double real_res_f = FixedType(var_value(assignment, real_res.output), FixedType::SCALE).to_double();
 #ifdef BLUEPRINT_PLONK_PROFILING_ENABLED
         std::cout << "fixed_point mul test: "
                   << "\n";
@@ -75,22 +75,22 @@ void test_fixedpoint_mul_rescale(FixedPoint<FieldType> input1, FixedPoint<FieldT
 
     component_type component_instance({0, 1, 2, 3}, {}, {});
 
-    std::vector<typename FieldType::value_type> public_input = {input1.get_value(), input2.get_value()};
+    std::vector<typename BlueprintFieldType::value_type> public_input = {input1.get_value(), input2.get_value()};
     nil::crypto3::test_component<component_type, BlueprintFieldType, ArithmetizationParams, hash_type, Lambda>(
         component_instance, public_input, result_check, instance_input);
 }
 
-template<typename FieldType>
+template<typename FixedType>
 void test_components(int i, int j) {
     // TACEO_TODO mul_by_const
     // TACEO_TODO bring to fixed_point
 
-    FixedPoint<FieldType> x((int64_t)i);
-    FixedPoint<FieldType> y((int64_t)j);
+    FixedType x((int64_t)i);
+    FixedType y((int64_t)j);
 
     // test_add<FieldType>({i, j});
     // test_sub<FieldType>({i, j});
-    test_fixedpoint_mul_rescale<FieldType>(x, y);
+    test_fixedpoint_mul_rescale<FixedType>(x, y);
     // test_mul_by_const<FieldType>({i}, j);
     // test_div_or_zero<FieldType>({i, j});
 }
@@ -113,11 +113,11 @@ void test_components(int i, int j) {
 //     // test_div_or_zero<FieldType>({i, j});
 // }
 
-template<typename FieldType, std::size_t RandomTestsAmount>
+template<typename FixedType, std::size_t RandomTestsAmount>
 void field_operations_test() {
     for (int i = -2; i < 3; i++) {
         for (int j = -2; j < 3; j++) {
-            test_components<FieldType>(i, j);
+            test_components<FixedType>(i, j);
         }
     }
 
@@ -132,17 +132,17 @@ BOOST_AUTO_TEST_SUITE(blueprint_plonk_test_suite)
 
 BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_mul_rescale_test_vesta) {
     using field_type = typename crypto3::algebra::curves::vesta::base_field_type;
-    field_operations_test<field_type, random_tests_amount>();
+    field_operations_test<FixedPoint16_16<field_type>, random_tests_amount>();
 }
 
 BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_mul_rescale_tes_pallas) {
     using field_type = typename crypto3::algebra::curves::pallas::base_field_type;
-    field_operations_test<field_type, random_tests_amount>();
+    field_operations_test<FixedPoint16_16<field_type>, random_tests_amount>();
 }
 
 BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_mul_rescale_tes_bls12) {
     using field_type = typename crypto3::algebra::fields::bls12_fr<381>;
-    field_operations_test<field_type, random_tests_amount>();
+    field_operations_test<FixedPoint16_16<field_type>, random_tests_amount>();
 }
 
 BOOST_AUTO_TEST_SUITE_END()
