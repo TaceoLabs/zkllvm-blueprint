@@ -268,6 +268,25 @@ void test_fixedpoint_div(FixedType input1, FixedType input2) {
 }
 
 template<typename FixedType>
+void test_fixedpoint_mod(FixedType input1, FixedType input2) {
+    double expected_res_f = remainder(input1.to_double(), input2.to_double());
+    // Correct signs for onnx specififcation
+    if (expected_res_f < 0 && input1.to_double() >= 0) {
+        expected_res_f += fabs(input2.to_double());
+    } else if (expected_res_f > 0 && input1.to_double() < 0) {
+        expected_res_f -= fabs(input2.to_double());
+    }
+
+    auto expected_res = input1 % input2;
+
+    if (!doubleEquals(expected_res_f, expected_res.to_double(), EPSILON)) {
+        std::cout << "input   : " << input1.to_double() << " " << input2.to_double() << "\n";
+        std::cout << "expected (float): " << expected_res_f << "\n";
+        std::cout << "expected (field to float): " << expected_res.to_double() << "\n\n";
+    }
+}
+
+template<typename FixedType>
 void test_fixedpoint_neg(FixedType input) {
     using BlueprintFieldType = typename FixedType::field_type;
     constexpr std::size_t WitnessColumns = 2;
@@ -424,6 +443,7 @@ void test_components_on_random_data(RngType &rng) {
     test_fixedpoint_neg<FixedType>(x);
     if (y.get_value() != 0) {
         test_fixedpoint_div<FixedType>(x, y);
+        test_fixedpoint_mod<FixedType>(x, y);
     }
 }
 
@@ -439,6 +459,7 @@ void test_components(int i, int j) {
     test_fixedpoint_neg<FixedType>(x);
     if (y.get_value() != 0) {
         test_fixedpoint_div<FixedType>(x, y);
+        test_fixedpoint_mod<FixedType>(x, y);
     }
 }
 

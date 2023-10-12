@@ -30,6 +30,7 @@ namespace nil {
                 // M2 is the number of post-comma 16-bit limbs
                 static DivMod<BlueprintFieldType> round_div_mod(const value_type &, uint64_t);
                 static DivMod<BlueprintFieldType> round_div_mod(const value_type &, const value_type &);
+                static DivMod<BlueprintFieldType> div_mod(const value_type &, const value_type &);
 
                 // Transforms from/to montgomery representation
                 static modular_backend field_to_backend(const value_type &);
@@ -80,6 +81,7 @@ namespace nil {
                 FixedPoint operator-(const FixedPoint &other) const;
                 FixedPoint operator*(const FixedPoint &other) const;
                 FixedPoint operator/(const FixedPoint &other) const;
+                FixedPoint operator%(const FixedPoint &other) const;
                 FixedPoint operator-() const;
 
                 double to_double() const;
@@ -242,6 +244,42 @@ namespace nil {
                 return res;
             }
 
+            // res.quotient = floor(val / div)
+            // remainder required for proof
+            template<typename BlueprintFieldType>
+            DivMod<BlueprintFieldType>
+                FixedPointHelper<BlueprintFieldType>::div_mod(const typename BlueprintFieldType::value_type &val,
+                                                              const typename BlueprintFieldType::value_type &div) {
+                BLUEPRINT_RELEASE_ASSERT(div != 0);
+
+                DivMod<BlueprintFieldType> res;
+
+                auto div_abs = div;
+                bool sign_div = abs(div_abs);
+                modular_backend div_ = field_to_backend(div_abs);
+
+                auto tmp = val;
+                bool sign_tmp = abs(tmp);
+                modular_backend out = field_to_backend(tmp);
+
+                modular_backend out_;
+                eval_divide(out_, out, div_);
+
+                res.quotient = backend_to_field(out_);
+                if (sign_div != sign_tmp) {
+                    res.quotient = -res.quotient;
+                }
+                // res.remainder = (val + mod/2) % mod;
+                res.remainder = val - res.quotient * div;
+                if (res.remainder > P_HALF) {
+                    // negative? artifact of eval_divide?
+                    res.remainder += div_abs;
+                    res.quotient -= 1;
+                }
+                BLUEPRINT_RELEASE_ASSERT(res.remainder < div_abs);
+                return res;
+            }
+
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
             double FixedPoint<BlueprintFieldType, M1, M2>::to_double() const {
                 auto tmp = value;
@@ -306,6 +344,22 @@ namespace nil {
                 auto mul = value * (1ULL << scale);
                 auto divmod = helper::round_div_mod(mul, other.value);
                 return FixedPoint(divmod.quotient, scale);
+            }
+
+            template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
+            FixedPoint<BlueprintFieldType, M1, M2> FixedPoint<BlueprintFieldType, M1, M2>::operator%(
+                const FixedPoint<BlueprintFieldType, M1, M2> &other) const {
+                BLUEPRINT_RELEASE_ASSERT(scale == other.scale);
+                auto divmod = helper::div_mod(value, other.value);
+                if (value > helper::P_HALF && divmod.remainder != 0) {
+                    // sign(remainder) = sign(value)
+                    if (other.value > helper::P_HALF)
+                        divmod.remainder += other.value;
+                    else
+                        divmod.remainder -= other.value;
+                }
+                // TACEO_TODO add some asserts for testing
+                return FixedPoint(divmod.remainder, scale);
             }
 
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
