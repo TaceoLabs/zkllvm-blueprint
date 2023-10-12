@@ -72,12 +72,13 @@ namespace nil {
                 FixedPoint(const FixedPoint &) = default;
                 FixedPoint &operator=(const FixedPoint &) = default;
 
-                bool operator==(const FixedPoint &other);
-                bool operator!=(const FixedPoint &other);
+                bool operator==(const FixedPoint &other) const;
+                bool operator!=(const FixedPoint &other) const;
 
-                FixedPoint operator+(const FixedPoint &other);
-                FixedPoint operator-(const FixedPoint &other);
-                FixedPoint operator*(const FixedPoint &other);
+                FixedPoint operator+(const FixedPoint &other) const;
+                FixedPoint operator-(const FixedPoint &other) const;
+                FixedPoint operator*(const FixedPoint &other) const;
+                FixedPoint operator-() const;
 
                 double to_double() const;
                 value_type get_value() const {
@@ -217,37 +218,42 @@ namespace nil {
 
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
             bool FixedPoint<BlueprintFieldType, M1, M2>::operator==(
-                const FixedPoint<BlueprintFieldType, M1, M2> &other) {
+                const FixedPoint<BlueprintFieldType, M1, M2> &other) const {
                 return (value == other.value) && (scale == other.scale);
             }
 
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
             bool FixedPoint<BlueprintFieldType, M1, M2>::operator!=(
-                const FixedPoint<BlueprintFieldType, M1, M2> &other) {
+                const FixedPoint<BlueprintFieldType, M1, M2> &other) const {
                 return (value != other.value) || (scale != other.scale);
             }
 
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
-            FixedPoint<BlueprintFieldType, M1, M2>
-                FixedPoint<BlueprintFieldType, M1, M2>::operator+(const FixedPoint<BlueprintFieldType, M1, M2> &other) {
+            FixedPoint<BlueprintFieldType, M1, M2> FixedPoint<BlueprintFieldType, M1, M2>::operator+(
+                const FixedPoint<BlueprintFieldType, M1, M2> &other) const {
                 BLUEPRINT_RELEASE_ASSERT(scale == other.scale);
                 return FixedPoint(value + other.value, scale);
             }
 
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
-            FixedPoint<BlueprintFieldType, M1, M2>
-                FixedPoint<BlueprintFieldType, M1, M2>::operator-(const FixedPoint<BlueprintFieldType, M1, M2> &other) {
+            FixedPoint<BlueprintFieldType, M1, M2> FixedPoint<BlueprintFieldType, M1, M2>::operator-(
+                const FixedPoint<BlueprintFieldType, M1, M2> &other) const {
                 BLUEPRINT_RELEASE_ASSERT(scale == other.scale);
                 return FixedPoint(value - other.value, scale);
             }
 
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
-            FixedPoint<BlueprintFieldType, M1, M2>
-                FixedPoint<BlueprintFieldType, M1, M2>::operator*(const FixedPoint<BlueprintFieldType, M1, M2> &other) {
+            FixedPoint<BlueprintFieldType, M1, M2> FixedPoint<BlueprintFieldType, M1, M2>::operator*(
+                const FixedPoint<BlueprintFieldType, M1, M2> &other) const {
                 BLUEPRINT_RELEASE_ASSERT(scale == other.scale);
                 auto mul = value * other.value;
                 auto divmod = helper::round_div_mod(mul, 1ULL << scale);
                 return FixedPoint(divmod.quotient, scale);
+            }
+
+            template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
+            FixedPoint<BlueprintFieldType, M1, M2> FixedPoint<BlueprintFieldType, M1, M2>::operator-() const {
+                return FixedPoint(-value, scale);
             }
 
         }    // namespace components

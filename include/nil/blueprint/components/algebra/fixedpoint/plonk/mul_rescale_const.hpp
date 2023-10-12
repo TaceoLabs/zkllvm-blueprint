@@ -22,10 +22,10 @@ namespace nil {
             // lookup table
 
             template<typename ArithmetizationType, typename FieldType, typename NonNativePolicyType>
-            class mul_rescale_const;
+            class fix_mul_rescale_const;
 
             template<typename BlueprintFieldType, typename ArithmetizationParams, typename NonNativePolicyType>
-            class mul_rescale_const<
+            class fix_mul_rescale_const<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                 BlueprintFieldType, NonNativePolicyType>
                 : public plonk_component<BlueprintFieldType, ArithmetizationParams, 1, 0> {
@@ -60,7 +60,7 @@ namespace nil {
                 class gate_manifest_type : public component_gate_manifest {
                 public:
                     std::uint32_t gates_amount() const override {
-                        return mul_rescale_const::gates_amount;
+                        return fix_mul_rescale_const::gates_amount;
                     }
                 };
 
@@ -94,11 +94,11 @@ namespace nil {
 
                 struct result_type {
                     var output = var(0, 0, false);
-                    result_type(const mul_rescale_const &component, std::uint32_t start_row_index) {
+                    result_type(const fix_mul_rescale_const &component, std::uint32_t start_row_index) {
                         output = var(component.W(1), start_row_index, false, var::column_type::witness);
                     }
 
-                    result_type(const mul_rescale_const &component, std::size_t start_row_index) {
+                    result_type(const fix_mul_rescale_const &component, std::size_t start_row_index) {
                         output = var(component.W(1), start_row_index, false, var::column_type::witness);
                     }
 
@@ -108,17 +108,17 @@ namespace nil {
                 };
 
                 template<typename ContainerType>
-                explicit mul_rescale_const(ContainerType witness, value_type constant_, uint8_t m2) :
+                explicit fix_mul_rescale_const(ContainerType witness, value_type constant_, uint8_t m2) :
                     component_type(witness, {}, {}, get_manifest(m2)), constant(constant_), m2(M2(m2)) {};
 
                 template<typename WitnessContainerType, typename ConstantContainerType,
                          typename PublicInputContainerType>
-                mul_rescale_const(WitnessContainerType witness, ConstantContainerType constant,
-                                  PublicInputContainerType public_input, value_type constant_, int8_t m2) :
+                fix_mul_rescale_const(WitnessContainerType witness, ConstantContainerType constant,
+                                      PublicInputContainerType public_input, value_type constant_, int8_t m2) :
                     component_type(witness, constant, public_input, get_manifest(m2)),
                     constant(constant_), m2(M2(m2)) {};
 
-                mul_rescale_const(
+                fix_mul_rescale_const(
                     std::initializer_list<typename component_type::witness_container_type::value_type> witnesses,
                     std::initializer_list<typename component_type::constant_container_type::value_type> constants,
                     std::initializer_list<typename component_type::public_input_container_type::value_type>
@@ -129,7 +129,7 @@ namespace nil {
             };
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
-            using plonk_fixedpoint_mul_rescale_const = mul_rescale_const<
+            using plonk_fixedpoint_mul_rescale_const = fix_mul_rescale_const<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
