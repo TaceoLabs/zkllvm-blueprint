@@ -77,7 +77,7 @@ namespace nil {
                 // TACEO_TODO Update to lookup tables
                 static manifest_type get_manifest(uint8_t m1, uint8_t m2) {
                     static manifest_type manifest = manifest_type(
-                        std::shared_ptr<manifest_param>(new manifest_single_value_param(3 + 2 * (M(m2) + M(m1)))),
+                        std::shared_ptr<manifest_param>(new manifest_single_value_param(4 + 3 * (M(m2) + M(m1)))),
                         false);
                     return manifest;
                 }
@@ -154,27 +154,42 @@ namespace nil {
                 typename BlueprintFieldType::value_type tmp =
                     var_value(assignment, instance_input.x) * component.get_scale();
 
-                DivMod<BlueprintFieldType> res =
-                    FixedPointHelper<BlueprintFieldType>::round_div_mod(tmp, var_value(assignment, instance_input.y));
+                auto y = var_value(assignment, instance_input.y);
 
-                // | x | y | z | q0 | ... | x_0 | ...
+                DivMod<BlueprintFieldType> res = FixedPointHelper<BlueprintFieldType>::round_div_mod(tmp, y);
+
+                // | x | y | z | s_y | y0 | ... | q0 | ... | x_0 | ...
                 assignment.witness(component.W(0), j) = var_value(assignment, instance_input.x);
-                assignment.witness(component.W(1), j) = var_value(assignment, instance_input.y);
+                assignment.witness(component.W(1), j) = y;
                 assignment.witness(component.W(2), j) = res.quotient;
 
+                std::vector<uint16_t> decomp_y;
                 std::vector<uint16_t> decomp_q;
                 std::vector<uint16_t> decomp_yq;
-                bool sign = FixedPointHelper<BlueprintFieldType>::decompose(res.remainder, decomp_q);
+
+                bool sign = FixedPointHelper<BlueprintFieldType>::abs(y);
+                if (sign) {
+                    assignment.witness(component.W(3), j) = -typename BlueprintFieldType::value_type(1);
+
+                } else {
+
+                    assignment.witness(component.W(3), j) = typename BlueprintFieldType::value_type(1);
+                }
+
+                sign = FixedPointHelper<BlueprintFieldType>::decompose(y, decomp_y);
                 BLUEPRINT_RELEASE_ASSERT(!sign);
-                sign = FixedPointHelper<BlueprintFieldType>::decompose(
-                    var_value(assignment, instance_input.y) - res.remainder - 1, decomp_yq);
+                sign = FixedPointHelper<BlueprintFieldType>::decompose(res.remainder, decomp_q);
+                BLUEPRINT_RELEASE_ASSERT(!sign);
+                sign = FixedPointHelper<BlueprintFieldType>::decompose(y - res.remainder - 1, decomp_yq);
                 BLUEPRINT_RELEASE_ASSERT(!sign);
                 // is ok because decomp is at least of size 4 and the biggest we have is 32.32
+                BLUEPRINT_RELEASE_ASSERT(decomp_y.size() >= m);
                 BLUEPRINT_RELEASE_ASSERT(decomp_q.size() >= m);
                 BLUEPRINT_RELEASE_ASSERT(decomp_yq.size() >= m);
                 for (auto i = 0; i < m; i++) {
-                    assignment.witness(component.W(3 + i), j) = decomp_q[i];
-                    assignment.witness(component.W(3 + m + i), j) = decomp_yq[i];
+                    assignment.witness(component.W(4 + i), j) = decomp_y[i];
+                    assignment.witness(component.W(4 + m + i), j) = decomp_q[i];
+                    assignment.witness(component.W(4 + 2 * m + i), j) = decomp_yq[i];
                 }
 
                 return typename plonk_fixedpoint_div<BlueprintFieldType, ArithmetizationParams>::result_type(
@@ -196,21 +211,25 @@ namespace nil {
                 auto m = component.get_m();
                 auto delta = component.get_scale();
 
-                auto q = nil::crypto3::math::expression(var(component.W(3), 0));
-                auto x = nil::crypto3::math::expression(var(component.W(3 + m), 0));
+                auto y = nil::crypto3::math::expression(var(component.W(4), 0));
+                auto q = nil::crypto3::math::expression(var(component.W(4 + m), 0));
+                auto x = nil::crypto3::math::expression(var(component.W(4 + 2 * m), 0));
                 for (auto i = 1; i < m; i++) {
-                    q += var(component.W(3 + i), 0) * (1ULL << (16 * i));
-                    x += var(component.W(3 + m + i), 0) * (1ULL << (16 * i));
+                    y += var(component.W(4 + i), 0) * (1ULL << (16 * i));
+                    q += var(component.W(4 + m + i), 0) * (1ULL << (16 * i));
+                    x += var(component.W(4 + 2 * m + i), 0) * (1ULL << (16 * i));
                 }
 
                 auto constraint_1 =
                     2 * (var(component.W(0), 0) * delta - var(component.W(1), 0) * var(component.W(2), 0) - q) +
                     var(component.W(1), 0);
 
-                auto constraint_2 = var(component.W(1), 0) - q - x - 1;
+                auto constraint_2 = var(component.W(2), 0) - y * var(component.W(3), 0);
+
+                auto constraint_3 = y - q - x - 1;
 
                 // TACEO_TODO extend for lookup constraint
-                return bp.add_gate({constraint_1, constraint_2});
+                return bp.add_gate({constraint_1, constraint_2, constraint_3});
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>

@@ -211,9 +211,9 @@ namespace nil {
 
                 DivMod<BlueprintFieldType> res;
 
-                auto div_tmp = div;
-                bool sign_div = abs(div_tmp);
-                modular_backend div_ = field_to_backend(div_tmp);
+                auto div_abs = div;
+                bool sign_div = abs(div_abs);
+                modular_backend div_ = field_to_backend(div_abs);
                 modular_backend div_2_ = div_;
                 for (auto i = 0; i < div_2_.size(); i++) {
                     div_2_.limbs()[i] >>= 1;
@@ -235,10 +235,10 @@ namespace nil {
                 res.remainder = val + div_2 - res.quotient * div;
                 if (res.remainder > P_HALF) {
                     // negative? artifact of eval_divide?
-                    res.remainder += div;
+                    res.remainder += div_abs;
                     res.quotient -= 1;
                 }
-                BLUEPRINT_RELEASE_ASSERT(res.remainder < div);
+                BLUEPRINT_RELEASE_ASSERT(res.remainder < div_abs);
                 return res;
             }
 

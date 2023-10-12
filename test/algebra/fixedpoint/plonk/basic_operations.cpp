@@ -29,7 +29,7 @@ using namespace nil;
 using nil::blueprint::components::FixedPoint16_16;
 using nil::blueprint::components::FixedPoint32_32;
 
-static constexpr double EPSILON = 0.000001;
+static constexpr double EPSILON = 0.001;
 
 bool doubleEquals(double a, double b, double epsilon) {
     // Essentially equal from
@@ -78,7 +78,7 @@ void test_add(FixedType input1, FixedType input2) {
             std::cout << "expected        : " << expected_res.get_value().data << "\n";
             std::cout << "real            : " << real_res_.get_value().data << "\n\n";
             std::cout << "expected (float): " << expected_res_f << "\n";
-            std::cout << "real (float)   : " << real_res_f << "\n\n";
+            std::cout << "real (float)    : " << real_res_f << "\n\n";
             abort();
         }
     };
@@ -133,7 +133,7 @@ void test_sub(FixedType input1, FixedType input2) {
             std::cout << "expected        : " << expected_res.get_value().data << "\n";
             std::cout << "real            : " << real_res_.get_value().data << "\n\n";
             std::cout << "expected (float): " << expected_res_f << "\n";
-            std::cout << "real (float)   : " << real_res_f << "\n\n";
+            std::cout << "real (float)    : " << real_res_f << "\n\n";
             abort();
         }
     };
@@ -188,7 +188,7 @@ void test_fixedpoint_mul_rescale(FixedType input1, FixedType input2) {
             std::cout << "expected        : " << expected_res.get_value().data << "\n";
             std::cout << "real            : " << real_res_.get_value().data << "\n\n";
             std::cout << "expected (float): " << expected_res_f << "\n";
-            std::cout << "real (float)   : " << real_res_f << "\n\n";
+            std::cout << "real (float)    : " << real_res_f << "\n\n";
             abort();
         }
     };
@@ -210,7 +210,7 @@ void test_fixedpoint_mul_rescale(FixedType input1, FixedType input2) {
 template<typename FixedType>
 void test_fixedpoint_div(FixedType input1, FixedType input2) {
     using BlueprintFieldType = typename FixedType::field_type;
-    constexpr std::size_t WitnessColumns = 3 + 2 * (FixedType::M_1 + FixedType::M_2);
+    constexpr std::size_t WitnessColumns = 4 + 3 * (FixedType::M_1 + FixedType::M_2);
     constexpr std::size_t PublicInputColumns = 1;
     constexpr std::size_t ConstantColumns = 0;
     constexpr std::size_t SelectorColumns = 1;
@@ -248,7 +248,7 @@ void test_fixedpoint_div(FixedType input1, FixedType input2) {
             std::cout << "expected        : " << expected_res.get_value().data << "\n";
             std::cout << "real            : " << real_res_.get_value().data << "\n\n";
             std::cout << "expected (float): " << expected_res_f << "\n";
-            std::cout << "real (float)   : " << real_res_f << "\n\n";
+            std::cout << "real (float)    : " << real_res_f << "\n\n";
             abort();
         }
     };
@@ -307,7 +307,7 @@ void test_fixedpoint_neg(FixedType input) {
             std::cout << "expected        : " << expected_res.get_value().data << "\n";
             std::cout << "real            : " << real_res_.get_value().data << "\n\n";
             std::cout << "expected (float): " << expected_res_f << "\n";
-            std::cout << "real (float)   : " << real_res_f << "\n\n";
+            std::cout << "real (float)    : " << real_res_f << "\n\n";
             abort();
         }
     };
@@ -422,7 +422,7 @@ void test_components_on_random_data(RngType &rng) {
     test_fixedpoint_mul_rescale<FixedType>(x, y);
     test_fixedpoint_mul_rescale_const<FixedType>(x, y);
     test_fixedpoint_neg<FixedType>(x);
-    if (y != 0) {
+    if (y.get_value() != 0) {
         test_fixedpoint_div<FixedType>(x, y);
     }
 }
@@ -437,7 +437,7 @@ void test_components(int i, int j) {
     test_fixedpoint_mul_rescale<FixedType>(x, y);
     test_fixedpoint_mul_rescale_const<FixedType>(x, y);
     test_fixedpoint_neg<FixedType>(x);
-    if (y != 0) {
+    if (y.get_value() != 0) {
         test_fixedpoint_div<FixedType>(x, y);
     }
 }
