@@ -57,11 +57,13 @@ void test_add(FixedType input1, FixedType input2) {
     typename component_type::input_type instance_input = {var(0, 0, false, var::column_type::public_input),
                                                           var(0, 1, false, var::column_type::public_input)};
 
-    double expected_res = input1.to_double() + input2.to_double();
+    double expected_res_f = input1.to_double() + input2.to_double();
+    auto expected_res = input1 + input2;
 
-    auto result_check = [&expected_res, input1, input2](AssignmentType &assignment,
-                                                        typename component_type::result_type &real_res) {
-        double real_res_f = FixedType(var_value(assignment, real_res.output), FixedType::SCALE).to_double();
+    auto result_check = [&expected_res, &expected_res_f, input1, input2](
+                            AssignmentType &assignment, typename component_type::result_type &real_res) {
+        auto real_res_ = FixedType(var_value(assignment, real_res.output), FixedType::SCALE);
+        double real_res_f = real_res_.to_double();
 #ifdef BLUEPRINT_PLONK_PROFILING_ENABLED
         std::cout << "fixed_point add test: "
                   << "\n";
@@ -70,9 +72,11 @@ void test_add(FixedType input1, FixedType input2) {
         std::cout << "expected: " << expected_res << "\n";
         std::cout << "real    : " << real_res_f << "\n\n";
 #endif
-        if (!doubleEquals(expected_res, real_res_f, EPSILON)) {
-            std::cout << "expected: " << expected_res << "\n";
-            std::cout << "real    : " << real_res_f << "\n\n";
+        if (!doubleEquals(expected_res_f, real_res_f, EPSILON) || expected_res != real_res_) {
+            std::cout << "expected        : " << expected_res.get_value().data << "\n";
+            std::cout << "real            : " << real_res_.get_value().data << "\n\n";
+            std::cout << "expected (float): " << expected_res_f << "\n";
+            std::cout << "real (float)   : " << real_res_f << "\n\n";
             abort();
         }
     };
@@ -108,11 +112,13 @@ void test_sub(FixedType input1, FixedType input2) {
     typename component_type::input_type instance_input = {var(0, 0, false, var::column_type::public_input),
                                                           var(0, 1, false, var::column_type::public_input)};
 
-    double expected_res = input1.to_double() - input2.to_double();
+    double expected_res_f = input1.to_double() - input2.to_double();
+    auto expected_res = input1 - input2;
 
-    auto result_check = [&expected_res, input1, input2](AssignmentType &assignment,
-                                                        typename component_type::result_type &real_res) {
-        double real_res_f = FixedType(var_value(assignment, real_res.output), FixedType::SCALE).to_double();
+    auto result_check = [&expected_res, &expected_res_f, input1, input2](
+                            AssignmentType &assignment, typename component_type::result_type &real_res) {
+        auto real_res_ = FixedType(var_value(assignment, real_res.output), FixedType::SCALE);
+        double real_res_f = real_res_.to_double();
 #ifdef BLUEPRINT_PLONK_PROFILING_ENABLED
         std::cout << "fixed_point sub test: "
                   << "\n";
@@ -121,9 +127,11 @@ void test_sub(FixedType input1, FixedType input2) {
         std::cout << "expected: " << expected_res << "\n";
         std::cout << "real    : " << real_res_f << "\n\n";
 #endif
-        if (!doubleEquals(expected_res, real_res_f, EPSILON)) {
-            std::cout << "expected: " << expected_res << "\n";
-            std::cout << "real    : " << real_res_f << "\n\n";
+        if (!doubleEquals(expected_res_f, real_res_f, EPSILON) || expected_res != real_res_) {
+            std::cout << "expected        : " << expected_res.get_value().data << "\n";
+            std::cout << "real            : " << real_res_.get_value().data << "\n\n";
+            std::cout << "expected (float): " << expected_res_f << "\n";
+            std::cout << "real (float)   : " << real_res_f << "\n\n";
             abort();
         }
     };
@@ -159,11 +167,13 @@ void test_fixedpoint_mul_rescale(FixedType input1, FixedType input2) {
     typename component_type::input_type instance_input = {var(0, 0, false, var::column_type::public_input),
                                                           var(0, 1, false, var::column_type::public_input)};
 
-    double expected_res = input1.to_double() * input2.to_double();
+    double expected_res_f = input1.to_double() * input2.to_double();
+    auto expected_res = input1 * input2;
 
-    auto result_check = [&expected_res, input1, input2](AssignmentType &assignment,
-                                                        typename component_type::result_type &real_res) {
-        double real_res_f = FixedType(var_value(assignment, real_res.output), FixedType::SCALE).to_double();
+    auto result_check = [&expected_res, &expected_res_f, input1, input2](
+                            AssignmentType &assignment, typename component_type::result_type &real_res) {
+        auto real_res_ = FixedType(var_value(assignment, real_res.output), FixedType::SCALE);
+        double real_res_f = real_res_.to_double();
 #ifdef BLUEPRINT_PLONK_PROFILING_ENABLED
         std::cout << "fixed_point mul test: "
                   << "\n";
@@ -172,9 +182,11 @@ void test_fixedpoint_mul_rescale(FixedType input1, FixedType input2) {
         std::cout << "expected: " << expected_res << "\n";
         std::cout << "real    : " << real_res_f << "\n\n";
 #endif
-        if (!doubleEquals(expected_res, real_res_f, EPSILON)) {
-            std::cout << "expected: " << expected_res << "\n";
-            std::cout << "real    : " << real_res_f << "\n\n";
+        if (!doubleEquals(expected_res_f, real_res_f, EPSILON) || expected_res != real_res_) {
+            std::cout << "expected        : " << expected_res.get_value().data << "\n";
+            std::cout << "real            : " << real_res_.get_value().data << "\n\n";
+            std::cout << "expected (float): " << expected_res_f << "\n";
+            std::cout << "real (float)   : " << real_res_f << "\n\n";
             abort();
         }
     };
@@ -216,11 +228,13 @@ void test_fixedpoint_mul_rescale_const(FixedType priv_input, FixedType const_inp
 
     typename component_type::input_type instance_input = {var(0, 0, false, var::column_type::public_input)};
 
-    double expected_res = priv_input.to_double() * const_input.to_double();
+    double expected_res_f = priv_input.to_double() * const_input.to_double();
+    auto expected_res = priv_input * const_input;
 
-    auto result_check = [&expected_res, priv_input, const_input](AssignmentType &assignment,
-                                                                 typename component_type::result_type &real_res) {
-        double real_res_f = FixedType(var_value(assignment, real_res.output), FixedType::SCALE).to_double();
+    auto result_check = [&expected_res, &expected_res_f, priv_input, const_input](
+                            AssignmentType &assignment, typename component_type::result_type &real_res) {
+        auto real_res_ = FixedType(var_value(assignment, real_res.output), FixedType::SCALE);
+        double real_res_f = real_res_.to_double();
 #ifdef BLUEPRINT_PLONK_PROFILING_ENABLED
         std::cout << "fixed_point mul test: "
                   << "\n";
@@ -229,9 +243,11 @@ void test_fixedpoint_mul_rescale_const(FixedType priv_input, FixedType const_inp
         std::cout << "expected: " << expected_res << "\n";
         std::cout << "real    : " << real_res_f << "\n\n";
 #endif
-        if (!doubleEquals(expected_res, real_res_f, EPSILON)) {
-            std::cout << "expected: " << expected_res << "\n";
-            std::cout << "real    : " << real_res_f << "\n\n";
+        if (!doubleEquals(expected_res_f, real_res_f, EPSILON) || expected_res != real_res_) {
+            std::cout << "expected        : " << expected_res.get_value().data << "\n";
+            std::cout << "real            : " << real_res_.get_value().data << "\n\n";
+            std::cout << "expected (float): " << expected_res_f << "\n";
+            std::cout << "real (float)   : " << real_res_f << "\n\n";
             abort();
         }
     };
