@@ -178,7 +178,7 @@ namespace nil {
                 }
                 // res.remainder = (val + mod/2) % mod;
                 res.remainder = val + (mod >> 1) - res.quotient * mod;
-                if (res.remainder > mod) {
+                if (res.remainder > P_HALF) {
                     // negative? artifact of eval_divide?
                     res.remainder += mod;
                     res.quotient -= 1;

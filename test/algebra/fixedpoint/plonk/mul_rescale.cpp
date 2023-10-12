@@ -25,8 +25,10 @@ using namespace nil;
 using nil::blueprint::components::FixedPoint16_16;
 using nil::blueprint::components::FixedPoint32_32;
 
-bool doubleEquals(double left, double right, double epsilon) {
-    return (fabs(left - right) < epsilon);
+bool doubleEquals(double a, double b, double epsilon) {
+    // Essentially equal from
+    // https://stackoverflow.com/questions/17333/how-do-you-compare-float-and-double-while-accounting-for-precision-loss
+    return fabs(a - b) <= ((fabs(a) > fabs(b) ? fabs(b) : fabs(a)) * epsilon);
 }
 
 template<typename FixedType>
@@ -66,7 +68,7 @@ void test_fixedpoint_mul_rescale(FixedType input1, FixedType input2) {
         std::cout << "expected: " << expected_res << "\n";
         std::cout << "real    : " << real_res_f << "\n\n";
 #endif
-        if (!doubleEquals(expected_res, real_res_f, 0.0001)) {
+        if (!doubleEquals(expected_res, real_res_f, 0.000001)) {
             std::cout << "expected: " << expected_res << "\n";
             std::cout << "real    : " << real_res_f << "\n\n";
             abort();
