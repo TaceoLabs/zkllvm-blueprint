@@ -228,8 +228,10 @@ namespace nil {
 
                 auto constraint_3 = y - q - x - 1;
 
+                auto constraint_4 = (var(component.W(2), 0) - 1) * (var(component.W(2), 0) + 1);
+
                 // TACEO_TODO extend for lookup constraint
-                return bp.add_gate({constraint_1, constraint_2, constraint_3});
+                return bp.add_gate({constraint_1, constraint_2, constraint_3, constraint_4});
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
