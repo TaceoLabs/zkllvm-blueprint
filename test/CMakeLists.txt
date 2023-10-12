@@ -183,7 +183,7 @@ set(BASIC_COMPONENTS_TESTS_FILES
 
 # TACEO_TODO Added
 SET(FIXEDPOINT_TESTS_FILES
-    "algebra/fixedpoint/plonk/mul_rescale"
+    "algebra/fixedpoint/plonk/basic_operations"
 )
 
 SET(ALGEBRA_TESTS_FILES
