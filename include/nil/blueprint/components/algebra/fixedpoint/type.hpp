@@ -28,7 +28,8 @@ namespace nil {
                 static constexpr value_type P_HALF = BlueprintFieldType::modulus / 2;
 
                 // M2 is the number of post-comma 16-bit limbs
-                static DivMod<BlueprintFieldType> round_div_mod(const value_type &, uint64_t mod);
+                static DivMod<BlueprintFieldType> round_div_mod(const value_type &, uint64_t);
+                static DivMod<BlueprintFieldType> round_div_mod(const value_type &, const value_type &);
 
                 // Transforms from/to montgomery representation
                 static modular_backend field_to_backend(const value_type &);
@@ -78,6 +79,7 @@ namespace nil {
                 FixedPoint operator+(const FixedPoint &other) const;
                 FixedPoint operator-(const FixedPoint &other) const;
                 FixedPoint operator*(const FixedPoint &other) const;
+                FixedPoint operator/(const FixedPoint &other) const;
                 FixedPoint operator-() const;
 
                 double to_double() const;
@@ -142,7 +144,9 @@ namespace nil {
 
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
             FixedPoint<BlueprintFieldType, M1, M2>::FixedPoint(const value_type &value, uint16_t scale) :
-                value(value), scale(SCALE) {};
+                value(value), scale(scale) {
+                BLUEPRINT_RELEASE_ASSERT(scale % 16 == 0);
+            };
 
             template<typename BlueprintFieldType>
             bool FixedPointHelper<BlueprintFieldType>::decompose(const value_type &inp, std::vector<uint16_t> &output) {
@@ -162,35 +166,79 @@ namespace nil {
                 return sign;
             }
 
-            // res.quotient = Round(val / Delta)
+            // res.quotient = Round(val / div)
             // remainder required for proof
             template<typename BlueprintFieldType>
             DivMod<BlueprintFieldType>
                 FixedPointHelper<BlueprintFieldType>::round_div_mod(const typename BlueprintFieldType::value_type &val,
-                                                                    uint64_t mod) {
-                DivMod<BlueprintFieldType> res;
+                                                                    uint64_t div) {
+                BLUEPRINT_RELEASE_ASSERT(div != 0);
 
-                modular_backend mod_;
-                mod_.limbs()[0] = mod;
-                auto tmp = val + (mod >> 1);
+                DivMod<BlueprintFieldType> res;
+                auto div_2 = (div >> 1);
+
+                modular_backend div_;
+                div_.limbs()[0] = div;
+                auto tmp = val + div_2;
                 bool sign = abs(tmp);
                 modular_backend out = field_to_backend(tmp);
 
                 modular_backend out_;
-                eval_divide(out_, out, mod_);
+                eval_divide(out_, out, div_);
 
                 res.quotient = backend_to_field(out_);
                 if (sign) {
                     res.quotient = -res.quotient;
                 }
                 // res.remainder = (val + mod/2) % mod;
-                res.remainder = val + (mod >> 1) - res.quotient * mod;
+                res.remainder = val + div_2 - res.quotient * div;
                 if (res.remainder > P_HALF) {
                     // negative? artifact of eval_divide?
-                    res.remainder += mod;
+                    res.remainder += div;
                     res.quotient -= 1;
                 }
-                BLUEPRINT_RELEASE_ASSERT(res.remainder < mod);
+                BLUEPRINT_RELEASE_ASSERT(res.remainder < div);
+                return res;
+            }
+
+            // res.quotient = Round(val / div)
+            // remainder required for proof
+            template<typename BlueprintFieldType>
+            DivMod<BlueprintFieldType> FixedPointHelper<BlueprintFieldType>::round_div_mod(
+                const typename BlueprintFieldType::value_type &val,
+                const typename BlueprintFieldType::value_type &div) {
+                BLUEPRINT_RELEASE_ASSERT(div != 0);
+
+                DivMod<BlueprintFieldType> res;
+
+                auto div_tmp = div;
+                bool sign_div = abs(div_tmp);
+                modular_backend div_ = field_to_backend(div_tmp);
+                modular_backend div_2_ = div_;
+                for (auto i = 0; i < div_2_.size(); i++) {
+                    div_2_.limbs()[i] >>= 1;
+                }
+                auto div_2 = backend_to_field(div_2_);    // = floor (abs(div) / 2)
+
+                auto tmp = val + div_2;
+                bool sign_tmp = abs(tmp);
+                modular_backend out = field_to_backend(tmp);
+
+                modular_backend out_;
+                eval_divide(out_, out, div_);
+
+                res.quotient = backend_to_field(out_);
+                if (sign_div != sign_tmp) {
+                    res.quotient = -res.quotient;
+                }
+                // res.remainder = (val + mod/2) % mod;
+                res.remainder = val + div_2 - res.quotient * div;
+                if (res.remainder > P_HALF) {
+                    // negative? artifact of eval_divide?
+                    res.remainder += div;
+                    res.quotient -= 1;
+                }
+                BLUEPRINT_RELEASE_ASSERT(res.remainder < div);
                 return res;
             }
 
@@ -248,6 +296,15 @@ namespace nil {
                 BLUEPRINT_RELEASE_ASSERT(scale == other.scale);
                 auto mul = value * other.value;
                 auto divmod = helper::round_div_mod(mul, 1ULL << scale);
+                return FixedPoint(divmod.quotient, scale);
+            }
+
+            template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
+            FixedPoint<BlueprintFieldType, M1, M2> FixedPoint<BlueprintFieldType, M1, M2>::operator/(
+                const FixedPoint<BlueprintFieldType, M1, M2> &other) const {
+                BLUEPRINT_RELEASE_ASSERT(scale == other.scale);
+                auto mul = value * (1ULL << scale);
+                auto divmod = helper::round_div_mod(mul, other.value);
                 return FixedPoint(divmod.quotient, scale);
             }
 

@@ -33,11 +33,11 @@ namespace nil {
             private:
                 uint8_t m2;    // Post-comma 16-bit limbs
 
-                static uint8_t M2(uint8_t m2) {
-                    if (m2 == 0 || m2 > 2) {
+                static uint8_t M(uint8_t m) {
+                    if (m == 0 || m > 2) {
                         BLUEPRINT_RELEASE_ASSERT(false);
                     }
-                    return m2;
+                    return m;
                 }
 
             public:
@@ -72,7 +72,7 @@ namespace nil {
                 // TACEO_TODO Update to lookup tables
                 static manifest_type get_manifest(uint8_t m2) {
                     static manifest_type manifest = manifest_type(
-                        std::shared_ptr<manifest_param>(new manifest_single_value_param(2 + M2(m2))), true);
+                        std::shared_ptr<manifest_param>(new manifest_single_value_param(2 + M(m2))), true);
                     return manifest;
                 }
 
@@ -109,14 +109,14 @@ namespace nil {
 
                 template<typename ContainerType>
                 explicit fix_mul_rescale_const(ContainerType witness, value_type constant_, uint8_t m2) :
-                    component_type(witness, {}, {}, get_manifest(m2)), constant(constant_), m2(M2(m2)) {};
+                    component_type(witness, {}, {}, get_manifest(m2)), constant(constant_), m2(M(m2)) {};
 
                 template<typename WitnessContainerType, typename ConstantContainerType,
                          typename PublicInputContainerType>
                 fix_mul_rescale_const(WitnessContainerType witness, ConstantContainerType constant,
                                       PublicInputContainerType public_input, value_type constant_, int8_t m2) :
                     component_type(witness, constant, public_input, get_manifest(m2)),
-                    constant(constant_), m2(M2(m2)) {};
+                    constant(constant_), m2(M(m2)) {};
 
                 fix_mul_rescale_const(
                     std::initializer_list<typename component_type::witness_container_type::value_type> witnesses,
@@ -125,7 +125,7 @@ namespace nil {
                         public_inputs,
                     value_type constant_, uint8_t m2) :
                     component_type(witnesses, constants, public_inputs, get_manifest(m2)),
-                    constant(constant_), m2(M2(m2)) {};
+                    constant(constant_), m2(M(m2)) {};
             };
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
@@ -161,6 +161,7 @@ namespace nil {
                     std::vector<uint16_t> decomp;
                     bool sign = FixedPointHelper<BlueprintFieldType>::decompose(res.remainder, decomp);
                     BLUEPRINT_RELEASE_ASSERT(!sign);
+                    // is ok because decomp is at least of size 4 and the biggest we have is 32.32
                     BLUEPRINT_RELEASE_ASSERT(decomp.size() >= component.get_m2());
                     for (auto i = 0; i < component.get_m2(); i++) {
                         assignment.witness(component.W(2 + i), j) = decomp[i];
@@ -185,14 +186,15 @@ namespace nil {
                 // 2xy + \Delta = 2z\Delta + 2q and proving 0 <= q < \Delta via a lookup table. Delta is a multiple of
                 // 2^16, hence q could be decomposed into 16-bit limbs
                 auto delta = component.get_scale();
-                auto constraint_1 = var(component.W(0), 0) * var(0, 0, true, var::column_type::constant) -
-                                    var(component.W(1), 0) * delta - var(component.W(2), 0);
 
+                auto q = nil::crypto3::math::expression(var(component.W(3), 0));
                 for (auto i = 1; i < component.get_m2(); i++) {
-                    constraint_1 -= var(component.W(2 + i), 0) * (1ULL << (16 * i));
+                    q += var(component.W(2 + i), 0) * (1ULL << (16 * i));
                 }
 
-                constraint_1 = (constraint_1) * 2 + delta;
+                auto constraint_1 = 2 * (var(component.W(0), 0) * var(0, 0, true, var::column_type::constant) -
+                                         var(component.W(1), 0) * delta - var(component.W(2), 0) - q) +
+                                    delta;
 
                 // TACEO_TODO extend for lookup constraint
                 return bp.add_gate(constraint_1);

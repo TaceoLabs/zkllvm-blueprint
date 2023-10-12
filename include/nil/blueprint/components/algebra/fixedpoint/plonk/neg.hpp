@@ -113,7 +113,7 @@ namespace nil {
 
                 const std::size_t j = start_row_index;
 
-                // | x | y | z | q0 | ... |
+                // | x | y |
                 assignment.witness(component.W(0), j) = var_value(assignment, instance_input.x);
                 assignment.witness(component.W(1), j) = -var_value(assignment, instance_input.x);
 
