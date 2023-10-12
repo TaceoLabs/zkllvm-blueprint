@@ -1,4 +1,4 @@
-#define BOOST_TEST_MODULE blueprint_plonk_fixedpoint_mul_rescale_test
+#define BOOST_TEST_MODULE blueprint_plonk_fixedpoint_basic_test
 
 #include <boost/test/unit_test.hpp>
 
@@ -17,6 +17,7 @@
 #include <nil/blueprint/blueprint/plonk/circuit.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/type.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/mul_rescale.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/plonk/mul_rescale_const.hpp>
 #include <nil/blueprint/components/algebra/fields/plonk/addition.hpp>
 #include <nil/blueprint/components/algebra/fields/plonk/subtraction.hpp>
 
@@ -179,8 +180,8 @@ void test_fixedpoint_mul_rescale(FixedType input1, FixedType input2) {
     };
 
     std::vector<std::uint32_t> witness_list;
-    witness_list.reserve(3 + FixedType::M_2);
-    for (auto i = 0; i < 3 + FixedType::M_2; i++) {
+    witness_list.reserve(WitnessColumns);
+    for (auto i = 0; i < WitnessColumns; i++) {
         witness_list.push_back(i);
     }
     // Is done by the manifest in a real circuit
@@ -188,6 +189,66 @@ void test_fixedpoint_mul_rescale(FixedType input1, FixedType input2) {
         witness_list, std::array<std::uint32_t, 0>(), std::array<std::uint32_t, 0>(), FixedType::M_2);
 
     std::vector<typename BlueprintFieldType::value_type> public_input = {input1.get_value(), input2.get_value()};
+    nil::crypto3::test_component<component_type, BlueprintFieldType, ArithmetizationParams, hash_type, Lambda>(
+        component_instance, public_input, result_check, instance_input);
+}
+
+template<typename FixedType>
+void test_fixedpoint_mul_rescale_const(FixedType priv_input, FixedType const_input) {
+    using BlueprintFieldType = typename FixedType::field_type;
+    constexpr std::size_t WitnessColumns = 2 + FixedType::M_2;
+    constexpr std::size_t PublicInputColumns = 1;
+    constexpr std::size_t ConstantColumns = 1;
+    constexpr std::size_t SelectorColumns = 1;
+    using ArithmetizationParams = crypto3::zk::snark::
+        plonk_arithmetization_params<WitnessColumns, PublicInputColumns, ConstantColumns, SelectorColumns>;
+    using ArithmetizationType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>;
+    using hash_type = nil::crypto3::hashes::keccak_1600<256>;
+    constexpr std::size_t Lambda = 40;
+    using AssignmentType = nil::blueprint::assignment<ArithmetizationType>;
+
+    using var = crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>;
+
+    using component_type =
+        blueprint::components::mul_rescale_const<ArithmetizationType,
+                                                 BlueprintFieldType,
+                                                 nil::blueprint::basic_non_native_policy<BlueprintFieldType>>;
+
+    typename component_type::input_type instance_input = {var(0, 0, false, var::column_type::public_input)};
+
+    double expected_res = priv_input.to_double() * const_input.to_double();
+
+    auto result_check = [&expected_res, priv_input, const_input](AssignmentType &assignment,
+                                                                 typename component_type::result_type &real_res) {
+        double real_res_f = FixedType(var_value(assignment, real_res.output), FixedType::SCALE).to_double();
+#ifdef BLUEPRINT_PLONK_PROFILING_ENABLED
+        std::cout << "fixed_point mul test: "
+                  << "\n";
+        std::cout << "input   : " << priv_input.to_double() << " " << const_input.to_double() << "\n";
+        std::cout << "input_f : " << priv_input.get_value().data << " " << const_input.get_value().data << "\n";
+        std::cout << "expected: " << expected_res << "\n";
+        std::cout << "real    : " << real_res_f << "\n\n";
+#endif
+        if (!doubleEquals(expected_res, real_res_f, EPSILON)) {
+            std::cout << "expected: " << expected_res << "\n";
+            std::cout << "real    : " << real_res_f << "\n\n";
+            abort();
+        }
+    };
+
+    std::vector<std::uint32_t> witness_list;
+    witness_list.reserve(WitnessColumns);
+    for (auto i = 0; i < WitnessColumns; i++) {
+        witness_list.push_back(i);
+    }
+    // Is done by the manifest in a real circuit
+    component_type component_instance(witness_list,
+                                      std::array<std::uint32_t, 1>({0}),
+                                      std::array<std::uint32_t, 0>(),
+                                      const_input.get_value(),
+                                      FixedType::M_2);
+
+    std::vector<typename BlueprintFieldType::value_type> public_input = {priv_input.get_value()};
     nil::crypto3::test_component<component_type, BlueprintFieldType, ArithmetizationParams, hash_type, Lambda>(
         component_instance, public_input, result_check, instance_input);
 }
@@ -220,8 +281,6 @@ FieldType generate_random_for_fixedpoint(uint8_t m1, uint8_t m2, RngType &rng) {
 
 template<typename FixedType, typename RngType>
 void test_components_on_random_data(RngType &rng) {
-    // TACEO_TODO mul_by_const
-
     // We don't care about overflows so far, so we can use M1 and M2
     FixedType x(generate_random_for_fixedpoint<typename FixedType::value_type>(FixedType::M_1, FixedType::M_2, rng),
                 FixedType::SCALE);
@@ -231,22 +290,18 @@ void test_components_on_random_data(RngType &rng) {
     test_add<FixedType>(x, y);
     test_sub<FixedType>(x, y);
     test_fixedpoint_mul_rescale<FixedType>(x, y);
-    // test_mul_by_const<FieldType>({i}, j);
-    // test_div_or_zero<FieldType>({i, j});
+    test_fixedpoint_mul_rescale_const<FixedType>(x, y);
 }
 
 template<typename FixedType>
 void test_components(int i, int j) {
-    // TACEO_TODO mul_by_const
-
     FixedType x((int64_t)i);
     FixedType y((int64_t)j);
 
     test_add<FixedType>(x, y);
     test_sub<FixedType>(x, y);
     test_fixedpoint_mul_rescale<FixedType>(x, y);
-    // test_mul_by_const<FieldType>({i}, j);
-    // test_div_or_zero<FieldType>({i, j});
+    test_fixedpoint_mul_rescale_const<FixedType>(x, y);
 }
 
 template<typename FixedType, std::size_t RandomTestsAmount>
@@ -267,19 +322,19 @@ constexpr static const std::size_t random_tests_amount = 10;
 
 BOOST_AUTO_TEST_SUITE(blueprint_plonk_test_suite)
 
-BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_mul_rescale_test_vesta) {
+BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_basic_test_vesta) {
     using field_type = typename crypto3::algebra::curves::vesta::base_field_type;
     field_operations_test<FixedPoint16_16<field_type>, random_tests_amount>();
     field_operations_test<FixedPoint32_32<field_type>, random_tests_amount>();
 }
 
-BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_mul_rescale_tes_pallas) {
+BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_basic_test_pallas) {
     using field_type = typename crypto3::algebra::curves::pallas::base_field_type;
     field_operations_test<FixedPoint16_16<field_type>, random_tests_amount>();
     field_operations_test<FixedPoint32_32<field_type>, random_tests_amount>();
 }
 
-BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_mul_rescale_tes_bls12) {
+BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_basic_test_bls12) {
     using field_type = typename crypto3::algebra::fields::bls12_fr<381>;
     field_operations_test<FixedPoint16_16<field_type>, random_tests_amount>();
     field_operations_test<FixedPoint32_32<field_type>, random_tests_amount>();
