@@ -186,7 +186,7 @@ namespace nil {
                 BLUEPRINT_RELEASE_ASSERT(decomp_q.size() >= m);
                 BLUEPRINT_RELEASE_ASSERT(decomp_yq.size() >= m);
 
-                assignment.witness(component.W(3), j) = -typename BlueprintFieldType::value_type(decomp_y[0] & 1);
+                assignment.witness(component.W(3), j) = typename BlueprintFieldType::value_type(decomp_y[0] & 1);
 
                 for (auto i = 0; i < m; i++) {
                     assignment.witness(component.W(5 + i), j) = decomp_y[i];
