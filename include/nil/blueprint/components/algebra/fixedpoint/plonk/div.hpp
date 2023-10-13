@@ -18,8 +18,8 @@ namespace nil {
             // Input: x, y as Fixedpoint numbers with \Delta_x = \Delta_y
             // Output: z = round(\Delta_z * x / y) with \Delta_z = \Delta_x = \Delta_y
 
-            // Works by proving z = round(\Delta_z * x / y) via 2x\Delta_z + y = 2zy + 2q and proving 0 <= q < \Delta
-            // via a two decompositions and a lookup tables for checking the range of the limbs
+            // Works by proving z = round(\Delta_z * x / y) via 2x\Delta_z + |y| - c = 2zy + 2q and proving 0 <= q < |y|
+            // via multiple decompositions and lookup tables for checking the range of the limbs
 
             template<typename ArithmetizationType, typename FieldType, typename NonNativePolicyType>
             class fix_div;
@@ -77,7 +77,7 @@ namespace nil {
                 // TACEO_TODO Update to lookup tables
                 static manifest_type get_manifest(uint8_t m1, uint8_t m2) {
                     static manifest_type manifest = manifest_type(
-                        std::shared_ptr<manifest_param>(new manifest_single_value_param(4 + 3 * (M(m2) + M(m1)))),
+                        std::shared_ptr<manifest_param>(new manifest_single_value_param(5 + 3 * (M(m2) + M(m1)))),
                         false);
                     return manifest;
                 }
@@ -158,7 +158,7 @@ namespace nil {
 
                 DivMod<BlueprintFieldType> res = FixedPointHelper<BlueprintFieldType>::round_div_mod(tmp, y);
 
-                // | x | y | z | s_y | y0 | ... | q0 | ... | x_0 | ...
+                // | x | y | z | c | s_y | y0 | ... | q0 | ... | x_0 | ...
                 assignment.witness(component.W(0), j) = var_value(assignment, instance_input.x);
                 assignment.witness(component.W(1), j) = y;
                 assignment.witness(component.W(2), j) = res.quotient;
@@ -186,10 +186,13 @@ namespace nil {
                 BLUEPRINT_RELEASE_ASSERT(decomp_y.size() >= m);
                 BLUEPRINT_RELEASE_ASSERT(decomp_q.size() >= m);
                 BLUEPRINT_RELEASE_ASSERT(decomp_yq.size() >= m);
+
+                assignment.witness(component.W(4), j) = -typename BlueprintFieldType::value_type(decomp_y[0] & 1);
+
                 for (auto i = 0; i < m; i++) {
-                    assignment.witness(component.W(4 + i), j) = decomp_y[i];
-                    assignment.witness(component.W(4 + m + i), j) = decomp_q[i];
-                    assignment.witness(component.W(4 + 2 * m + i), j) = decomp_yq[i];
+                    assignment.witness(component.W(5 + i), j) = decomp_y[i];
+                    assignment.witness(component.W(5 + m + i), j) = decomp_q[i];
+                    assignment.witness(component.W(5 + 2 * m + i), j) = decomp_yq[i];
                 }
 
                 return typename plonk_fixedpoint_div<BlueprintFieldType, ArithmetizationParams>::result_type(
@@ -206,8 +209,7 @@ namespace nil {
                     &instance_input) {
 
                 using var = typename plonk_fixedpoint_div<BlueprintFieldType, ArithmetizationParams>::var;
-                // 2xy + \Delta = 2z\Delta + 2q and proving 0 <= q < \Delta via a lookup table. Delta is a multiple of
-                // 2^16, hence q could be decomposed into 16-bit limbs
+                // 2x\Delta_z + |y| - c = 2zy + 2q and proving 0 <= q < |y|
                 auto m = component.get_m();
                 auto delta = component.get_scale();
 
@@ -215,14 +217,14 @@ namespace nil {
                 auto q = nil::crypto3::math::expression(var(component.W(4 + m), 0));
                 auto x = nil::crypto3::math::expression(var(component.W(4 + 2 * m), 0));
                 for (auto i = 1; i < m; i++) {
-                    y += var(component.W(4 + i), 0) * (1ULL << (16 * i));
-                    q += var(component.W(4 + m + i), 0) * (1ULL << (16 * i));
-                    x += var(component.W(4 + 2 * m + i), 0) * (1ULL << (16 * i));
+                    y += var(component.W(5 + i), 0) * (1ULL << (16 * i));
+                    q += var(component.W(5 + m + i), 0) * (1ULL << (16 * i));
+                    x += var(component.W(5 + 2 * m + i), 0) * (1ULL << (16 * i));
                 }
 
                 auto constraint_1 =
-                    2 * (var(component.W(0), 0) * delta - var(component.W(1), 0) * var(component.W(2), 0) - q) +
-                    var(component.W(1), 0);
+                    2 * (var(component.W(0), 0) * delta - var(component.W(1), 0) * var(component.W(2), 0) - q) + y -
+                    var(component.W(4), 0);
 
                 auto constraint_2 = var(component.W(2), 0) - y * var(component.W(3), 0);
 
@@ -230,8 +232,10 @@ namespace nil {
 
                 auto constraint_4 = (var(component.W(2), 0) - 1) * (var(component.W(2), 0) + 1);
 
+                auto constraint_5 = (var(component.W(4), 0) - 1) * (var(component.W(4), 0) + 1);
+
                 // TACEO_TODO extend for lookup constraint
-                return bp.add_gate({constraint_1, constraint_2, constraint_3, constraint_4});
+                return bp.add_gate({constraint_1, constraint_2, constraint_3, constraint_4, constraint_5});
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>

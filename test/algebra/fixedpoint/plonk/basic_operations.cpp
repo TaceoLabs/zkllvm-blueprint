@@ -210,7 +210,7 @@ void test_fixedpoint_mul_rescale(FixedType input1, FixedType input2) {
 template<typename FixedType>
 void test_fixedpoint_div(FixedType input1, FixedType input2) {
     using BlueprintFieldType = typename FixedType::field_type;
-    constexpr std::size_t WitnessColumns = 4 + 3 * (FixedType::M_1 + FixedType::M_2);
+    constexpr std::size_t WitnessColumns = 5 + 3 * (FixedType::M_1 + FixedType::M_2);
     constexpr std::size_t PublicInputColumns = 1;
     constexpr std::size_t ConstantColumns = 0;
     constexpr std::size_t SelectorColumns = 1;
@@ -269,14 +269,12 @@ void test_fixedpoint_div(FixedType input1, FixedType input2) {
 
 template<typename FixedType>
 void test_fixedpoint_mod(FixedType input1, FixedType input2) {
-    double expected_res_f = remainder(input1.to_double(), input2.to_double());
+    double input2_f = input2.to_double();
+    double expected_res_f = remainder(input1.to_double(), input2_f);
     // Correct signs for onnx specififcation
-    if (expected_res_f < 0 && input1.to_double() >= 0) {
-        expected_res_f += fabs(input2.to_double());
-    } else if (expected_res_f > 0 && input1.to_double() < 0) {
-        expected_res_f -= fabs(input2.to_double());
+    if ((expected_res_f < 0 && input2_f > 0) || (expected_res_f > 0 && input2_f < 0)) {
+        expected_res_f += input2_f;
     }
-
     auto expected_res = input1 % input2;
 
     if (!doubleEquals(expected_res_f, expected_res.to_double(), EPSILON)) {

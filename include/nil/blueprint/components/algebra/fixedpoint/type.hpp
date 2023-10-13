@@ -192,14 +192,13 @@ namespace nil {
                 if (sign) {
                     res.quotient = -res.quotient;
                 }
-                // res.remainder = (val + mod/2) % mod;
+                // res.remainder = (val + div/2) % div;
                 res.remainder = val + div_2 - res.quotient * div;
                 if (res.remainder > P_HALF) {
                     // negative? artifact of eval_divide?
                     res.remainder += div;
-                    res.quotient -= 1;
+                    res.quotient -= 1;    // div is always positive
                 }
-                BLUEPRINT_RELEASE_ASSERT(res.remainder < div);
                 return res;
             }
 
@@ -233,14 +232,16 @@ namespace nil {
                 if (sign_div != sign_tmp) {
                     res.quotient = -res.quotient;
                 }
-                // res.remainder = (val + mod/2) % mod;
+                // res.remainder = (val + div/2) % div;
                 res.remainder = val + div_2 - res.quotient * div;
                 if (res.remainder > P_HALF) {
                     // negative? artifact of eval_divide?
                     res.remainder += div_abs;
-                    res.quotient -= 1;
+                    if (sign_div)
+                        res.quotient += 1;
+                    else
+                        res.quotient -= 1;
                 }
-                BLUEPRINT_RELEASE_ASSERT(res.remainder < div_abs);
                 return res;
             }
 
@@ -274,9 +275,11 @@ namespace nil {
                 if (res.remainder > P_HALF) {
                     // negative? artifact of eval_divide?
                     res.remainder += div_abs;
-                    res.quotient -= 1;
+                    if (sign_div)
+                        res.quotient += 1;
+                    else
+                        res.quotient -= 1;
                 }
-                BLUEPRINT_RELEASE_ASSERT(res.remainder < div_abs);
                 return res;
             }
 
@@ -350,15 +353,12 @@ namespace nil {
             FixedPoint<BlueprintFieldType, M1, M2> FixedPoint<BlueprintFieldType, M1, M2>::operator%(
                 const FixedPoint<BlueprintFieldType, M1, M2> &other) const {
                 BLUEPRINT_RELEASE_ASSERT(scale == other.scale);
-                auto divmod = helper::div_mod(value, other.value);
-                if (value > helper::P_HALF && divmod.remainder != 0) {
-                    // sign(remainder) = sign(value)
-                    if (other.value > helper::P_HALF)
-                        divmod.remainder += other.value;
-                    else
-                        divmod.remainder -= other.value;
+                auto divmod = helper::div_mod(value, other.value);    // divmod.remainder is positiv
+                if (other.value > helper::P_HALF && divmod.remainder != 0) {
+                    // sign(other.value) == sign(divmod_remainder)
+                    divmod.remainder += other.value;
                 }
-                // TACEO_TODO add some asserts for testing
+
                 return FixedPoint(divmod.remainder, scale);
             }
 
