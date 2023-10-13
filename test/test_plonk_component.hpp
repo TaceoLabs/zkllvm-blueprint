@@ -285,33 +285,34 @@ namespace nil {
                                    expected_to_pass, component_static_info_args...);
 
 #ifdef BLUEPRINT_PLACEHOLDER_PROOF_GEN_ENABLED
-            using placeholder_params =
-                zk::snark::placeholder_params<BlueprintFieldType, ArithmetizationParams, Hash, Hash, Lambda>;
-            using types = zk::snark::detail::placeholder_policy<BlueprintFieldType, placeholder_params>;
+            typedef zk::snark::placeholder_circuit_params<BlueprintFieldType, ArithmetizationParams> circuit_params;
 
-            using fri_type =
-                typename zk::commitments::fri<BlueprintFieldType, typename placeholder_params::merkle_hash_type,
-                                              typename placeholder_params::transcript_hash_type, Lambda, 2, 4>;
+            using lpc_params_type = zk::commitments::list_polynomial_commitment_params<Hash, Hash, Lambda, 2>;
+            using lpc_type = zk::commitments::list_polynomial_commitment<BlueprintFieldType, lpc_params_type>;
+            using lpc_scheme_type = typename zk::commitments::lpc_commitment_scheme<lpc_type>;
+            using lpc_placeholder_params_type = zk::snark::placeholder_params<circuit_params, lpc_scheme_type>;
 
             std::size_t table_rows_log = std::ceil(std::log2(desc.rows_amount));
-
-            typename fri_type::params_type fri_params = create_fri_params<fri_type, BlueprintFieldType>(table_rows_log);
+            typename lpc_type::fri_type::params_type fri_params = create_fri_params<typename lpc_type::fri_type, BlueprintFieldType>(table_rows_log);
+            lpc_scheme_type lpc_scheme(fri_params);
 
             std::size_t permutation_size = desc.witness_columns + desc.public_input_columns + desc.constant_columns;
 
             typename zk::snark::placeholder_public_preprocessor<
-                BlueprintFieldType, placeholder_params>::preprocessed_data_type public_preprocessed_data =
-                zk::snark::placeholder_public_preprocessor<BlueprintFieldType, placeholder_params>::process(
-                    bp, assignments.public_table(), desc, fri_params, permutation_size);
-            typename zk::snark::placeholder_private_preprocessor<
-                BlueprintFieldType, placeholder_params>::preprocessed_data_type private_preprocessed_data =
-                zk::snark::placeholder_private_preprocessor<BlueprintFieldType, placeholder_params>::process(
-                    bp, assignments.private_table(), desc, fri_params);
-            auto proof = zk::snark::placeholder_prover<BlueprintFieldType, placeholder_params>::process(
-                public_preprocessed_data, private_preprocessed_data, desc, bp, assignments, fri_params);
+                BlueprintFieldType, lpc_placeholder_params_type>::preprocessed_data_type public_preprocessed_data =
+                zk::snark::placeholder_public_preprocessor<BlueprintFieldType, lpc_placeholder_params_type>::process(
+                    bp, assignments.public_table(), desc, lpc_scheme, permutation_size);
 
-            bool verifier_res = zk::snark::placeholder_verifier<BlueprintFieldType, placeholder_params>::process(
-                public_preprocessed_data, proof, bp, fri_params);
+            typename zk::snark::placeholder_private_preprocessor<
+                BlueprintFieldType, lpc_placeholder_params_type>::preprocessed_data_type private_preprocessed_data =
+                zk::snark::placeholder_private_preprocessor<BlueprintFieldType, lpc_placeholder_params_type>::process(
+                    bp, assignments.private_table(), desc);
+
+            auto proof = zk::snark::placeholder_prover<BlueprintFieldType, lpc_placeholder_params_type>::process(
+                public_preprocessed_data, private_preprocessed_data, desc, bp, assignments, lpc_scheme);
+
+            bool verifier_res = zk::snark::placeholder_verifier<BlueprintFieldType, lpc_placeholder_params_type>::process(
+                public_preprocessed_data, proof, bp, lpc_scheme);
 
             if (expected_to_pass) {
                 BOOST_CHECK(verifier_res);
