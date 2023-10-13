@@ -169,10 +169,10 @@ namespace nil {
 
                 bool sign = FixedPointHelper<BlueprintFieldType>::abs(y);
                 if (sign) {
-                    assignment.witness(component.W(3), j) = -typename BlueprintFieldType::value_type(1);
+                    assignment.witness(component.W(4), j) = -typename BlueprintFieldType::value_type(1);
 
                 } else {
-                    assignment.witness(component.W(3), j) = typename BlueprintFieldType::value_type(1);
+                    assignment.witness(component.W(4), j) = typename BlueprintFieldType::value_type(1);
                 }
 
                 sign = FixedPointHelper<BlueprintFieldType>::decompose(y, decomp_y);
@@ -186,7 +186,7 @@ namespace nil {
                 BLUEPRINT_RELEASE_ASSERT(decomp_q.size() >= m);
                 BLUEPRINT_RELEASE_ASSERT(decomp_yq.size() >= m);
 
-                assignment.witness(component.W(4), j) = -typename BlueprintFieldType::value_type(decomp_y[0] & 1);
+                assignment.witness(component.W(3), j) = -typename BlueprintFieldType::value_type(decomp_y[0] & 1);
 
                 for (auto i = 0; i < m; i++) {
                     assignment.witness(component.W(5 + i), j) = decomp_y[i];
@@ -223,13 +223,13 @@ namespace nil {
 
                 auto constraint_1 =
                     2 * (var(component.W(0), 0) * delta - var(component.W(1), 0) * var(component.W(2), 0) - q) + y -
-                    var(component.W(4), 0);
+                    var(component.W(3), 0);
 
-                auto constraint_2 = var(component.W(2), 0) - y * var(component.W(3), 0);
+                auto constraint_2 = var(component.W(1), 0) - y * var(component.W(4), 0);
 
                 auto constraint_3 = y - q - yq - 1;
 
-                auto constraint_4 = (var(component.W(3), 0) - 1) * (var(component.W(3), 0));
+                auto constraint_4 = (var(component.W(3), 0) - 1) * var(component.W(3), 0);
 
                 auto constraint_5 = (var(component.W(4), 0) - 1) * (var(component.W(4), 0) + 1);
 
