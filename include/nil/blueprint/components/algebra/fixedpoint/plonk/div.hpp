@@ -229,7 +229,7 @@ namespace nil {
 
                 auto constraint_3 = y - q - yq - 1;
 
-                auto constraint_4 = (var(component.W(2), 0) - 1) * (var(component.W(2), 0) + 1);
+                auto constraint_4 = (var(component.W(3), 0) - 1) * (var(component.W(3), 0));
 
                 auto constraint_5 = (var(component.W(4), 0) - 1) * (var(component.W(4), 0) + 1);
 
