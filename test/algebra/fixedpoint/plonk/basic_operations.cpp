@@ -70,8 +70,8 @@ void test_add(FixedType input1, FixedType input2) {
 #ifdef BLUEPRINT_PLONK_PROFILING_ENABLED
         std::cout << "fixed_point add test: "
                   << "\n";
-        std::cout << "input   : " << input1.to_double() << " " << input2.to_double() << "\n";
-        std::cout << "input_f : " << input1.get_value().data << " " << input2.get_value().data << "\n";
+        std::cout << "input_f :" << input1.to_double() << " " << input2.to_double() << "\n";
+        std::cout << "input   : " << input1.get_value().data << " " << input2.get_value().data << "\n";
         std::cout << "expected: " << expected_res_f << "\n";
         std::cout << "real    : " << real_res_f << "\n\n";
 #endif
@@ -125,8 +125,8 @@ void test_sub(FixedType input1, FixedType input2) {
 #ifdef BLUEPRINT_PLONK_PROFILING_ENABLED
         std::cout << "fixed_point sub test: "
                   << "\n";
-        std::cout << "input   : " << input1.to_double() << " " << input2.to_double() << "\n";
-        std::cout << "input_f : " << input1.get_value().data << " " << input2.get_value().data << "\n";
+        std::cout << "input_f :" << input1.to_double() << " " << input2.to_double() << "\n";
+        std::cout << "input   : " << input1.get_value().data << " " << input2.get_value().data << "\n";
         std::cout << "expected: " << expected_res_f << "\n";
         std::cout << "real    : " << real_res_f << "\n\n";
 #endif
@@ -180,8 +180,8 @@ void test_fixedpoint_mul_rescale(FixedType input1, FixedType input2) {
 #ifdef BLUEPRINT_PLONK_PROFILING_ENABLED
         std::cout << "fixed_point mul test: "
                   << "\n";
-        std::cout << "input   : " << input1.to_double() << " " << input2.to_double() << "\n";
-        std::cout << "input_f : " << input1.get_value().data << " " << input2.get_value().data << "\n";
+        std::cout << "input_f :" << input1.to_double() << " " << input2.to_double() << "\n";
+        std::cout << "input   : " << input1.get_value().data << " " << input2.get_value().data << "\n";
         std::cout << "expected: " << expected_res_f << "\n";
         std::cout << "real    : " << real_res_f << "\n\n";
 #endif
@@ -240,8 +240,8 @@ void test_fixedpoint_div(FixedType input1, FixedType input2) {
 #ifdef BLUEPRINT_PLONK_PROFILING_ENABLED
         std::cout << "fixed_point mul test: "
                   << "\n";
-        std::cout << "input   : " << input1.to_double() << " " << input2.to_double() << "\n";
-        std::cout << "input_f : " << input1.get_value().data << " " << input2.get_value().data << "\n";
+        std::cout << "input_f :" << input1.to_double() << " " << input2.to_double() << "\n";
+        std::cout << "input   : " << input1.get_value().data << " " << input2.get_value().data << "\n";
         std::cout << "expected: " << expected_res_f << "\n";
         std::cout << "real    : " << real_res_f << "\n\n";
 #endif
@@ -305,8 +305,8 @@ void test_fixedpoint_mod(FixedType input1, FixedType input2) {
 #ifdef BLUEPRINT_PLONK_PROFILING_ENABLED
         std::cout << "fixed_point mul test: "
                   << "\n";
-        std::cout << "input   : " << input1.to_double() << " " << input2.to_double() << "\n";
-        std::cout << "input_f : " << input1.get_value().data << " " << input2.get_value().data << "\n";
+        std::cout << "input_f :" << input1.to_double() << " " << input2.to_double() << "\n";
+        std::cout << "input   : " << input1.get_value().data << " " << input2.get_value().data << "\n";
         std::cout << "expected: " << expected_res_f << "\n";
         std::cout << "real    : " << real_res_f << "\n\n";
 #endif
@@ -364,8 +364,8 @@ void test_fixedpoint_neg(FixedType input) {
 #ifdef BLUEPRINT_PLONK_PROFILING_ENABLED
         std::cout << "fixed_point neg test: "
                   << "\n";
-        std::cout << "input   : " << input.to_double() << "\n";
-        std::cout << "input_f : " << input.get_value().data << "\n";
+        std::cout << "input_f :" << input.to_double() << "\n";
+        std::cout << "input   : " << input.get_value().data << "\n";
         std::cout << "expected: " << expected_res_f << "\n";
         std::cout << "real    : " << real_res_f << "\n\n";
 #endif
@@ -418,8 +418,8 @@ void test_fixedpoint_mul_rescale_const(FixedType priv_input, FixedType const_inp
 #ifdef BLUEPRINT_PLONK_PROFILING_ENABLED
         std::cout << "fixed_point mul const test: "
                   << "\n";
-        std::cout << "input   : " << priv_input.to_double() << " " << const_input.to_double() << "\n";
-        std::cout << "input_f : " << priv_input.get_value().data << " " << const_input.get_value().data << "\n";
+        std::cout << "input_f :" << priv_input.to_double() << " " << const_input.to_double() << "\n";
+        std::cout << "input   : " << priv_input.get_value().data << " " << const_input.get_value().data << "\n";
         std::cout << "expected: " << expected_res_f << "\n";
         std::cout << "real    : " << real_res_f << "\n\n";
 #endif
@@ -447,6 +447,31 @@ void test_fixedpoint_mul_rescale_const(FixedType priv_input, FixedType const_inp
     std::vector<typename BlueprintFieldType::value_type> public_input = {priv_input.get_value()};
     nil::crypto3::test_component<component_type, BlueprintFieldType, ArithmetizationParams, hash_type, Lambda>(
         component_instance, public_input, result_check, instance_input);
+}
+
+template<typename FixedType>
+void test_fixedpoint_cmp(FixedType input1, FixedType input2) {
+    double input1_f = input1.to_double();
+    double input2_f = input2.to_double();
+    bool expected_res_less_f = input1_f < input2_f;
+    bool expected_res_greater_f = input1_f > input2_f;
+    bool expected_res_equal_f = fabs(input1_f - input2_f) < pow(2., -FixedType::SCALE);
+    bool expected_res_less = input1 < input2;
+    bool expected_res_greater = input1 > input2;
+    bool expected_res_equal = input1 == input2;
+
+    if ((expected_res_equal != expected_res_equal_f) || (expected_res_greater != expected_res_greater_f) ||
+        (expected_res_less != expected_res_less_f)) {
+        std::cout << "input_f    :" << input1.to_double() << " " << input2.to_double() << "\n";
+        std::cout << "input      : " << input1.get_value().data << " " << input2.get_value().data << "\n";
+        std::cout << "expected<_f:" << expected_res_less_f << "\n";
+        std::cout << "expected<  :" << expected_res_less << "\n";
+        std::cout << "expected>_f:" << expected_res_greater_f << "\n";
+        std::cout << "expected>  :" << expected_res_greater << "\n";
+        std::cout << "expected=_f:" << expected_res_equal_f << "\n";
+        std::cout << "expected=  :" << expected_res_equal << "\n\n";
+        abort();
+    }
 }
 
 template<typename FieldType, typename RngType>
@@ -488,6 +513,7 @@ void test_components_on_random_data(RngType &rng) {
     test_fixedpoint_mul_rescale<FixedType>(x, y);
     test_fixedpoint_mul_rescale_const<FixedType>(x, y);
     test_fixedpoint_neg<FixedType>(x);
+    test_fixedpoint_cmp<FixedType>(x, y);
     if (y.get_value() != 0) {
         test_fixedpoint_div<FixedType>(x, y);
         test_fixedpoint_mod<FixedType>(x, y);
@@ -504,6 +530,7 @@ void test_components(int i, int j) {
     test_fixedpoint_mul_rescale<FixedType>(x, y);
     test_fixedpoint_mul_rescale_const<FixedType>(x, y);
     test_fixedpoint_neg<FixedType>(x);
+    test_fixedpoint_cmp<FixedType>(x, y);
     if (y.get_value() != 0) {
         test_fixedpoint_div<FixedType>(x, y);
         test_fixedpoint_mod<FixedType>(x, y);

@@ -25,6 +25,7 @@ namespace nil {
                 using value_type = typename BlueprintFieldType::value_type;
                 using modular_backend = typename BlueprintFieldType::modular_backend;
 
+                // modulus is cpp_int_backend, so /2 is integer division and not field divison
                 static constexpr value_type P_HALF = BlueprintFieldType::modulus / 2;
 
                 // M2 is the number of post-comma 16-bit limbs
@@ -76,6 +77,10 @@ namespace nil {
 
                 bool operator==(const FixedPoint &other) const;
                 bool operator!=(const FixedPoint &other) const;
+                bool operator<(const FixedPoint &other) const;
+                bool operator>(const FixedPoint &other) const;
+                bool operator<=(const FixedPoint &other) const;
+                bool operator>=(const FixedPoint &other) const;
 
                 FixedPoint operator+(const FixedPoint &other) const;
                 FixedPoint operator-(const FixedPoint &other) const;
@@ -308,13 +313,52 @@ namespace nil {
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
             bool FixedPoint<BlueprintFieldType, M1, M2>::operator==(
                 const FixedPoint<BlueprintFieldType, M1, M2> &other) const {
-                return (value == other.value) && (scale == other.scale);
+                BLUEPRINT_RELEASE_ASSERT(scale == other.scale);
+                return value == other.value;
             }
 
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
             bool FixedPoint<BlueprintFieldType, M1, M2>::operator!=(
                 const FixedPoint<BlueprintFieldType, M1, M2> &other) const {
-                return (value != other.value) || (scale != other.scale);
+                return !(*this == other);
+            }
+
+            template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
+            bool FixedPoint<BlueprintFieldType, M1, M2>::operator<(
+                const FixedPoint<BlueprintFieldType, M1, M2> &other) const {
+                BLUEPRINT_RELEASE_ASSERT(scale == other.scale);
+                auto a_abs = value;
+                auto b_abs = other.value;
+                bool sign_a = helper::abs(a_abs);
+                bool sign_b = helper::abs(b_abs);
+                bool abs_less = a_abs < b_abs;
+                return (sign_a && !sign_b) || (sign_a && sign_b && (a_abs > b_abs)) ||
+                       (!sign_a && !sign_b && (a_abs < b_abs));
+            }
+
+            template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
+            bool FixedPoint<BlueprintFieldType, M1, M2>::operator>(
+                const FixedPoint<BlueprintFieldType, M1, M2> &other) const {
+                BLUEPRINT_RELEASE_ASSERT(scale == other.scale);
+                auto a_abs = value;
+                auto b_abs = other.value;
+                bool sign_a = helper::abs(a_abs);
+                bool sign_b = helper::abs(b_abs);
+                bool abs_less = a_abs < b_abs;
+                return (!sign_a && sign_b) || (sign_a && sign_b && (a_abs < b_abs)) ||
+                       (!sign_a && !sign_b && (a_abs > b_abs));
+            }
+
+            template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
+            bool FixedPoint<BlueprintFieldType, M1, M2>::operator<=(
+                const FixedPoint<BlueprintFieldType, M1, M2> &other) const {
+                return !(*this > other);
+            }
+
+            template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
+            bool FixedPoint<BlueprintFieldType, M1, M2>::operator>=(
+                const FixedPoint<BlueprintFieldType, M1, M2> &other) const {
+                return !(*this < other);
             }
 
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
