@@ -188,7 +188,7 @@ namespace nil {
 
                 auto q = nil::crypto3::math::expression(var(component.W(3), 0));
                 for (auto i = 1; i < component.get_m2(); i++) {
-                    q += var(component.W(2 + i), 0) * (1ULL << (16 * i));
+                    q += var(component.W(3 + i), 0) * (1ULL << (16 * i));
                 }
 
                 auto constraint_1 =

@@ -187,13 +187,13 @@ namespace nil {
                 // 2^16, hence q could be decomposed into 16-bit limbs
                 auto delta = component.get_scale();
 
-                auto q = nil::crypto3::math::expression(var(component.W(3), 0));
+                auto q = nil::crypto3::math::expression(var(component.W(2), 0));
                 for (auto i = 1; i < component.get_m2(); i++) {
                     q += var(component.W(2 + i), 0) * (1ULL << (16 * i));
                 }
 
                 auto constraint_1 = 2 * (var(component.W(0), 0) * var(0, 0, true, var::column_type::constant) -
-                                         var(component.W(1), 0) * delta - var(component.W(2), 0) - q) +
+                                         var(component.W(1), 0) * delta - q) +
                                     delta;
 
                 // TACEO_TODO extend for lookup constraint
