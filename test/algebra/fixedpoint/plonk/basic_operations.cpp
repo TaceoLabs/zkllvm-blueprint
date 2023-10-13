@@ -547,12 +547,8 @@ FieldType generate_random_for_fixedpoint(uint8_t m1, uint8_t m2, RngType &rng) {
     BLUEPRINT_RELEASE_ASSERT(m2 > 0 && m2 < 3);
     auto m = m1 + m2;
 
-    uint64_t max = 0;
-    if (m == 4) {
-        max = -1;
-    } else {
-        max = (1ull << (16 * m)) - 1;
-    }
+    // Generate one bit too little since comparison gadget can overflow otherwise
+    uint64_t max = max = (1ull << (16 * m - 1)) - 1;
 
     distribution dist = distribution(0, max);
     uint64_t x = dist(rng);
