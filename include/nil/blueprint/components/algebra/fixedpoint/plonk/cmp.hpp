@@ -72,7 +72,7 @@ namespace nil {
                 // TACEO_TODO Update to lookup tables
                 static manifest_type get_manifest(uint8_t m1, uint8_t m2) {
                     static manifest_type manifest = manifest_type(
-                        std::shared_ptr<manifest_param>(new manifest_single_value_param(7 + M(m2) + M(m1))), false);
+                        std::shared_ptr<manifest_param>(new manifest_single_value_param(8 + M(m2) + M(m1))), false);
                     return manifest;
                 }
 
@@ -156,6 +156,7 @@ namespace nil {
 
                 auto diff = x - y;
 
+                // Take m+1 limbs due to potential overflow
                 // | x | y | eq | lt | gt | s | inv | y0 | ...
                 assignment.witness(component.W(0), j) = x;
                 assignment.witness(component.W(1), j) = y;
@@ -186,6 +187,12 @@ namespace nil {
                 } else {
                     assignment.witness(component.W(6), j) = diff.inversed();
                 }
+                if (decomp.size() > m) {
+                    BLUEPRINT_RELEASE_ASSERT(decomp[m] == 0 || decomp[m] == 1);
+                    assignment.witness(component.W(7 + m), j) = decomp[m];
+                } else {
+                    assignment.witness(component.W(7 + m), j) = 0;
+                }
 
                 for (auto i = 0; i < m; i++) {
                     assignment.witness(component.W(7 + i), j) = decomp[i];
@@ -211,6 +218,10 @@ namespace nil {
                 for (auto i = 1; i < m; i++) {
                     diff += var(component.W(7 + i), 0) * (1ULL << (16 * i));
                 }
+                typename BlueprintFieldType::value_type tmp =
+                    1ULL << (16 * (m - 1));    // 1ULL << 16m could overflow 64-bit int
+                tmp *= 1ULL << 16;
+                diff += var(component.W(7 + m), 0) * tmp;
 
                 auto constraint_1 = var(component.W(0), 0) - var(component.W(1), 0) - var(component.W(5), 0) * diff;
 

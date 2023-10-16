@@ -453,7 +453,7 @@ void test_fixedpoint_mul_rescale_const(FixedType priv_input, FixedType const_inp
 template<typename FixedType>
 void test_fixedpoint_cmp(FixedType input1, FixedType input2) {
     using BlueprintFieldType = typename FixedType::field_type;
-    constexpr std::size_t WitnessColumns = 7 + FixedType::M_1 + FixedType::M_2;
+    constexpr std::size_t WitnessColumns = 8 + FixedType::M_1 + FixedType::M_2;
     constexpr std::size_t PublicInputColumns = 1;
     constexpr std::size_t ConstantColumns = 0;
     constexpr std::size_t SelectorColumns = 1;
@@ -506,19 +506,19 @@ void test_fixedpoint_cmp(FixedType input1, FixedType input2) {
 #endif
         if ((expected_res_less_f != real_res_less) || (expected_res_less != real_res_less)) {
             std::cout << "expected<        : " << expected_res_less << "\n";
-            std::cout << "real<            : " << real_res_less << "\n\n";
+            std::cout << "real<            : " << real_res_less << "\n";
             std::cout << "expected< (float): " << expected_res_less_f << "\n\n";
             abort();
         }
         if ((expected_res_greater_f != real_res_greater) || (expected_res_greater != real_res_greater)) {
             std::cout << "expected>        : " << expected_res_greater << "\n";
-            std::cout << "real>            : " << real_res_greater << "\n\n";
+            std::cout << "real>            : " << real_res_greater << "\n";
             std::cout << "expected> (float): " << expected_res_greater_f << "\n\n";
             abort();
         }
         if ((expected_res_equal_f != real_res_equal) || (expected_res_equal != real_res_equal)) {
             std::cout << "expected=        : " << expected_res_equal << "\n";
-            std::cout << "real=            : " << real_res_equal << "\n\n";
+            std::cout << "real=            : " << real_res_equal << "\n";
             std::cout << "expected= (float): " << expected_res_equal_f << "\n\n";
             abort();
         }
@@ -547,8 +547,12 @@ FieldType generate_random_for_fixedpoint(uint8_t m1, uint8_t m2, RngType &rng) {
     BLUEPRINT_RELEASE_ASSERT(m2 > 0 && m2 < 3);
     auto m = m1 + m2;
 
-    // Generate one bit too little since comparison gadget can overflow otherwise
-    uint64_t max = max = (1ull << (16 * m - 1)) - 1;
+    uint64_t max = 0;
+    if (m == 4) {
+        max = -1;
+    } else {
+        max = (1ull << (16 * m)) - 1;
+    }
 
     distribution dist = distribution(0, max);
     uint64_t x = dist(rng);
