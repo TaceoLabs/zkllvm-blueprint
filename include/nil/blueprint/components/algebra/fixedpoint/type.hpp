@@ -6,6 +6,7 @@
 
 #include <nil/blueprint/assert.hpp>
 #include <nil/crypto3/multiprecision/cpp_int/divide.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/tables.hpp>
 
 namespace nil {
     namespace blueprint {
@@ -74,6 +75,8 @@ namespace nil {
                 virtual ~FixedPoint() = default;
                 FixedPoint(const FixedPoint &) = default;
                 FixedPoint &operator=(const FixedPoint &) = default;
+
+                FixedPoint exp() const;
 
                 bool operator==(const FixedPoint &other) const;
                 bool operator!=(const FixedPoint &other) const;
@@ -404,6 +407,15 @@ namespace nil {
                 }
 
                 return FixedPoint(divmod.remainder, scale);
+            }
+
+            template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
+            FixedPoint<BlueprintFieldType, M1, M2> FixedPoint<BlueprintFieldType, M1, M2>::exp() const {
+                auto exp_a = FixedPointTables<BlueprintFieldType, M1, M2>::get_exp_a();
+                auto exp_b = FixedPointTables<BlueprintFieldType, M1, M2>::get_exp_b();
+
+                // TODO implement
+                return FixedPoint(0, scale);
             }
 
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>

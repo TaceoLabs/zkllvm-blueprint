@@ -71,7 +71,7 @@ void test_add(FixedType input1, FixedType input2) {
 #ifdef BLUEPRINT_PLONK_PROFILING_ENABLED
         std::cout << "fixed_point add test: "
                   << "\n";
-        std::cout << "input_f :" << input1.to_double() << " " << input2.to_double() << "\n";
+        std::cout << "input_f : " << input1.to_double() << " " << input2.to_double() << "\n";
         std::cout << "input   : " << input1.get_value().data << " " << input2.get_value().data << "\n";
         std::cout << "expected: " << expected_res_f << "\n";
         std::cout << "real    : " << real_res_f << "\n\n";
@@ -126,7 +126,7 @@ void test_sub(FixedType input1, FixedType input2) {
 #ifdef BLUEPRINT_PLONK_PROFILING_ENABLED
         std::cout << "fixed_point sub test: "
                   << "\n";
-        std::cout << "input_f :" << input1.to_double() << " " << input2.to_double() << "\n";
+        std::cout << "input_f : " << input1.to_double() << " " << input2.to_double() << "\n";
         std::cout << "input   : " << input1.get_value().data << " " << input2.get_value().data << "\n";
         std::cout << "expected: " << expected_res_f << "\n";
         std::cout << "real    : " << real_res_f << "\n\n";
@@ -181,7 +181,7 @@ void test_fixedpoint_mul_rescale(FixedType input1, FixedType input2) {
 #ifdef BLUEPRINT_PLONK_PROFILING_ENABLED
         std::cout << "fixed_point mul test: "
                   << "\n";
-        std::cout << "input_f :" << input1.to_double() << " " << input2.to_double() << "\n";
+        std::cout << "input_f : " << input1.to_double() << " " << input2.to_double() << "\n";
         std::cout << "input   : " << input1.get_value().data << " " << input2.get_value().data << "\n";
         std::cout << "expected: " << expected_res_f << "\n";
         std::cout << "real    : " << real_res_f << "\n\n";
@@ -241,7 +241,7 @@ void test_fixedpoint_div(FixedType input1, FixedType input2) {
 #ifdef BLUEPRINT_PLONK_PROFILING_ENABLED
         std::cout << "fixed_point div test: "
                   << "\n";
-        std::cout << "input_f :" << input1.to_double() << " " << input2.to_double() << "\n";
+        std::cout << "input_f : " << input1.to_double() << " " << input2.to_double() << "\n";
         std::cout << "input   : " << input1.get_value().data << " " << input2.get_value().data << "\n";
         std::cout << "expected: " << expected_res_f << "\n";
         std::cout << "real    : " << real_res_f << "\n\n";
@@ -306,7 +306,7 @@ void test_fixedpoint_mod(FixedType input1, FixedType input2) {
 #ifdef BLUEPRINT_PLONK_PROFILING_ENABLED
         std::cout << "fixed_point mod test: "
                   << "\n";
-        std::cout << "input_f :" << input1.to_double() << " " << input2.to_double() << "\n";
+        std::cout << "input_f : " << input1.to_double() << " " << input2.to_double() << "\n";
         std::cout << "input   : " << input1.get_value().data << " " << input2.get_value().data << "\n";
         std::cout << "expected: " << expected_res_f << "\n";
         std::cout << "real    : " << real_res_f << "\n\n";
@@ -365,7 +365,7 @@ void test_fixedpoint_neg(FixedType input) {
 #ifdef BLUEPRINT_PLONK_PROFILING_ENABLED
         std::cout << "fixed_point neg test: "
                   << "\n";
-        std::cout << "input_f :" << input.to_double() << "\n";
+        std::cout << "input_f : " << input.to_double() << "\n";
         std::cout << "input   : " << input.get_value().data << "\n";
         std::cout << "expected: " << expected_res_f << "\n";
         std::cout << "real    : " << real_res_f << "\n\n";
@@ -419,7 +419,7 @@ void test_fixedpoint_mul_rescale_const(FixedType priv_input, FixedType const_inp
 #ifdef BLUEPRINT_PLONK_PROFILING_ENABLED
         std::cout << "fixed_point mul const test: "
                   << "\n";
-        std::cout << "input_f :" << priv_input.to_double() << " " << const_input.to_double() << "\n";
+        std::cout << "input_f : " << priv_input.to_double() << " " << const_input.to_double() << "\n";
         std::cout << "input   : " << priv_input.get_value().data << " " << const_input.get_value().data << "\n";
         std::cout << "expected: " << expected_res_f << "\n";
         std::cout << "real    : " << real_res_f << "\n\n";
