@@ -96,31 +96,28 @@ void test_fixedpoint_exp(FixedType input) {
     //         component_instance, public_input, result_check, instance_input);
 }
 
-template<typename FieldType, uint8_t M1, uint8_t M2, typename RngType>
-typename FieldType::value_type generate_random_for_fixedpoint(RngType &rng) {
+template<typename FieldType, typename RngType>
+typename FieldType::value_type generate_random_for_fixedpoint(uint8_t m2, RngType &rng) {
     using distribution = boost::random::uniform_int_distribution<uint64_t>;
     using value_type = typename FieldType::value_type;
 
-    distribution dist = distribution(0, nil::blueprint::components::FixedPointTables<FieldType, M1, M2>::ExpALen / 2);
+    distribution dist = distribution(0, nil::blueprint::components::FixedPointTables<FieldType>::ExpALen / 2);
     uint64_t pre = dist(rng);
-    distribution dist_ = distribution(0, (1ULL << (16 * M2)) - 1);
+    distribution dist_ = distribution(0, (1ULL << (16 * m2)) - 1);
     uint64_t post = dist_(rng);
     distribution dist_bool = distribution(0, 1);
     bool sign = dist_bool(rng) == 1;
-    std::cout << pre << std::endl;
-    std::cout << post << std::endl;
-    std::cout << sign << std::endl << std::endl;
+
     if (sign) {
-        return -value_type(pre << (16 * M2)) + post;
+        return -value_type(pre << (16 * m2)) + post;
     } else {
-        return value_type(pre << (16 * M2)) + post;
+        return value_type(pre << (16 * m2)) + post;
     }
 }
 
 template<typename FixedType, typename RngType>
 void test_components_on_random_data(RngType &rng) {
-    FixedType x(generate_random_for_fixedpoint<typename FixedType::field_type, FixedType::M_1, FixedType::M_2>(rng),
-                FixedType::SCALE);
+    FixedType x(generate_random_for_fixedpoint<typename FixedType::field_type>(FixedType::M_2, rng), FixedType::SCALE);
 
     test_fixedpoint_exp<FixedType>(x);
 }
@@ -151,7 +148,7 @@ BOOST_AUTO_TEST_SUITE(blueprint_plonk_test_suite)
 BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_exp_test_vesta) {
     using field_type = typename crypto3::algebra::curves::vesta::base_field_type;
     field_operations_test<FixedPoint16_16<field_type>, random_tests_amount>();
-    // field_operations_test<FixedPoint32_32<field_type>, random_tests_amount>();
+    field_operations_test<FixedPoint32_32<field_type>, random_tests_amount>();
 }
 
 // BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_exp_test_pallas) {
