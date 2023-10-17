@@ -59,7 +59,7 @@ void test_fixedpoint_exp(FixedType input) {
     auto expected_res = input.exp();
     std::cout << "expected: " << expected_res_f << "\n";
     std::cout << "field   : " << expected_res.get_value().data << "\n";
-    std::cout << "field_d : " << expected_res.to_double() << "\n";
+    std::cout << "field_d : " << expected_res.to_double() << "\n\n";
 
     //     auto result_check = [&expected_res, &expected_res_f, input](AssignmentType &assignment,
     //                                                                 typename component_type::result_type &real_res) {
@@ -96,40 +96,34 @@ void test_fixedpoint_exp(FixedType input) {
     //         component_instance, public_input, result_check, instance_input);
 }
 
-// template<typename FieldType, typename RngType>
-// FieldType generate_random_for_fixedpoint(uint8_t m1, uint8_t m2, RngType &rng) {
-//     using distribution = boost::random::uniform_int_distribution<uint64_t>;
+template<typename FieldType, uint8_t M1, uint8_t M2, typename RngType>
+typename FieldType::value_type generate_random_for_fixedpoint(RngType &rng) {
+    using distribution = boost::random::uniform_int_distribution<uint64_t>;
+    using value_type = typename FieldType::value_type;
 
-//     BLUEPRINT_RELEASE_ASSERT(m1 > 0 && m1 < 3);
-//     BLUEPRINT_RELEASE_ASSERT(m2 > 0 && m2 < 3);
-//     auto m = m1 + m2;
+    distribution dist = distribution(0, nil::blueprint::components::FixedPointTables<FieldType, M1, M2>::ExpALen / 2);
+    uint64_t pre = dist(rng);
+    distribution dist_ = distribution(0, (1ULL << (16 * M2)) - 1);
+    uint64_t post = dist_(rng);
+    distribution dist_bool = distribution(0, 1);
+    bool sign = dist_bool(rng) == 1;
+    std::cout << pre << std::endl;
+    std::cout << post << std::endl;
+    std::cout << sign << std::endl << std::endl;
+    if (sign) {
+        return -value_type(pre << (16 * M2)) + post;
+    } else {
+        return value_type(pre << (16 * M2)) + post;
+    }
+}
 
-//     uint64_t max = 0;
-//     if (m == 4) {
-//         max = -1;
-//     } else {
-//         max = (1ull << (16 * m)) - 1;
-//     }
+template<typename FixedType, typename RngType>
+void test_components_on_random_data(RngType &rng) {
+    FixedType x(generate_random_for_fixedpoint<typename FixedType::field_type, FixedType::M_1, FixedType::M_2>(rng),
+                FixedType::SCALE);
 
-//     distribution dist = distribution(0, max);
-//     uint64_t x = dist(rng);
-//     distribution dist_bool = distribution(0, 1);
-//     bool sign = dist_bool(rng) == 1;
-//     if (sign) {
-//         return -FieldType(x);
-//     } else {
-//         return FieldType(x);
-//     }
-// }
-
-// template<typename FixedType, typename RngType>
-// void test_components_on_random_data(RngType &rng) {
-//     // We don't care about overflows so far, so we can use M1 and M2
-//     FixedType x(generate_random_for_fixedpoint<typename FixedType::value_type>(FixedType::M_1, FixedType::M_2, rng),
-//                 FixedType::SCALE);
-
-//     test_fixedpoint_exp<FixedType>(x);
-// }
+    test_fixedpoint_exp<FixedType>(x);
+}
 
 template<typename FixedType>
 void test_components(int i) {
@@ -144,10 +138,10 @@ void field_operations_test() {
         test_components<FixedType>(i);
     }
 
-    // boost::random::mt19937 seed_seq(0);
-    // for (std::size_t i = 0; i < RandomTestsAmount; i++) {
-    //     test_components_on_random_data<FixedType>(seed_seq);
-    // }
+    boost::random::mt19937 seed_seq(0);
+    for (std::size_t i = 0; i < RandomTestsAmount; i++) {
+        test_components_on_random_data<FixedType>(seed_seq);
+    }
 }
 
 constexpr static const std::size_t random_tests_amount = 10;
@@ -160,16 +154,16 @@ BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_exp_test_vesta) {
     // field_operations_test<FixedPoint32_32<field_type>, random_tests_amount>();
 }
 
-BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_exp_test_pallas) {
-    using field_type = typename crypto3::algebra::curves::pallas::base_field_type;
-    field_operations_test<FixedPoint16_16<field_type>, random_tests_amount>();
-    // field_operations_test<FixedPoint32_32<field_type>, random_tests_amount>();
-}
+// BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_exp_test_pallas) {
+//     using field_type = typename crypto3::algebra::curves::pallas::base_field_type;
+// field_operations_test<FixedPoint16_16<field_type>, random_tests_amount>();
+// field_operations_test<FixedPoint32_32<field_type>, random_tests_amount>();
+// }
 
-BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_exp_test_bls12) {
-    using field_type = typename crypto3::algebra::fields::bls12_fr<381>;
-    field_operations_test<FixedPoint16_16<field_type>, random_tests_amount>();
-    // field_operations_test<FixedPoint32_32<field_type>, random_tests_amount>();
-}
+// BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_exp_test_bls12) {
+// using field_type = typename crypto3::algebra::fields::bls12_fr<381>;
+// field_operations_test<FixedPoint16_16<field_type>, random_tests_amount>();
+// field_operations_test<FixedPoint32_32<field_type>, random_tests_amount>();
+// }
 
 BOOST_AUTO_TEST_SUITE_END()

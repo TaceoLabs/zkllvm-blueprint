@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <cmath>
 
+#include <nil/crypto3/multiprecision/cpp_bin_float.hpp>
+
 namespace nil {
     namespace blueprint {
         namespace components {
@@ -11,9 +13,7 @@ namespace nil {
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
             class FixedPointTables {
                 using value_type = typename BlueprintFieldType::value_type;
-
-                static constexpr uint32_t ExpALen = 201;
-                static constexpr uint32_t ExpBLen = (1 << 16);
+                using big_float = nil::crypto3::multiprecision::cpp_bin_float_double;
 
                 static std::vector<value_type> fill_exp_a_table();
                 static std::vector<value_type> fill_exp_b_table();
@@ -25,6 +25,9 @@ namespace nil {
 
                 static constexpr uint16_t ExpAScale = 128;
                 static constexpr uint16_t ExpBScale = 32;
+
+                static constexpr uint32_t ExpALen = 151;
+                static constexpr uint32_t ExpBLen = (1 << 16);
 
                 static const std::vector<value_type> &get_exp_a();
                 static const std::vector<value_type> &get_exp_b();
@@ -50,8 +53,11 @@ namespace nil {
                 std::vector<value_type> exp_a;
                 exp_a.reserve(ExpALen);
                 for (auto i = 0; i < ExpALen; ++i) {
-                    double val = std::exp(i - ExpALen / 2) * pow(2., ExpAScale);
-                    // TODO properly implement
+                    big_float val = std::exp(i - (int32_t)ExpALen / 2);
+                    val *= pow(2., ExpAScale);
+                    auto int_val = val.convert_to<nil::crypto3::multiprecision::cpp_int>();
+                    auto field_val = value_type(int_val);
+                    exp_a.push_back(field_val);
                 }
                 return exp_a;
             }
@@ -62,8 +68,12 @@ namespace nil {
                 std::vector<value_type> exp_b;
                 exp_b.reserve(ExpBLen);
                 for (auto i = 0; i < ExpBLen; ++i) {
+                    double val = std::exp((double)i / ExpBLen);
+                    val *= pow(2., ExpBScale);
+                    auto int_val = uint64_t(val);
+                    auto field_val = value_type(int_val);
+                    exp_b.push_back(field_val);
                 }
-                // TODO properly implement
                 return exp_b;
             }
 

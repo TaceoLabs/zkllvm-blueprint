@@ -39,7 +39,8 @@ namespace nil {
                 static value_type backend_to_field(const modular_backend &);
 
                 static bool abs(value_type &);    // Returns true if sign was changed
-                static bool decompose(const value_type &, std::vector<uint16_t> &);    // Returns sign
+                static bool decompose(const value_type &, std::vector<uint16_t> &);         // Returns sign
+                static bool split(const value_type &, uint16_t, uint64_t &, uint64_t &);    // Returns sign
             };
 
             // FieldType is the representation of the proof system, whereas M1 is the number of pre-comma 16-bit limbs
@@ -112,6 +113,7 @@ namespace nil {
                 FixedPointHelper<BlueprintFieldType>::field_to_backend(const value_type &x) {
                 modular_backend out;
                 BlueprintFieldType::modulus_params.adjust_regular(out, x.data.backend().base_data());
+                BLUEPRINT_RELEASE_ASSERT(out.size() != 0);
                 return out;
             }
 
@@ -176,6 +178,36 @@ namespace nil {
                 return sign;
             }
 
+            template<typename BlueprintFieldType>
+            bool FixedPointHelper<BlueprintFieldType>::split(const value_type &inp,
+                                                             uint16_t scale,
+                                                             uint64_t &pre,
+                                                             uint64_t &post) {
+                BLUEPRINT_RELEASE_ASSERT(scale <= 64);
+                auto tmp_ = inp;
+                bool sign = abs(tmp_);
+
+                auto tmp = field_to_backend(tmp_);
+                if (scale == 64) {
+                    post = tmp.limbs()[0];
+                    pre = tmp.size() > 1 ? tmp.limbs()[1] : 0;
+
+                } else {
+                    auto mask = ((1ULL << scale) - 1);
+                    post = tmp.limbs()[0] & mask;
+                    pre = (tmp.limbs()[0] >> scale);
+                    if (tmp.size() > 1) {
+                        pre |= (tmp.limbs()[1] << (64 - scale));
+                        BLUEPRINT_RELEASE_ASSERT((tmp.limbs()[1] >> scale) == 0);
+                    }
+                }
+                for (auto i = 2; i < tmp.size(); i++) {
+                    BLUEPRINT_RELEASE_ASSERT(tmp.limbs()[i] == 0);
+                }
+
+                return sign;
+            }
+
             // res.quotient = Round(val / div)
             // remainder required for proof
             template<typename BlueprintFieldType>
@@ -224,8 +256,14 @@ namespace nil {
                 bool sign_div = abs(div_abs);
                 modular_backend div_ = field_to_backend(div_abs);
                 modular_backend div_2_ = div_;
-                for (auto i = 0; i < div_2_.size(); i++) {
-                    div_2_.limbs()[i] >>= 1;
+                uint64_t carry = 0;
+                for (auto i = div_2_.size(); i > 0; i--) {
+                    auto tmp = carry;
+                    carry = div_2_.limbs()[i - 1] & 1;
+                    div_2_.limbs()[i - 1] >>= 1;
+                    if (tmp) {
+                        div_2_.limbs()[i - 1] |= 0x8000000000000000;
+                    }
                 }
                 auto div_2 = backend_to_field(div_2_);    // = floor (abs(div) / 2)
 
@@ -414,8 +452,27 @@ namespace nil {
                 auto exp_a = FixedPointTables<BlueprintFieldType, M1, M2>::get_exp_a();
                 auto exp_b = FixedPointTables<BlueprintFieldType, M1, M2>::get_exp_b();
 
+                uint64_t pre, post;
+                bool sign = helper::split(value, scale, pre, post);
+                // convert from s(a delta + b) to s a delta + b
+                if (sign && post != 0) {
+                    post = DELTA - post;
+                    pre += 1;
+                    BLUEPRINT_ASSERT(pre != 0);
+                }
+                int32_t table_half = exp_a.size() / 2;
+                if (pre > table_half) {
+                    pre = table_half;
+                }
+                int32_t input_a = sign ? table_half - (int32_t)pre : table_half + pre;
+                BLUEPRINT_RELEASE_ASSERT(input_a >= 0 && input_a < exp_a.size());
+                BLUEPRINT_RELEASE_ASSERT(post >= 0 && post < exp_b.size());
+                value_type res = exp_a[input_a] * exp_b[post];
+
                 // TODO implement
-                return FixedPoint(0, scale);
+                return FixedPoint(res,
+                                  FixedPointTables<BlueprintFieldType, M1, M2>::ExpAScale +
+                                      FixedPointTables<BlueprintFieldType, M1, M2>::ExpBScale);
             }
 
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>

@@ -567,7 +567,6 @@ FieldType generate_random_for_fixedpoint(uint8_t m1, uint8_t m2, RngType &rng) {
 
 template<typename FixedType, typename RngType>
 void test_components_on_random_data(RngType &rng) {
-    // We don't care about overflows so far, so we can use M1 and M2
     FixedType x(generate_random_for_fixedpoint<typename FixedType::value_type>(FixedType::M_1, FixedType::M_2, rng),
                 FixedType::SCALE);
     FixedType y(generate_random_for_fixedpoint<typename FixedType::value_type>(FixedType::M_1, FixedType::M_2, rng),
