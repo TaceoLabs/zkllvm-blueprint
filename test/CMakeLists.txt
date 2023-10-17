@@ -184,6 +184,7 @@ set(BASIC_COMPONENTS_TESTS_FILES
 # TACEO_TODO Added
 SET(FIXEDPOINT_TESTS_FILES
     "algebra/fixedpoint/plonk/basic_operations"
+    "algebra/fixedpoint/plonk/exp"
 )
 
 SET(ALGEBRA_TESTS_FILES
