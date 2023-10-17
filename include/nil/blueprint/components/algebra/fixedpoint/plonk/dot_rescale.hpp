@@ -169,7 +169,7 @@ namespace nil {
                 const plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams> &component,
                 std::size_t offset) {
                 auto pos = component.position(0, offset);
-                return var(component.W(pos.second), pos.first));
+                return var(component.W(pos.second), pos.first);
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
@@ -177,7 +177,7 @@ namespace nil {
                 get_copy_var(const plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams> &component,
                              std::size_t row_index, std::size_t offset) {
                 auto pos = component.position(row_index, offset);
-                return var(component.W(pos.second), static_cast<int>(pos.first)), false);
+                return var(component.W(pos.second), static_cast<int>(pos.first), false);
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
@@ -244,7 +244,7 @@ namespace nil {
                 // 2^16, hence q could be decomposed into 16-bit limbs
                 auto delta = component.get_delta();
 
-                nil::crypto3::math::expression dot;
+                nil::crypto3::math::expression<var> dot;
                 for (auto i = 0; i < component.dots; i++) {
                     dot += get_constraint_var(component, 1 + 2 * i) * get_constraint_var(component, 2 + 2 * i);
                 }
@@ -275,8 +275,8 @@ namespace nil {
                 const std::size_t j = start_row_index;
 
                 for (auto i = 0; i < component.dots; i++) {
-                    var compnent_x = get_copy_var(component, j, 1 + 2 * i);
-                    var compnent_y = get_copy_var(component, j, 2 + 2 * i);
+                    var component_x = get_copy_var(component, j, 1 + 2 * i);
+                    var component_y = get_copy_var(component, j, 2 + 2 * i);
                     bp.add_copy_constraint({instance_input.x[i], component_x});
                     bp.add_copy_constraint({component_y, instance_input.y[i]});
                 }

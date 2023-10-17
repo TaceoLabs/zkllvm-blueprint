@@ -185,6 +185,7 @@ set(BASIC_COMPONENTS_TESTS_FILES
 SET(FIXEDPOINT_TESTS_FILES
     "algebra/fixedpoint/plonk/basic_operations"
     "algebra/fixedpoint/plonk/exp"
+    "algebra/fixedpoint/plonk/dot_rescale"
 )
 
 SET(ALGEBRA_TESTS_FILES
