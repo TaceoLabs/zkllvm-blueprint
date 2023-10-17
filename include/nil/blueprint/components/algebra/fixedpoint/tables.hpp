@@ -35,6 +35,9 @@ namespace nil {
                 static const std::vector<value_type> &get_exp_a();
                 static const std::vector<value_type> &get_exp_b();
                 static const std::vector<value_type> &get_exp_c();
+
+                template<uint8_t M2>
+                static constexpr uint16_t get_exp_scale();
             };
 
             template<typename BlueprintFieldType>
@@ -92,7 +95,7 @@ namespace nil {
             std::vector<typename FixedPointTables<BlueprintFieldType>::value_type>
                 FixedPointTables<BlueprintFieldType>::fill_exp_c_table() {
                 std::vector<value_type> exp_c;
-                exp_c.reserve(ExpBLen);
+                exp_c.reserve(ExpCLen);
                 for (auto i = 0; i < ExpCLen; ++i) {
                     double val = std::exp((double)i / ((uint64_t)ExpBLen * ExpCLen));
                     val *= pow(2., ExpCScale);
@@ -101,6 +104,17 @@ namespace nil {
                     exp_c.push_back(field_val);
                 }
                 return exp_c;
+            }
+
+            template<typename BlueprintFieldType>
+            template<uint8_t M2>
+            constexpr uint16_t FixedPointTables<BlueprintFieldType>::get_exp_scale() {
+                static_assert(M2 > 0 && M2 < 3, "Only allow one or two post-comma linbs");
+                if (M2 == 1) {
+                    return ExpAScale + ExpBScale;
+                } else {
+                    return ExpAScale + ExpBScale + ExpCScale;
+                }
             }
 
         }    // namespace components

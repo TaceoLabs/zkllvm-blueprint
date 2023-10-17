@@ -38,9 +38,14 @@ namespace nil {
                 static modular_backend field_to_backend(const value_type &);
                 static value_type backend_to_field(const modular_backend &);
 
-                static bool abs(value_type &);    // Returns true if sign was changed
-                static bool decompose(const value_type &, std::vector<uint16_t> &);         // Returns sign
-                static bool split(const value_type &, uint16_t, uint64_t &, uint64_t &);    // Returns sign
+                // Returns true if sign was changed
+                static bool abs(value_type &);
+                // Returns sign
+                static bool decompose(const value_type &, std::vector<uint16_t> &);
+                // Returns sign, and in = s*(a*delta + b)
+                static bool split(const value_type &, uint16_t, uint64_t &, uint64_t &);
+                // Returns sign, and in = s*a*delta + b
+                static bool split_exp(const value_type &, uint16_t, uint64_t &, uint64_t &);
             };
 
             // FieldType is the representation of the proof system, whereas M1 is the number of pre-comma 16-bit limbs
@@ -205,6 +210,21 @@ namespace nil {
                     BLUEPRINT_RELEASE_ASSERT(tmp.limbs()[i] == 0);
                 }
 
+                return sign;
+            }
+
+            template<typename BlueprintFieldType>
+            bool FixedPointHelper<BlueprintFieldType>::split_exp(const value_type &inp,
+                                                                 uint16_t scale,
+                                                                 uint64_t &pre,
+                                                                 uint64_t &post) {
+                bool sign = split(inp, scale, pre, post);
+                // convert from s(a delta + b) to s a delta + b
+                if (sign && post != 0) {
+                    post = (1ULL << scale) - post;
+                    pre += 1;
+                    BLUEPRINT_RELEASE_ASSERT(pre != 0);
+                }
                 return sign;
             }
 
@@ -449,18 +469,15 @@ namespace nil {
 
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
             FixedPoint<BlueprintFieldType, M1, M2> FixedPoint<BlueprintFieldType, M1, M2>::exp() const {
+                BLUEPRINT_RELEASE_ASSERT(scale == SCALE);
                 auto exp_a = FixedPointTables<BlueprintFieldType>::get_exp_a();
                 auto exp_b = FixedPointTables<BlueprintFieldType>::get_exp_b();
 
-                uint64_t pre, post;
-                bool sign = helper::split(value, scale, pre, post);
-                // convert from s(a delta + b) to s a delta + b
-                if (sign && post != 0) {
-                    post = DELTA - post;
-                    pre += 1;
-                    BLUEPRINT_ASSERT(pre != 0);
-                }
-                int32_t table_half = exp_a.size() / 2;
+                uint64_t pre = 0;
+                uint64_t post = 0;
+                bool sign = helper::split_exp(value, scale, pre, post);
+
+                int32_t table_half = FixedPointTables<BlueprintFieldType>::ExpALen / 2;
                 if (pre > table_half) {
                     pre = table_half;
                 }
@@ -475,17 +492,12 @@ namespace nil {
                     BLUEPRINT_RELEASE_ASSERT(input_b >= 0 && input_b < exp_b.size());
                     BLUEPRINT_RELEASE_ASSERT(input_c >= 0 && input_c < exp_c.size());
                     value_type res = exp_a[input_a] * exp_b[input_b] * exp_c[input_c];
-                    return FixedPoint(res,
-                                      FixedPointTables<BlueprintFieldType>::ExpAScale +
-                                          FixedPointTables<BlueprintFieldType>::ExpBScale +
-                                          FixedPointTables<BlueprintFieldType>::ExpCScale);
+                    return FixedPoint(res, FixedPointTables<BlueprintFieldType>::template get_exp_scale<M2>());
                 } else {
                     BLUEPRINT_RELEASE_ASSERT(input_a >= 0 && input_a < exp_a.size());
                     BLUEPRINT_RELEASE_ASSERT(post >= 0 && post < exp_b.size());
                     value_type res = exp_a[input_a] * exp_b[post];
-                    return FixedPoint(res,
-                                      FixedPointTables<BlueprintFieldType>::ExpAScale +
-                                          FixedPointTables<BlueprintFieldType>::ExpBScale);
+                    return FixedPoint(res, FixedPointTables<BlueprintFieldType>::template get_exp_scale<M2>());
                 }
             }
 

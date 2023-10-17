@@ -45,7 +45,7 @@ namespace nil {
                     return m2;
                 }
 
-                uint64_t get_scale() const {
+                uint64_t get_delta() const {
                     return 1ULL << (16 * m2);
                 }
 
@@ -148,7 +148,7 @@ namespace nil {
                     var_value(assignment, instance_input.x) * var_value(assignment, instance_input.y);
 
                 DivMod<BlueprintFieldType> res =
-                    FixedPointHelper<BlueprintFieldType>::round_div_mod(tmp, component.get_scale());
+                    FixedPointHelper<BlueprintFieldType>::round_div_mod(tmp, component.get_delta());
 
                 // | x | y | z | q0 | ... |
                 assignment.witness(component.W(0), j) = var_value(assignment, instance_input.x);
@@ -184,7 +184,7 @@ namespace nil {
                 using var = typename plonk_fixedpoint_mul_rescale<BlueprintFieldType, ArithmetizationParams>::var;
                 // 2xy + \Delta = 2z\Delta + 2q and proving 0 <= q < \Delta via a lookup table. Delta is a multiple of
                 // 2^16, hence q could be decomposed into 16-bit limbs
-                auto delta = component.get_scale();
+                auto delta = component.get_delta();
 
                 auto q = nil::crypto3::math::expression(var(component.W(3), 0));
                 for (auto i = 1; i < component.get_m2(); i++) {

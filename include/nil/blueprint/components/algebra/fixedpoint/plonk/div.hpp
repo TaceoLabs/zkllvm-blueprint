@@ -53,7 +53,7 @@ namespace nil {
                     return m2;
                 }
 
-                uint64_t get_scale() const {
+                uint64_t get_delta() const {
                     return 1ULL << (16 * m2);
                 }
 
@@ -152,7 +152,7 @@ namespace nil {
                 auto m = component.get_m();
 
                 typename BlueprintFieldType::value_type tmp =
-                    var_value(assignment, instance_input.x) * component.get_scale();
+                    var_value(assignment, instance_input.x) * component.get_delta();
 
                 auto y = var_value(assignment, instance_input.y);
 
@@ -210,7 +210,7 @@ namespace nil {
                 using var = typename plonk_fixedpoint_div<BlueprintFieldType, ArithmetizationParams>::var;
                 // 2x\Delta_z + |y| - c = 2zy + 2q and proving 0 <= q < |y|
                 auto m = component.get_m();
-                auto delta = component.get_scale();
+                auto delta = component.get_delta();
 
                 auto y = nil::crypto3::math::expression(var(component.W(5), 0));
                 auto q = nil::crypto3::math::expression(var(component.W(5 + m), 0));

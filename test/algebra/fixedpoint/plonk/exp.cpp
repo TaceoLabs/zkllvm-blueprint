@@ -34,66 +34,63 @@ bool doubleEquals(double a, double b, double epsilon) {
 
 template<typename FixedType>
 void test_fixedpoint_exp(FixedType input) {
-    // using BlueprintFieldType = typename FixedType::field_type;
-    // constexpr std::size_t WitnessColumns = 3 + FixedType::M_2;    // TODO update
-    // constexpr std::size_t PublicInputColumns = 1;
-    // constexpr std::size_t ConstantColumns = 0;
-    // constexpr std::size_t SelectorColumns = 1;
-    // using ArithmetizationParams = crypto3::zk::snark::
-    //     plonk_arithmetization_params<WitnessColumns, PublicInputColumns, ConstantColumns, SelectorColumns>;
-    // using ArithmetizationType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType,
-    // ArithmetizationParams>; using hash_type = nil::crypto3::hashes::keccak_1600<256>; constexpr std::size_t Lambda =
-    // 40; using AssignmentType = nil::blueprint::assignment<ArithmetizationType>;
+    using BlueprintFieldType = typename FixedType::field_type;
+    constexpr std::size_t WitnessColumns = 4 + 2 * FixedType::M_2;
+    constexpr std::size_t PublicInputColumns = 1;
+    constexpr std::size_t ConstantColumns = 0;
+    constexpr std::size_t SelectorColumns = 1;
+    using ArithmetizationParams = crypto3::zk::snark::
+        plonk_arithmetization_params<WitnessColumns, PublicInputColumns, ConstantColumns, SelectorColumns>;
+    using ArithmetizationType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>;
+    using hash_type = nil::crypto3::hashes::keccak_1600<256>;
+    constexpr std::size_t Lambda = 40;
+    using AssignmentType = nil::blueprint::assignment<ArithmetizationType>;
 
-    // using var = crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>;
+    using var = crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>;
 
-    // using component_type = blueprint::components::
-    //     exp<ArithmetizationType, BlueprintFieldType, nil::blueprint::basic_non_native_policy<BlueprintFieldType>>;
+    using component_type = blueprint::components::
+        fix_exp<ArithmetizationType, BlueprintFieldType, nil::blueprint::basic_non_native_policy<BlueprintFieldType>>;
 
-    // typename component_type::input_type instance_input = {var(0, 0, false, var::column_type::public_input)};
-
-    std::cout << "input_f : " << input.to_double() << "\n";
-    std::cout << "input   : " << input.get_value().data << "\n";
+    typename component_type::input_type instance_input = {var(0, 0, false, var::column_type::public_input)};
 
     double expected_res_f = exp(input.to_double());
     auto expected_res = input.exp();
-    std::cout << "expected: " << expected_res_f << "\n";
-    std::cout << "field   : " << expected_res.get_value().data << "\n";
-    std::cout << "field_d : " << expected_res.to_double() << "\n\n";
 
-    //     auto result_check = [&expected_res, &expected_res_f, input](AssignmentType &assignment,
-    //                                                                 typename component_type::result_type &real_res) {
-    //         auto real_res_ = FixedType(var_value(assignment, real_res.output), FixedType::SCALE);
-    //         double real_res_f = real_res_.to_double();
-    // #ifdef BLUEPRINT_PLONK_PROFILING_ENABLED
-    //         std::cout << "fixed_point exp test: "
-    //                   << "\n";
-    //         std::cout << "input_f : " << input.to_double() << "\n";
-    //         std::cout << "input   : " << input.get_value().data << "\n";
-    //         std::cout << "expected: " << expected_res_f << "\n";
-    //         std::cout << "real    : " << real_res_f << "\n\n";
-    // #endif
-    //         if (!doubleEquals(expected_res_f, real_res_f, EPSILON) || expected_res != real_res_) {
-    //             std::cout << "expected        : " << expected_res.get_value().data << "\n";
-    //             std::cout << "real            : " << real_res_.get_value().data << "\n\n";
-    //             std::cout << "expected (float): " << expected_res_f << "\n";
-    //             std::cout << "real (float)    : " << real_res_f << "\n\n";
-    //             abort();
-    //         }
-    //     };
+    auto result_check = [&expected_res, &expected_res_f, input](AssignmentType &assignment,
+                                                                typename component_type::result_type &real_res) {
+        auto real_res_ = FixedType(
+            var_value(assignment, real_res.output),
+            nil::blueprint::components::FixedPointTables<BlueprintFieldType>::template get_exp_scale<FixedType::M_2>());
+        double real_res_f = real_res_.to_double();
+#ifdef BLUEPRINT_PLONK_PROFILING_ENABLED
+        std::cout << "fixed_point exp test: "
+                  << "\n";
+        std::cout << "input_f : " << input.to_double() << "\n";
+        std::cout << "input   : " << input.get_value().data << "\n";
+        std::cout << "expected: " << expected_res_f << "\n";
+        std::cout << "real    : " << real_res_f << "\n\n";
+#endif
+        if (!doubleEquals(expected_res_f, real_res_f, EPSILON) || expected_res != real_res_) {
+            std::cout << "expected        : " << expected_res.get_value().data << "\n";
+            std::cout << "real            : " << real_res_.get_value().data << "\n\n";
+            std::cout << "expected (float): " << expected_res_f << "\n";
+            std::cout << "real (float)    : " << real_res_f << "\n\n";
+            abort();
+        }
+    };
 
-    //     std::vector<std::uint32_t> witness_list;
-    //     witness_list.reserve(WitnessColumns);
-    //     for (auto i = 0; i < WitnessColumns; i++) {
-    //         witness_list.push_back(i);
-    //     }
-    //     // Is done by the manifest in a real circuit
-    //     component_type component_instance(
-    //         witness_list, std::array<std::uint32_t, 0>(), std::array<std::uint32_t, 0>(), FixedType::M_2);
+    std::vector<std::uint32_t> witness_list;
+    witness_list.reserve(WitnessColumns);
+    for (auto i = 0; i < WitnessColumns; i++) {
+        witness_list.push_back(i);
+    }
+    // Is done by the manifest in a real circuit
+    component_type component_instance(
+        witness_list, std::array<std::uint32_t, 0>(), std::array<std::uint32_t, 0>(), FixedType::M_2);
 
-    //     std::vector<typename BlueprintFieldType::value_type> public_input = {input1.get_value(), input2.get_value()};
-    //     nil::crypto3::test_component<component_type, BlueprintFieldType, ArithmetizationParams, hash_type, Lambda>(
-    //         component_instance, public_input, result_check, instance_input);
+    std::vector<typename BlueprintFieldType::value_type> public_input = {input.get_value()};
+    nil::crypto3::test_component<component_type, BlueprintFieldType, ArithmetizationParams, hash_type, Lambda>(
+        component_instance, public_input, result_check, instance_input);
 }
 
 template<typename FieldType, typename RngType>
@@ -151,16 +148,16 @@ BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_exp_test_vesta) {
     field_operations_test<FixedPoint32_32<field_type>, random_tests_amount>();
 }
 
-// BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_exp_test_pallas) {
-//     using field_type = typename crypto3::algebra::curves::pallas::base_field_type;
-// field_operations_test<FixedPoint16_16<field_type>, random_tests_amount>();
-// field_operations_test<FixedPoint32_32<field_type>, random_tests_amount>();
-// }
+BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_exp_test_pallas) {
+    using field_type = typename crypto3::algebra::curves::pallas::base_field_type;
+    field_operations_test<FixedPoint16_16<field_type>, random_tests_amount>();
+    field_operations_test<FixedPoint32_32<field_type>, random_tests_amount>();
+}
 
-// BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_exp_test_bls12) {
-// using field_type = typename crypto3::algebra::fields::bls12_fr<381>;
-// field_operations_test<FixedPoint16_16<field_type>, random_tests_amount>();
-// field_operations_test<FixedPoint32_32<field_type>, random_tests_amount>();
-// }
+BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_exp_test_bls12) {
+    using field_type = typename crypto3::algebra::fields::bls12_fr<381>;
+    field_operations_test<FixedPoint16_16<field_type>, random_tests_amount>();
+    field_operations_test<FixedPoint32_32<field_type>, random_tests_amount>();
+}
 
 BOOST_AUTO_TEST_SUITE_END()
