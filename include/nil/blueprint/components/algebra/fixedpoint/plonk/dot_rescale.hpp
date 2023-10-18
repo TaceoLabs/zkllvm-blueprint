@@ -15,7 +15,6 @@ namespace nil {
             template<typename ArithmetizationType, typename FieldType, typename NonNativePolicyType>
             class fix_dot_rescale;
 
-            // TODO update const/public input
             template<typename BlueprintFieldType, typename ArithmetizationParams, typename NonNativePolicyType>
             class fix_dot_rescale<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
@@ -78,7 +77,6 @@ namespace nil {
                     return {row, column};
                 }
 
-                // TODO update const/public input
                 using component_type = plonk_component<BlueprintFieldType, ArithmetizationParams, 0, 0>;
 
                 using var = typename component_type::var;
@@ -94,22 +92,22 @@ namespace nil {
                     }
 
                     std::uint32_t gates_amount() const override {
-                        return fix_dot_rescale::gates_amount;
+                        return 2;
                     }
                 };
 
                 static gate_manifest get_gate_manifest(std::size_t witness_amount, std::size_t lookup_column_amount,
                                                        uint16_t dots, uint8_t m2) {
-                    static gate_manifest manifest = gate_manifest(gate_manifest_type(dots, m2));
+                    static gate_manifest manifest =
+                        gate_manifest(gate_manifest_type(dots, m2))
+                            .merge_with(rescale_component::get_gate_manifest(witness_amount, lookup_column_amount));
                     return manifest;
                 }
 
-                // TACEO_TODO Update to lookup tables
                 static manifest_type get_manifest(uint32_t dots, uint8_t m2) {
                     static manifest_type manifest =
-                        manifest_type(std::shared_ptr<manifest_param>(
-                                          new manifest_range_param(2 + M(m2) + 2 * dots + 1, 2 + M(m2) + 3 * dots)),
-                                      false);
+                        manifest_type(std::shared_ptr<manifest_param>(new manifest_single_value_param(3)), false)
+                            .merge_with(rescale_component::get_manifest(m2));
                     return manifest;
                 }
 
@@ -121,20 +119,21 @@ namespace nil {
                     if (dots % dots_per_row != 0) {
                         rows++;
                     }
-                    rows++;    // rescale row
+                    rows += rescale_component::get_rows_amount(witness_amount, lookup_column_amount);
                     return rows;
                 }
 
-                constexpr static const std::size_t gates_amount = 3;    // including rescale gate
                 const std::size_t rows_amount = get_rows_amount(this->witness_amount(), 0, dots, m2);
 
                 struct input_type {
                     std::vector<var> x;
                     std::vector<var> y;
+                    var zero = var(0, 0, false);    // for asserting zero for unused constraints
 
                     std::vector<var> all_vars() const {
                         auto z = x;
                         z.insert(end(z), begin(y), end(y));
+                        z.push_back(zero);
                         return z;
                     }
                 };
@@ -214,9 +213,9 @@ namespace nil {
                     for (auto i = 0; i < dots_per_row; i++) {
                         auto dot = dots_per_row * row + i;
                         auto x = dot < dots ? var_value(assignment, instance_input.x[dot]) :
-                                              typename BlueprintFieldType::value_type(0);
+                                              BlueprintFieldType::value_type::zero();
                         auto y = dot < dots ? var_value(assignment, instance_input.y[dot]) :
-                                              typename BlueprintFieldType::value_type(0);
+                                              BlueprintFieldType::value_type::zero();
                         auto mul = x * y;
                         sum += mul;
 
@@ -230,7 +229,7 @@ namespace nil {
                 using var = typename plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams>::var;
                 typename plonk_fixedpoint_dot_rescale<
                     BlueprintFieldType, ArithmetizationParams>::rescale_component::input_type rescale_input;
-                rescale_input.x = var(component.W(0), start_row_index + rows - 1, false, var::column_type::witness);
+                rescale_input.x = var(component.W(0), start_row_index + rows - 2, false, var::column_type::witness);
 
                 auto rescale_comp = component.get_rescale_component();
                 return generate_assignments(rescale_comp, assignment, rescale_input, start_row_index + rows - 1);
@@ -280,7 +279,6 @@ namespace nil {
                 return bp.add_gate(constraint_1);
             }
 
-            // TODO update for all the zeros!!!
             template<typename BlueprintFieldType, typename ArithmetizationParams>
             void generate_copy_constraints(
                 const plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams> &component,
@@ -294,12 +292,27 @@ namespace nil {
                 using var = typename plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams>::var;
 
                 const std::size_t j = start_row_index;
+                auto rows = component.rows_amount;
+                auto dots = component.get_dots();
+                auto dots_per_row = component.get_dots_per_row();
 
-                for (auto i = 0; i < component.get_dots(); i++) {
+                for (auto i = 0; i < dots; i++) {
                     var component_x = get_copy_var(component, j, i, true);
                     var component_y = get_copy_var(component, j, i, false);
                     bp.add_copy_constraint({instance_input.x[i], component_x});
                     bp.add_copy_constraint({component_y, instance_input.y[i]});
+                }
+
+                // Proof that unused dot-slots are constrained to zero
+                auto rem = dots % dots_per_row;
+                if (rem != 0) {
+                    auto row = j + rows - 2;
+                    for (auto i = rem; i < dots_per_row; i++) {
+                        var component_x = get_copy_var(component, row, i, true);
+                        var component_y = get_copy_var(component, row, i, false);
+                        bp.add_copy_constraint({instance_input.zero, component_x});
+                        bp.add_copy_constraint({instance_input.zero, component_y});
+                    }
                 }
             }
 
@@ -329,7 +342,7 @@ namespace nil {
                 using var = typename plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams>::var;
                 typename plonk_fixedpoint_dot_rescale<
                     BlueprintFieldType, ArithmetizationParams>::rescale_component::input_type rescale_input;
-                rescale_input.x = var(component.W(0), start_row_index + rows - 1, false, var::column_type::witness);
+                rescale_input.x = var(component.W(0), start_row_index + rows - 2, false, var::column_type::witness);
 
                 auto rescale_comp = component.get_rescale_component();
                 return generate_circuit(rescale_comp, bp, assignment, rescale_input, start_row_index + rows - 1);

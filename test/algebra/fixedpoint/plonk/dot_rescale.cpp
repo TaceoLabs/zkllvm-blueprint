@@ -37,11 +37,10 @@ void test_fixedpoint_dot(std::vector<FixedType> &input1, std::vector<FixedType> 
     auto dots = input1.size();
     BLUEPRINT_RELEASE_ASSERT(dots == input2.size());
     using BlueprintFieldType = typename FixedType::field_type;
-    // TODO update this to use the correct number of columns
     constexpr std::size_t WitnessColumns = 8;
     constexpr std::size_t PublicInputColumns = 1;
     constexpr std::size_t ConstantColumns = 0;
-    constexpr std::size_t SelectorColumns = 1;
+    constexpr std::size_t SelectorColumns = 3;
     using ArithmetizationParams = crypto3::zk::snark::
         plonk_arithmetization_params<WitnessColumns, PublicInputColumns, ConstantColumns, SelectorColumns>;
     using ArithmetizationType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>;
@@ -58,18 +57,20 @@ void test_fixedpoint_dot(std::vector<FixedType> &input1, std::vector<FixedType> 
 
     std::vector<var> instance_input_x;
     std::vector<var> instance_input_y;
-    std::vector<typename BlueprintFieldType::value_type> public_input(2 * dots, BlueprintFieldType::value_type::zero());
+    std::vector<typename BlueprintFieldType::value_type> public_input(2 * dots + 1,
+                                                                      BlueprintFieldType::value_type::zero());
     instance_input_x.reserve(dots);
     instance_input_y.reserve(dots);
 
+    auto zero = var(0, 0, false, var::column_type::public_input);
     for (auto i = 0; i < dots; i++) {
-        instance_input_x.push_back(var(0, i, false, var::column_type::public_input));
-        instance_input_y.push_back(var(0, i + dots, false, var::column_type::public_input));
-        public_input[i] = input1[i].get_value();
-        public_input[i + dots] = input2[i].get_value();
+        instance_input_x.push_back(var(0, i + 1, false, var::column_type::public_input));
+        instance_input_y.push_back(var(0, i + dots + 1, false, var::column_type::public_input));
+        public_input[i + 1] = input1[i].get_value();
+        public_input[i + dots + 1] = input2[i].get_value();
     }
 
-    typename component_type::input_type instance_input = {instance_input_x, instance_input_y};
+    typename component_type::input_type instance_input = {instance_input_x, instance_input_y, zero};
 
     double expected_res_f = 0.;
     for (auto i = 0; i < input1.size(); i++) {

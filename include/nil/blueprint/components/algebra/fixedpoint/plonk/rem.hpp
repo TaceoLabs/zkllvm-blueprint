@@ -171,18 +171,18 @@ namespace nil {
                 bool sign_y_ = FixedPointHelper<BlueprintFieldType>::decompose(y_abs, decomp_y);
                 BLUEPRINT_RELEASE_ASSERT(!sign_y_);
                 if (sign_y) {
-                    assignment.witness(component.W(3), j) = -typename BlueprintFieldType::value_type(1);
+                    assignment.witness(component.W(3), j) = -BlueprintFieldType::value_type::one();
 
                 } else {
-                    assignment.witness(component.W(3), j) = typename BlueprintFieldType::value_type(1);
+                    assignment.witness(component.W(3), j) =  BlueprintFieldType::value_type::one();
                 }
 
                 bool sign_q = FixedPointHelper<BlueprintFieldType>::decompose(res.quotient, decomp_q);
                 if (sign_q) {
-                    assignment.witness(component.W(4), j) = -typename BlueprintFieldType::value_type(1);
+                    assignment.witness(component.W(4), j) = -BlueprintFieldType::value_type::one();
 
                 } else {
-                    assignment.witness(component.W(4), j) = typename BlueprintFieldType::value_type(1);
+                    assignment.witness(component.W(4), j) =  BlueprintFieldType::value_type::one();
                 }
 
                 auto z_abs = res.remainder;

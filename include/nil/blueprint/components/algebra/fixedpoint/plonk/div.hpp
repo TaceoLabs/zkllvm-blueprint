@@ -169,10 +169,10 @@ namespace nil {
 
                 bool sign = FixedPointHelper<BlueprintFieldType>::abs(y);
                 if (sign) {
-                    assignment.witness(component.W(4), j) = -typename BlueprintFieldType::value_type(1);
+                    assignment.witness(component.W(4), j) = -BlueprintFieldType::value_type::one();
 
                 } else {
-                    assignment.witness(component.W(4), j) = typename BlueprintFieldType::value_type(1);
+                    assignment.witness(component.W(4), j) =  BlueprintFieldType::value_type::one();
                 }
 
                 sign = FixedPointHelper<BlueprintFieldType>::decompose(y, decomp_y);

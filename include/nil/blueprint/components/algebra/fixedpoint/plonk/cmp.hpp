@@ -175,15 +175,15 @@ namespace nil {
                     typename BlueprintFieldType::value_type((uint64_t)(!eq && !sign));
 
                 if (sign) {
-                    assignment.witness(component.W(5), j) = -typename BlueprintFieldType::value_type(1);
+                    assignment.witness(component.W(5), j) = -BlueprintFieldType::value_type::one();
 
                 } else {
-                    assignment.witness(component.W(5), j) = typename BlueprintFieldType::value_type(1);
+                    assignment.witness(component.W(5), j) = BlueprintFieldType::value_type::one();
                 }
 
                 if (eq) {
                     assignment.witness(component.W(6), j) =
-                        typename BlueprintFieldType::value_type(0);    // Does not matter what to put here
+                        BlueprintFieldType::value_type::zero();    // Does not matter what to put here
                 } else {
                     assignment.witness(component.W(6), j) = diff.inversed();
                 }
