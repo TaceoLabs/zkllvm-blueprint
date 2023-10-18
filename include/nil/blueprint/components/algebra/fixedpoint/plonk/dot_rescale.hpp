@@ -104,9 +104,10 @@ namespace nil {
                     return manifest;
                 }
 
+                // Hardcoded to max 15 for now
                 static manifest_type get_manifest(uint32_t dots, uint8_t m2) {
                     static manifest_type manifest =
-                        manifest_type(std::shared_ptr<manifest_param>(new manifest_single_value_param(3)), false)
+                        manifest_type(std::shared_ptr<manifest_param>(new manifest_range_param(3, 15)), false)
                             .merge_with(rescale_component::get_manifest(m2));
                     return manifest;
                 }
