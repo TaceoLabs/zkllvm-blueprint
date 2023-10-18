@@ -276,7 +276,7 @@ void test_fixedpoint_mul_rescale(FixedType input1, FixedType input2) {
 template<typename FixedType>
 void test_fixedpoint_div(FixedType input1, FixedType input2) {
     using BlueprintFieldType = typename FixedType::field_type;
-    constexpr std::size_t WitnessColumns = 5 + 3 * (FixedType::M_1 + FixedType::M_2);
+    constexpr std::size_t WitnessColumns = 15;
     constexpr std::size_t PublicInputColumns = 1;
     constexpr std::size_t ConstantColumns = 0;
     constexpr std::size_t SelectorColumns = 1;
@@ -336,7 +336,7 @@ void test_fixedpoint_div(FixedType input1, FixedType input2) {
 template<typename FixedType>
 void test_fixedpoint_mod(FixedType input1, FixedType input2) {
     using BlueprintFieldType = typename FixedType::field_type;
-    constexpr std::size_t WitnessColumns = 5 + 4 * (FixedType::M_1 + FixedType::M_2);
+    constexpr std::size_t WitnessColumns = 15;
     constexpr std::size_t PublicInputColumns = 1;
     constexpr std::size_t ConstantColumns = 0;
     constexpr std::size_t SelectorColumns = 1;
