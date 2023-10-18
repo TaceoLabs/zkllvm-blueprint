@@ -98,6 +98,8 @@ namespace nil {
                 FixedPoint operator%(const FixedPoint &other) const;
                 FixedPoint operator-() const;
 
+                static FixedPoint dot(const std::vector<FixedPoint> &, const std::vector<FixedPoint> &);
+
                 double to_double() const;
                 value_type get_value() const {
                     return value;
@@ -504,6 +506,27 @@ namespace nil {
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
             FixedPoint<BlueprintFieldType, M1, M2> FixedPoint<BlueprintFieldType, M1, M2>::operator-() const {
                 return FixedPoint(-value, scale);
+            }
+
+            template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
+            FixedPoint<BlueprintFieldType, M1, M2>
+                FixedPoint<BlueprintFieldType, M1, M2>::dot(const std::vector<FixedPoint> &a,
+                                                            const std::vector<FixedPoint> &b) {
+                auto dots = a.size();
+                BLUEPRINT_RELEASE_ASSERT(dots == b.size());
+                if (dots == 0) {
+                    return FixedPoint(0, SCALE);
+                }
+
+                value_type sum = 0;
+                auto scale = a[0].scale;
+                for (auto i = 0; i < dots; i++) {
+                    BLUEPRINT_RELEASE_ASSERT(a[i].scale == scale);
+                    BLUEPRINT_RELEASE_ASSERT(b[i].scale == scale);
+                    sum += a[i].value * b[i].value;
+                }
+                auto divmod = helper::round_div_mod(sum, 1ULL << scale);
+                return FixedPoint(divmod.quotient, scale);
             }
 
         }    // namespace components
