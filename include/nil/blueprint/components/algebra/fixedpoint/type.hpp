@@ -98,6 +98,7 @@ namespace nil {
                 FixedPoint operator%(const FixedPoint &other) const;
                 FixedPoint operator-() const;
 
+                void rescale();
                 static FixedPoint dot(const std::vector<FixedPoint> &, const std::vector<FixedPoint> &);
 
                 double to_double() const;
@@ -527,6 +528,14 @@ namespace nil {
                 }
                 auto divmod = helper::round_div_mod(sum, 1ULL << scale);
                 return FixedPoint(divmod.quotient, scale);
+            }
+
+            template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
+            void FixedPoint<BlueprintFieldType, M1, M2>::rescale() {
+                BLUEPRINT_RELEASE_ASSERT(scale == 2 * SCALE);
+                auto divmod = helper::round_div_mod(value, DELTA);
+                value = divmod.quotient;
+                scale = SCALE;
             }
 
         }    // namespace components

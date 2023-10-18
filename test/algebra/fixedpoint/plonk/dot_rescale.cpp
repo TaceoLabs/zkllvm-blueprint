@@ -33,7 +33,7 @@ bool doubleEquals(double a, double b, double epsilon) {
 }
 
 template<typename FixedType>
-void test_dot(std::vector<FixedType> &input1, std::vector<FixedType> &input2) {
+void test_fixedpoint_dot(std::vector<FixedType> &input1, std::vector<FixedType> &input2) {
     BLUEPRINT_RELEASE_ASSERT(input1.size() == input2.size());
     using BlueprintFieldType = typename FixedType::field_type;
     constexpr std::size_t WitnessColumns = 8;
@@ -139,7 +139,7 @@ void test_components_on_random_data(std::size_t dots, RngType &rng) {
             FixedType::SCALE));
     }
 
-    test_dot<FixedType>(x, y);
+    test_fixedpoint_dot<FixedType>(x, y);
 }
 
 template<typename FixedType>
@@ -154,7 +154,7 @@ void test_components(std::size_t dots) {
         y.push_back(FixedType((int64_t)i));
     }
 
-    test_dot<FixedType>(x, y);
+    test_fixedpoint_dot<FixedType>(x, y);
 }
 
 template<typename FixedType>
