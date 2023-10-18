@@ -1,5 +1,5 @@
-#ifndef CRYPTO3_BLUEPRINT_plonk_fixedpoint_dot_rescale_HPP
-#define CRYPTO3_BLUEPRINT_plonk_fixedpoint_dot_rescale_HPP
+#ifndef CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_DOT_RESCALE_HPP
+#define CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_DOT_RESCALE_HPP
 
 #include "nil/blueprint/components/algebra/fixedpoint/plonk/rescale.hpp"
 
@@ -164,17 +164,6 @@ namespace nil {
                                 BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
-            void assign_witness(
-                const plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams> &component,
-                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
-                    &assignment,
-                typename BlueprintFieldType::value_type value, std::size_t start_row_index, std::size_t dot_index,
-                bool is_x) {
-                auto pos = component.position(start_row_index, dot_index, is_x);
-                assignment.witness(component.W(pos.second), pos.first) = value;
-            }
-
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
             typename plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams>::var
                 get_copy_var(const plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams> &component,
                              std::size_t start_row_index, std::size_t dot_index, bool is_x) {
@@ -204,37 +193,33 @@ namespace nil {
                 // Last row:   | dotm | x1m | y1m | ... | xnm | ynm | with dotm = dot(n-1) + sum_i xmi * ymi
                 // Rescale row: | dotm | z | q0 | ...
 
-                // typename BlueprintFieldType::value_type sum = 0;
+                auto rows = component.rows_amount;
+                typename BlueprintFieldType::value_type sum = 0;
 
-                // for (auto i = 0; i < component.dots; i++) {
-                //     auto x = var_value(assignment, instance_input.x[i]);
-                //     auto y = var_value(assignment, instance_input.y[i]);
-                //     auto mul = x * y;
+                for (auto row = 0; row < rows - 1; row++) {
+                    for (auto i = 0; i < component.dots_per_row; i++) {
+                        auto dot = component.dots_per_row * row + i;
+                        auto x = dot < component.dots ? var_value(assignment, instance_input.x[dot]) :
+                                                        typename BlueprintFieldType::value_type(0);
+                        auto y = dot < component.dots ? var_value(assignment, instance_input.y[dot]) :
+                                                        typename BlueprintFieldType::value_type(0);
+                        auto mul = x * y;
+                        sum += mul;
 
-                //     assign_witness(component, assignment, x, j, 1 + 2 * i);
-                //     assign_witness(component, assignment, y, j, 2 + 2 * i);
+                        assignment.witness(component.W(2 * i + 1), j + row) = x;
+                        assignment.witness(component.W(2 * i + 2), j + row) = y;
+                    }
+                    assignment.witness(component.W(0), j + row) = sum;
+                }
 
-                //     sum += mul;
-                // }
-                // DivMod<BlueprintFieldType> res =
-                //     FixedPointHelper<BlueprintFieldType>::round_div_mod(sum, component.get_delta());
-                // assignment.witness(component.W(0), j) = res.quotient;
+                // Use rescale component
+                using var = typename plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams>::var;
+                typename plonk_fixedpoint_dot_rescale<
+                    BlueprintFieldType, ArithmetizationParams>::rescale_component::input_type rescale_input;
+                rescale_input.x = var(component.W(0), start_row_index + rows - 1, false, var::column_type::witness);
 
-                // if (component.get_m2() == 1) {
-                //     assign_witness(component, assignment, res.remainder, j, 1 + 2 * component.dots);
-                // } else {
-                //     std::vector<uint16_t> decomp;
-                //     bool sign = FixedPointHelper<BlueprintFieldType>::decompose(res.remainder, decomp);
-                //     BLUEPRINT_RELEASE_ASSERT(!sign);
-                //     // is ok because decomp is at least of size 4 and the biggest we have is 32.32
-                //     BLUEPRINT_RELEASE_ASSERT(decomp.size() >= component.get_m2());
-                //     for (auto i = 0; i < component.get_m2(); i++) {
-                //         assign_witness(component, assignment, decomp[i], j, 1 + 2 * component.dots + i);
-                //     }
-                // }
-
-                return typename plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams>::result_type(
-                    component, start_row_index);
+                auto rescale_comp = component.get_rescale_component();
+                return generate_assignments(rescale_comp, assignment, rescale_input, start_row_index + rows - 1);
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
@@ -340,4 +325,4 @@ namespace nil {
     }        // namespace blueprint
 }    // namespace nil
 
-#endif    // CRYPTO3_BLUEPRINT_plonk_fixedpoint_dot_rescale_HPP
+#endif    // CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_DOT_RESCALE_HPP
