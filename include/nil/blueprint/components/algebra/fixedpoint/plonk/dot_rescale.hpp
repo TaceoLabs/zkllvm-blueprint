@@ -40,14 +40,15 @@ namespace nil {
                     return m;
                 }
 
-                static rescale_component instantiate_rescale(uint8_t m2) {
+                rescale_component instantiate_rescale(uint8_t m2) {
                     std::vector<std::uint32_t> witness_list;
                     auto witness_columns = 2 + M(m2);
                     witness_list.reserve(witness_columns);
                     for (auto i = 0; i < witness_columns; i++) {
-                        witness_list.push_back(i);
+                        witness_list.push_back(this->W(i));
                     }
-                    return rescale_component(witness_list, m2);
+                    return rescale_component(witness_list, std::array<std::uint32_t, 0>(),
+                                             std::array<std::uint32_t, 0>(), m2);
                 }
 
             public:
@@ -55,8 +56,16 @@ namespace nil {
                     return m2;
                 }
 
-                rescale_component &get_rescale_component() const {
+                const rescale_component &get_rescale_component() const {
                     return rescale;
+                }
+
+                uint32_t get_dots() const {
+                    return dots;
+                }
+
+                uint32_t get_dots_per_row() const {
+                    return dots_per_row;
                 }
 
                 std::pair<std::size_t, std::size_t> dot_position(std::size_t start_row_index, std::size_t dot_index,
@@ -123,8 +132,10 @@ namespace nil {
                     std::vector<var> x;
                     std::vector<var> y;
 
-                    std::vector<std::vector<var>> all_vars() const {
-                        return {x, y};
+                    std::vector<var> all_vars() const {
+                        auto z = x;
+                        z.insert(end(z), begin(y), end(y));
+                        return z;
                     }
                 };
 
@@ -168,10 +179,10 @@ namespace nil {
                 get_copy_var(const plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams> &component,
                              std::size_t start_row_index, std::size_t dot_index, bool is_x) {
                 auto pos = component.dot_position(start_row_index, dot_index, is_x);
+                using var = typename plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams>::var;
                 return var(component.W(pos.second), static_cast<int>(pos.first), false);
             }
 
-            // TODO update
             template<typename BlueprintFieldType, typename ArithmetizationParams>
             typename plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams>::result_type
                 generate_assignments(
@@ -184,9 +195,6 @@ namespace nil {
 
                 const std::size_t j = start_row_index;
 
-                BLUEPRINT_RELEASE_ASSERT(instance_input.x.size() == component.dots);
-                BLUEPRINT_RELEASE_ASSERT(instance_input.y.size() == component.dots);
-
                 // First row:  | dot0 | x01 | y01 | ... | x0n | y0n | with dot0 = sum_i x0i * y0i
                 // Second row: | dot1 | x11 | y11 | ... | x1n | y1n | with dot1 = dot0 + sum_i x1i * y1i
                 // ...
@@ -194,15 +202,21 @@ namespace nil {
                 // Rescale row: | dotm | z | q0 | ...
 
                 auto rows = component.rows_amount;
+                auto dots = component.get_dots();
+                auto dots_per_row = component.get_dots_per_row();
+
+                BLUEPRINT_RELEASE_ASSERT(instance_input.x.size() == dots);
+                BLUEPRINT_RELEASE_ASSERT(instance_input.y.size() == dots);
+
                 typename BlueprintFieldType::value_type sum = 0;
 
                 for (auto row = 0; row < rows - 1; row++) {
-                    for (auto i = 0; i < component.dots_per_row; i++) {
-                        auto dot = component.dots_per_row * row + i;
-                        auto x = dot < component.dots ? var_value(assignment, instance_input.x[dot]) :
-                                                        typename BlueprintFieldType::value_type(0);
-                        auto y = dot < component.dots ? var_value(assignment, instance_input.y[dot]) :
-                                                        typename BlueprintFieldType::value_type(0);
+                    for (auto i = 0; i < dots_per_row; i++) {
+                        auto dot = dots_per_row * row + i;
+                        auto x = dot < dots ? var_value(assignment, instance_input.x[dot]) :
+                                              typename BlueprintFieldType::value_type(0);
+                        auto y = dot < dots ? var_value(assignment, instance_input.y[dot]) :
+                                              typename BlueprintFieldType::value_type(0);
                         auto mul = x * y;
                         sum += mul;
 
@@ -235,7 +249,7 @@ namespace nil {
                 // sum = sum_i x_i * y_i
 
                 nil::crypto3::math::expression<var> dot;
-                for (auto i = 0; i < component.dots_per_row; i++) {
+                for (auto i = 0; i < component.get_dots_per_row(); i++) {
                     dot += var(component.W(2 * i + 1), 0) * var(component.W(2 * i + 2), 0);
                 }
 
@@ -257,7 +271,7 @@ namespace nil {
                 // sum = prev_sum + sum_i x_i * y_i
 
                 nil::crypto3::math::expression<var> dot;
-                for (auto i = 0; i < component.dots_per_row; i++) {
+                for (auto i = 0; i < component.get_dots_per_row(); i++) {
                     dot += var(component.W(2 * i + 1), 0) * var(component.W(2 * i + 2), 0);
                 }
 
@@ -281,7 +295,7 @@ namespace nil {
 
                 const std::size_t j = start_row_index;
 
-                for (auto i = 0; i < component.dots; i++) {
+                for (auto i = 0; i < component.get_dots(); i++) {
                     var component_x = get_copy_var(component, j, i, true);
                     var component_y = get_copy_var(component, j, i, false);
                     bp.add_copy_constraint({instance_input.x[i], component_x});

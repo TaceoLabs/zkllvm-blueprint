@@ -34,7 +34,8 @@ bool doubleEquals(double a, double b, double epsilon) {
 
 template<typename FixedType>
 void test_fixedpoint_dot(std::vector<FixedType> &input1, std::vector<FixedType> &input2) {
-    BLUEPRINT_RELEASE_ASSERT(input1.size() == input2.size());
+    auto dots = input1.size();
+    BLUEPRINT_RELEASE_ASSERT(dots == input2.size());
     using BlueprintFieldType = typename FixedType::field_type;
     // TODO update this to use the correct number of columns
     constexpr std::size_t WitnessColumns = 8;
@@ -55,8 +56,20 @@ void test_fixedpoint_dot(std::vector<FixedType> &input1, std::vector<FixedType> 
                                                BlueprintFieldType,
                                                nil::blueprint::basic_non_native_policy<BlueprintFieldType>>;
 
-    // typename component_type::input_type instance_input = {var(0, 0, false, var::column_type::public_input),
-    //                                                       var(0, 1, false, var::column_type::public_input)};
+    std::vector<var> instance_input_x;
+    std::vector<var> instance_input_y;
+    std::vector<typename BlueprintFieldType::value_type> public_input(2 * dots, BlueprintFieldType::value_type::zero());
+    instance_input_x.reserve(dots);
+    instance_input_y.reserve(dots);
+
+    for (auto i = 0; i < dots; i++) {
+        instance_input_x.push_back(var(0, i, false, var::column_type::public_input));
+        instance_input_y.push_back(var(0, i + dots, false, var::column_type::public_input));
+        public_input[i] = input1[i].get_value();
+        public_input[i + dots] = input2[i].get_value();
+    }
+
+    typename component_type::input_type instance_input = {instance_input_x, instance_input_y};
 
     double expected_res_f = 0.;
     for (auto i = 0; i < input1.size(); i++) {
@@ -84,18 +97,17 @@ void test_fixedpoint_dot(std::vector<FixedType> &input1, std::vector<FixedType> 
         }
     };
 
-    // std::vector<std::uint32_t> witness_list;
-    // witness_list.reserve(WitnessColumns);
-    // for (auto i = 0; i < WitnessColumns; i++) {
-    //     witness_list.push_back(i);
-    // }
-    // // Is done by the manifest in a real circuit
-    // component_type component_instance(
-    //     witness_list, std::array<std::uint32_t, 0>(), std::array<std::uint32_t, 0>(), FixedType::M_2);
+    std::vector<std::uint32_t> witness_list;
+    witness_list.reserve(WitnessColumns);
+    for (auto i = 0; i < WitnessColumns; i++) {
+        witness_list.push_back(i);
+    }
+    // Is done by the manifest in a real circuit
+    component_type component_instance(
+        witness_list, std::array<std::uint32_t, 0>(), std::array<std::uint32_t, 0>(), dots, FixedType::M_2);
 
-    // std::vector<typename BlueprintFieldType::value_type> public_input = {input1.get_value(), input2.get_value()};
-    // nil::crypto3::test_component<component_type, BlueprintFieldType, ArithmetizationParams, hash_type, Lambda>(
-    //     component_instance, public_input, result_check, instance_input);
+    nil::crypto3::test_component<component_type, BlueprintFieldType, ArithmetizationParams, hash_type, Lambda>(
+        component_instance, public_input, result_check, instance_input);
 }
 
 template<typename FieldType, typename RngType>
