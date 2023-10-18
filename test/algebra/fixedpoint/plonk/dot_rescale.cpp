@@ -36,6 +36,7 @@ template<typename FixedType>
 void test_fixedpoint_dot(std::vector<FixedType> &input1, std::vector<FixedType> &input2) {
     BLUEPRINT_RELEASE_ASSERT(input1.size() == input2.size());
     using BlueprintFieldType = typename FixedType::field_type;
+    // TODO update this to use the correct number of columns
     constexpr std::size_t WitnessColumns = 8;
     constexpr std::size_t PublicInputColumns = 1;
     constexpr std::size_t ConstantColumns = 0;

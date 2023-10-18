@@ -1,15 +1,7 @@
 #ifndef CRYPTO3_BLUEPRINT_plonk_fixedpoint_dot_rescale_HPP
 #define CRYPTO3_BLUEPRINT_plonk_fixedpoint_dot_rescale_HPP
 
-#include <nil/crypto3/zk/snark/arithmetization/plonk/constraint_system.hpp>
-
-#include <nil/blueprint/blueprint/plonk/assignment.hpp>
-#include <nil/blueprint/blueprint/plonk/circuit.hpp>
-#include <nil/blueprint/component.hpp>
-#include <nil/blueprint/manifest.hpp>
-#include <nil/blueprint/basic_non_native_policy.hpp>
-
-#include "nil/blueprint/components/algebra/fixedpoint/type.hpp"
+#include "nil/blueprint/components/algebra/fixedpoint/plonk/rescale.hpp"
 
 namespace nil {
     namespace blueprint {
@@ -18,21 +10,28 @@ namespace nil {
             // Input: vec{x}, vec{y} as Fixedpoint numbers with \Delta_x = \Delta_y
             // Output: z = Rescale(sum_i x_i * y_i) with \Delta_z = \Delta_x = \Delta_y
 
-            // Works by proving z = round(sum/\Delta) via 2 sum + \Delta = 2z\Delta + 2q and proving 0 <= q < \Delta via
-            // a lookup table
+            // Works by proving a dot product in multiple rows, followed by a rescale gadget
 
             template<typename ArithmetizationType, typename FieldType, typename NonNativePolicyType>
             class fix_dot_rescale;
 
+            // TODO update const/public input
             template<typename BlueprintFieldType, typename ArithmetizationParams, typename NonNativePolicyType>
             class fix_dot_rescale<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                 BlueprintFieldType, NonNativePolicyType>
                 : public plonk_component<BlueprintFieldType, ArithmetizationParams, 0, 0> {
 
+            public:
+                using rescale_component =
+                    fix_rescale<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                                BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
+
             private:
                 uint32_t dots;
+                uint32_t dots_per_row;
                 uint8_t m2;    // Post-comma 16-bit limbs
+                rescale_component rescale;
 
                 static uint8_t M(uint8_t m) {
                     if (m == 0 || m > 2) {
@@ -41,22 +40,36 @@ namespace nil {
                     return m;
                 }
 
+                static rescale_component instantiate_rescale(uint8_t m2) {
+                    std::vector<std::uint32_t> witness_list;
+                    auto witness_columns = 2 + M(m2);
+                    witness_list.reserve(witness_columns);
+                    for (auto i = 0; i < witness_columns; i++) {
+                        witness_list.push_back(i);
+                    }
+                    return rescale_component(witness_list, m2);
+                }
+
             public:
                 uint8_t get_m2() const {
                     return m2;
                 }
 
-                uint64_t get_delta() const {
-                    return 1ULL << (16 * m2);
+                rescale_component &get_rescale_component() const {
+                    return rescale;
                 }
 
-                std::pair<std::size_t, std::size_t> position(std::size_t start_row_index,
-                                                             std::size_t column_index) const {
-                    std::size_t row = start_row_index + column_index / this->witness_amount();
-                    std::size_t column = column_index % this->witness_amount();
+                std::pair<std::size_t, std::size_t> dot_position(std::size_t start_row_index, std::size_t dot_index,
+                                                                 bool is_x) const {
+                    std::size_t row = start_row_index + dot_index / dots_per_row;
+                    std::size_t column = 1 + 2 * (dot_index % dots_per_row);
+                    if (!is_x) {
+                        column++;
+                    }
                     return {row, column};
                 }
 
+                // TODO update const/public input
                 using component_type = plonk_component<BlueprintFieldType, ArithmetizationParams, 0, 0>;
 
                 using var = typename component_type::var;
@@ -84,24 +97,26 @@ namespace nil {
 
                 // TACEO_TODO Update to lookup tables
                 static manifest_type get_manifest(uint32_t dots, uint8_t m2) {
-                    static manifest_type manifest = manifest_type(
-                        std::shared_ptr<manifest_param>(new manifest_single_value_param(1 + 2 * dots + M(m2))), false);
+                    static manifest_type manifest =
+                        manifest_type(std::shared_ptr<manifest_param>(
+                                          new manifest_range_param(2 + M(m2) + 2 * dots + 1, 2 + M(m2) + 3 * dots)),
+                                      false);
                     return manifest;
                 }
 
                 constexpr static std::size_t get_rows_amount(std::size_t witness_amount,
                                                              std::size_t lookup_column_amount, uint32_t dots,
                                                              uint8_t m2) {
-                    uint32_t witnesses = 1 + 2 * dots + M(m2);
-                    uint32_t div = witnesses / witness_amount;
-                    uint32_t mod = witnesses % witness_amount;
-                    if (mod != 0) {
-                        div++;
+                    uint32_t dots_per_row = (witness_amount - 1) / 2;    // -1 for sum
+                    uint32_t rows = dots / dots_per_row;
+                    if (dots % dots_per_row != 0) {
+                        rows++;
                     }
-                    return div;
+                    rows++;    // rescale row
+                    return rows;
                 }
 
-                constexpr static const std::size_t gates_amount = 1;
+                constexpr static const std::size_t gates_amount = 3;    // including rescale gate
                 const std::size_t rows_amount = get_rows_amount(this->witness_amount(), 0, dots, m2);
 
                 struct input_type {
@@ -113,31 +128,23 @@ namespace nil {
                     }
                 };
 
-                struct result_type {
-                    var output = var(0, 0, false);
-                    result_type(const fix_dot_rescale &component, std::uint32_t start_row_index) {
-                        output = var(component.W(0), start_row_index, false, var::column_type::witness);
-                    }
-
-                    result_type(const fix_dot_rescale &component, std::size_t start_row_index) {
-                        output = var(component.W(0), start_row_index, false, var::column_type::witness);
-                    }
-
-                    std::vector<var> all_vars() const {
-                        return {output};
-                    }
-                };
+                using result_type = typename rescale_component::result_type;
 
                 template<typename ContainerType>
                 explicit fix_dot_rescale(ContainerType witness, uint32_t dots, uint8_t m2) :
-                    component_type(witness, {}, {}, get_manifest(dots, m2)), dots(dots), m2(M(m2)) {};
+                    component_type(witness, {}, {}, get_manifest(dots, m2)), dots(dots), m2(M(m2)),
+                    rescale(instantiate_rescale(m2)) {
+                    dots_per_row = (this->witness_amount() - 1) / 2;
+                };
 
                 template<typename WitnessContainerType, typename ConstantContainerType,
                          typename PublicInputContainerType>
                 fix_dot_rescale(WitnessContainerType witness, ConstantContainerType constant,
                                 PublicInputContainerType public_input, uint32_t dots, uint8_t m2) :
                     component_type(witness, constant, public_input, get_manifest(dots, m2)),
-                    dots(dots), m2(M(m2)) {};
+                    dots(dots), m2(M(m2)), rescale(instantiate_rescale(m2)) {
+                    dots_per_row = (this->witness_amount() - 1) / 2;
+                };
 
                 fix_dot_rescale(
                     std::initializer_list<typename component_type::witness_container_type::value_type> witnesses,
@@ -146,7 +153,9 @@ namespace nil {
                         public_inputs,
                     uint32_t dots, uint8_t m2) :
                     component_type(witnesses, constants, public_inputs, get_manifest(dots, m2)),
-                    dots(dots), m2(M(m2)) {};
+                    dots(dots), m2(M(m2)), rescale(instantiate_rescale(m2)) {
+                    dots_per_row = (this->witness_amount() - 1) / 2;
+                };
             };
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
@@ -159,27 +168,21 @@ namespace nil {
                 const plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams> &component,
                 assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                     &assignment,
-                typename BlueprintFieldType::value_type value, std::size_t row_index, std::size_t offset) {
-                auto pos = component.position(row_index, offset);
+                typename BlueprintFieldType::value_type value, std::size_t start_row_index, std::size_t dot_index,
+                bool is_x) {
+                auto pos = component.position(start_row_index, dot_index, is_x);
                 assignment.witness(component.W(pos.second), pos.first) = value;
-            }
-
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
-            typename plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams>::var get_constraint_var(
-                const plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams> &component,
-                std::size_t offset) {
-                auto pos = component.position(0, offset);
-                return var(component.W(pos.second), pos.first);
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
             typename plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams>::var
                 get_copy_var(const plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams> &component,
-                             std::size_t row_index, std::size_t offset) {
-                auto pos = component.position(row_index, offset);
+                             std::size_t start_row_index, std::size_t dot_index, bool is_x) {
+                auto pos = component.dot_position(start_row_index, dot_index, is_x);
                 return var(component.W(pos.second), static_cast<int>(pos.first), false);
             }
 
+            // TODO update
             template<typename BlueprintFieldType, typename ArithmetizationParams>
             typename plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams>::result_type
                 generate_assignments(
@@ -195,43 +198,47 @@ namespace nil {
                 BLUEPRINT_RELEASE_ASSERT(instance_input.x.size() == component.dots);
                 BLUEPRINT_RELEASE_ASSERT(instance_input.y.size() == component.dots);
 
-                // | z | x1 | y1 | ... | xn | yn | q0 | ...
+                // First row:  | dot0 | x01 | y01 | ... | x0n | y0n | with dot0 = sum_i x0i * y0i
+                // Second row: | dot1 | x11 | y11 | ... | x1n | y1n | with dot1 = dot0 + sum_i x1i * y1i
+                // ...
+                // Last row:   | dotm | x1m | y1m | ... | xnm | ynm | with dotm = dot(n-1) + sum_i xmi * ymi
+                // Rescale row: | dotm | z | q0 | ...
 
-                typename BlueprintFieldType::value_type sum = 0;
+                // typename BlueprintFieldType::value_type sum = 0;
 
-                for (auto i = 0; i < component.dots; i++) {
-                    auto x = var_value(assignment, instance_input.x[i]);
-                    auto y = var_value(assignment, instance_input.y[i]);
-                    auto mul = x * y;
+                // for (auto i = 0; i < component.dots; i++) {
+                //     auto x = var_value(assignment, instance_input.x[i]);
+                //     auto y = var_value(assignment, instance_input.y[i]);
+                //     auto mul = x * y;
 
-                    assign_witness(component, assignment, x, j, 1 + 2 * i);
-                    assign_witness(component, assignment, y, j, 2 + 2 * i);
+                //     assign_witness(component, assignment, x, j, 1 + 2 * i);
+                //     assign_witness(component, assignment, y, j, 2 + 2 * i);
 
-                    sum += mul;
-                }
-                DivMod<BlueprintFieldType> res =
-                    FixedPointHelper<BlueprintFieldType>::round_div_mod(sum, component.get_delta());
-                assignment.witness(component.W(0), j) = res.quotient;
+                //     sum += mul;
+                // }
+                // DivMod<BlueprintFieldType> res =
+                //     FixedPointHelper<BlueprintFieldType>::round_div_mod(sum, component.get_delta());
+                // assignment.witness(component.W(0), j) = res.quotient;
 
-                if (component.get_m2() == 1) {
-                    assign_witness(component, assignment, res.remainder, j, 1 + 2 * component.dots);
-                } else {
-                    std::vector<uint16_t> decomp;
-                    bool sign = FixedPointHelper<BlueprintFieldType>::decompose(res.remainder, decomp);
-                    BLUEPRINT_RELEASE_ASSERT(!sign);
-                    // is ok because decomp is at least of size 4 and the biggest we have is 32.32
-                    BLUEPRINT_RELEASE_ASSERT(decomp.size() >= component.get_m2());
-                    for (auto i = 0; i < component.get_m2(); i++) {
-                        assign_witness(component, assignment, decomp[i], j, 1 + 2 * component.dots + i);
-                    }
-                }
+                // if (component.get_m2() == 1) {
+                //     assign_witness(component, assignment, res.remainder, j, 1 + 2 * component.dots);
+                // } else {
+                //     std::vector<uint16_t> decomp;
+                //     bool sign = FixedPointHelper<BlueprintFieldType>::decompose(res.remainder, decomp);
+                //     BLUEPRINT_RELEASE_ASSERT(!sign);
+                //     // is ok because decomp is at least of size 4 and the biggest we have is 32.32
+                //     BLUEPRINT_RELEASE_ASSERT(decomp.size() >= component.get_m2());
+                //     for (auto i = 0; i < component.get_m2(); i++) {
+                //         assign_witness(component, assignment, decomp[i], j, 1 + 2 * component.dots + i);
+                //     }
+                // }
 
                 return typename plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams>::result_type(
                     component, start_row_index);
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
-            std::size_t generate_gates(
+            std::size_t generate_first_gate(
                 const plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams> &component,
                 circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
                 assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
@@ -240,26 +247,41 @@ namespace nil {
                     &instance_input) {
 
                 using var = typename plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams>::var;
-                // 2sum + \Delta = 2z\Delta + 2q and proving 0 <= q < \Delta via a lookup table. Delta is a multiple of
-                // 2^16, hence q could be decomposed into 16-bit limbs
-                auto delta = component.get_delta();
+                // sum = sum_i x_i * y_i
 
                 nil::crypto3::math::expression<var> dot;
-                for (auto i = 0; i < component.dots; i++) {
-                    dot += get_constraint_var(component, 1 + 2 * i) * get_constraint_var(component, 2 + 2 * i);
+                for (auto i = 0; i < component.dots_per_row; i++) {
+                    dot += var(component.W(2 * i + 1), 0) * var(component.W(2 * i + 2), 0);
                 }
 
-                auto q = nil::crypto3::math::expression(get_constraint_var(component, 1 + 2 * component.dots));
-                for (auto i = 1; i < component.get_m2(); i++) {
-                    q += var(component.W(1 + 2 * component.dots + i), 0) * (1ULL << (16 * i));
-                }
+                auto constraint_1 = dot - var(component.W(0), 0);
 
-                auto constraint_1 = 2 * (dot - var(component.W(0), 0) * delta - q) + delta;
-
-                // TACEO_TODO extend for lookup constraint
                 return bp.add_gate(constraint_1);
             }
 
+            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            std::size_t generate_second_gate(
+                const plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams> &component,
+                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                    &assignment,
+                const typename plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams>::input_type
+                    &instance_input) {
+
+                using var = typename plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams>::var;
+                // sum = prev_sum + sum_i x_i * y_i
+
+                nil::crypto3::math::expression<var> dot;
+                for (auto i = 0; i < component.dots_per_row; i++) {
+                    dot += var(component.W(2 * i + 1), 0) * var(component.W(2 * i + 2), 0);
+                }
+
+                auto constraint_1 = dot + var(component.W(0), -1) - var(component.W(0), 0);
+
+                return bp.add_gate(constraint_1);
+            }
+
+            // TODO update for all the zeros!!!
             template<typename BlueprintFieldType, typename ArithmetizationParams>
             void generate_copy_constraints(
                 const plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams> &component,
@@ -275,8 +297,8 @@ namespace nil {
                 const std::size_t j = start_row_index;
 
                 for (auto i = 0; i < component.dots; i++) {
-                    var component_x = get_copy_var(component, j, 1 + 2 * i);
-                    var component_y = get_copy_var(component, j, 2 + 2 * i);
+                    var component_x = get_copy_var(component, j, i, true);
+                    var component_y = get_copy_var(component, j, i, false);
                     bp.add_copy_constraint({instance_input.x[i], component_x});
                     bp.add_copy_constraint({component_y, instance_input.y[i]});
                 }
@@ -293,15 +315,25 @@ namespace nil {
                         &instance_input,
                     const std::size_t start_row_index) {
 
-                // TACEO_TODO extend for lookup?
-                std::size_t selector_index = generate_gates(component, bp, assignment, instance_input);
+                std::size_t rows = component.rows_amount;
+                std::size_t first_selector = generate_first_gate(component, bp, assignment, instance_input);
+                assignment.enable_selector(first_selector, start_row_index);
 
-                assignment.enable_selector(selector_index, start_row_index);
+                if (rows > 2) {
+                    std::size_t second_selector = generate_second_gate(component, bp, assignment, instance_input);
+                    assignment.enable_selector(second_selector, start_row_index + 1, start_row_index + rows - 2);
+                }
 
                 generate_copy_constraints(component, bp, assignment, instance_input, start_row_index);
 
-                return typename plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams>::result_type(
-                    component, start_row_index);
+                // Use rescale component
+                using var = typename plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams>::var;
+                typename plonk_fixedpoint_dot_rescale<
+                    BlueprintFieldType, ArithmetizationParams>::rescale_component::input_type rescale_input;
+                rescale_input.x = var(component.W(0), start_row_index + rows - 1, false, var::column_type::witness);
+
+                auto rescale_comp = component.get_rescale_component();
+                return generate_circuit(rescale_comp, bp, assignment, rescale_input, start_row_index + rows - 1);
             }
 
         }    // namespace components
