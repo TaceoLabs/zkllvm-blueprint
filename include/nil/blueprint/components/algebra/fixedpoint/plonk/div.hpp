@@ -177,12 +177,8 @@ namespace nil {
                 std::vector<uint16_t> decomp_yq;
 
                 bool sign = FixedPointHelper<BlueprintFieldType>::abs(y);
-                if (sign) {
-                    assignment.witness(component.W(4), j) = -BlueprintFieldType::value_type::one();
-
-                } else {
-                    assignment.witness(component.W(4), j) = BlueprintFieldType::value_type::one();
-                }
+                assignment.witness(component.W(4), j) =
+                    sign ? -BlueprintFieldType::value_type::one() : BlueprintFieldType::value_type::one();
 
                 sign = FixedPointHelper<BlueprintFieldType>::decompose(y, decomp_y);
                 BLUEPRINT_RELEASE_ASSERT(!sign);

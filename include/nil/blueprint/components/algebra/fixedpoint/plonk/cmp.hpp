@@ -97,6 +97,7 @@ namespace nil {
                     var eq = var(0, 0, false);
                     var lt = var(0, 0, false);
                     var gt = var(0, 0, false);
+
                     result_type(const fix_cmp &component, std::uint32_t start_row_index) {
                         eq = var(component.W(2), start_row_index, false, var::column_type::witness);
                         lt = var(component.W(3), start_row_index, false, var::column_type::witness);
@@ -174,19 +175,11 @@ namespace nil {
                 assignment.witness(component.W(4), j) =
                     typename BlueprintFieldType::value_type((uint64_t)(!eq && !sign));
 
-                if (sign) {
-                    assignment.witness(component.W(5), j) = -BlueprintFieldType::value_type::one();
+                assignment.witness(component.W(5), j) =
+                    sign ? -BlueprintFieldType::value_type::one() : BlueprintFieldType::value_type::one();
 
-                } else {
-                    assignment.witness(component.W(5), j) = BlueprintFieldType::value_type::one();
-                }
-
-                if (eq) {
-                    assignment.witness(component.W(6), j) =
-                        BlueprintFieldType::value_type::zero();    // Does not matter what to put here
-                } else {
-                    assignment.witness(component.W(6), j) = diff.inversed();
-                }
+                // if eq:  Does not matter what to put here
+                assignment.witness(component.W(6), j) = eq ? BlueprintFieldType::value_type::zero() : diff.inversed();
 
                 // Additional limb due to potential overflow of diff
                 if (decomp.size() > m) {

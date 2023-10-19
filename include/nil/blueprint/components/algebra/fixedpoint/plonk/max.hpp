@@ -167,12 +167,8 @@ namespace nil {
                 z *= inv2;
                 assignment.witness(component.W(2), j) = z;
 
-                if (sign) {
-                    assignment.witness(component.W(3), j) = -BlueprintFieldType::value_type::one();
-
-                } else {
-                    assignment.witness(component.W(3), j) = BlueprintFieldType::value_type::one();
-                }
+                assignment.witness(component.W(3), j) =
+                    sign ? -BlueprintFieldType::value_type::one() : BlueprintFieldType::value_type::one();
 
                 // Additional limb due to potential overflow of diff
                 if (decomp.size() > m) {

@@ -395,7 +395,6 @@ namespace nil {
                 auto b_abs = other.value;
                 bool sign_a = helper::abs(a_abs);
                 bool sign_b = helper::abs(b_abs);
-                bool abs_less = a_abs < b_abs;
                 return (sign_a && !sign_b) || (sign_a && sign_b && (a_abs > b_abs)) ||
                        (!sign_a && !sign_b && (a_abs < b_abs));
             }
@@ -408,7 +407,6 @@ namespace nil {
                 auto b_abs = other.value;
                 bool sign_a = helper::abs(a_abs);
                 bool sign_b = helper::abs(b_abs);
-                bool abs_less = a_abs < b_abs;
                 return (!sign_a && sign_b) || (sign_a && sign_b && (a_abs < b_abs)) ||
                        (!sign_a && !sign_b && (a_abs > b_abs));
             }
