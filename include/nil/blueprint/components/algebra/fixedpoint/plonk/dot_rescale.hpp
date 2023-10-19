@@ -7,7 +7,7 @@ namespace nil {
     namespace blueprint {
         namespace components {
 
-            // Input: vec{x}, vec{y} as Fixedpoint numbers with \Delta_x = \Delta_y
+            // Input: vec{x}, vec{y} as fixedpoint numbers with \Delta_x = \Delta_y
             // Output: z = Rescale(sum_i x_i * y_i) with \Delta_z = \Delta_x = \Delta_y
 
             // Works by proving a dot product in multiple rows, followed by a rescale gadget
@@ -350,7 +350,7 @@ namespace nil {
             }
 
         }    // namespace components
-    }        // namespace blueprint
+    }    // namespace blueprint
 }    // namespace nil
 
 #endif    // CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_DOT_RESCALE_HPP

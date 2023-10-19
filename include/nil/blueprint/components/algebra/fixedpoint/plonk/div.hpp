@@ -15,7 +15,7 @@ namespace nil {
     namespace blueprint {
         namespace components {
 
-            // Input: x, y as Fixedpoint numbers with \Delta_x = \Delta_y
+            // Input: x, y as fixedpoint numbers with \Delta_x = \Delta_y
             // Output: z = round(\Delta_z * x / y) with \Delta_z = \Delta_x = \Delta_y
 
             // Works by proving z = round(\Delta_z * x / y) via 2x\Delta_z + |y| - c = 2zy + 2q and proving 0 <= q < |y|
@@ -294,7 +294,7 @@ namespace nil {
             }
 
         }    // namespace components
-    }        // namespace blueprint
+    }    // namespace blueprint
 }    // namespace nil
 
 #endif    // CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_DIV_HPP

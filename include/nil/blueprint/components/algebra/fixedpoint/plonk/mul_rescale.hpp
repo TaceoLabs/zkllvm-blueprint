@@ -15,7 +15,7 @@ namespace nil {
     namespace blueprint {
         namespace components {
 
-            // Input: x, y as Fixedpoint numbers with \Delta_x = \Delta_y
+            // Input: x, y as fixedpoint numbers with \Delta_x = \Delta_y
             // Output: z = Rescale(x * y) with \Delta_z = \Delta_x = \Delta_y
 
             // Works by proving z = round(x*y/\Delta) via 2xy + \Delta = 2z\Delta + 2q and proving 0 <= q < \Delta via a
@@ -240,7 +240,7 @@ namespace nil {
             }
 
         }    // namespace components
-    }        // namespace blueprint
+    }    // namespace blueprint
 }    // namespace nil
 
 #endif    // CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_MUL_RESCALE_HPP

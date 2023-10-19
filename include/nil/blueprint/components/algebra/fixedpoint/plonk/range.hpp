@@ -15,7 +15,7 @@ namespace nil {
     namespace blueprint {
         namespace components {
 
-            // Input: x as Fixedpoint numbers with \Delta_x
+            // Input: x as fixedpoint numbers with \Delta_x
             // Constant inputs: Two fixedpoint ranges(x_lo, x_hi) with \Delta_x
             // Output: three flags with values \in {0,1} indicating whether x is in range. Concretely lt = x < x_lo, gt
             // = x > x_hi, in = x_lo <= x <= x_hi
@@ -385,7 +385,7 @@ namespace nil {
             }
 
         }    // namespace components
-    }        // namespace blueprint
+    }    // namespace blueprint
 }    // namespace nil
 
 #endif    // CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_RANGE_HPP

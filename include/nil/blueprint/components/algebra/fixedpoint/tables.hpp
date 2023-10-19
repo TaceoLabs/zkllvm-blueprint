@@ -118,7 +118,7 @@ namespace nil {
             }
 
         }    // namespace components
-    }        // namespace blueprint
+    }    // namespace blueprint
 }    // namespace nil
 
 #endif    // CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_HPP

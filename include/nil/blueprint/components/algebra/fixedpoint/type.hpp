@@ -53,8 +53,8 @@ namespace nil {
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
             class FixedPoint {
 
-                static_assert(M1 > 0 && M1 < 3, "Only allow one or two pre-comma linbs");
-                static_assert(M2 > 0 && M2 < 3, "Only allow one or two post-comma linbs");
+                static_assert(M1 > 0 && M1 < 3, "Only allow one or two pre-comma limbs");
+                static_assert(M2 > 0 && M2 < 3, "Only allow one or two post-comma limbs");
 
             public:
                 using helper = FixedPointHelper<BlueprintFieldType>;
@@ -537,7 +537,7 @@ namespace nil {
             }
 
         }    // namespace components
-    }        // namespace blueprint
+    }    // namespace blueprint
 }    // namespace nil
 
 #endif    // CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_HPP

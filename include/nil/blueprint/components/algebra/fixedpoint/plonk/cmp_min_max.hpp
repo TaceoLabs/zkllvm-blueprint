@@ -7,7 +7,7 @@ namespace nil {
     namespace blueprint {
         namespace components {
 
-            // Input: x, y as Fixedpoint numbers with \Delta_x = \Delta_y
+            // Input: x, y as fixedpoint numbers with \Delta_x = \Delta_y
             // Output: three flags with values \in {0,1} indicating equality, less than, or greater than, as well as the
             // min and max values of the inputs
 
@@ -265,7 +265,7 @@ namespace nil {
             }
 
         }    // namespace components
-    }        // namespace blueprint
+    }    // namespace blueprint
 }    // namespace nil
 
 #endif    // CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_CMP_MIN_MAX_HPP

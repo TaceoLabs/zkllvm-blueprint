@@ -13,7 +13,7 @@ namespace nil {
     namespace blueprint {
         namespace components {
 
-            // Input: x, y as Fixedpoint numbers with \Delta_x = \Delta_y
+            // Input: x, y as fixedpoint numbers with \Delta_x = \Delta_y
             // Input: c: boolean selector
             // Output: z = c == true ? x : y
 
@@ -196,7 +196,7 @@ namespace nil {
             }
 
         }    // namespace components
-    }        // namespace blueprint
+    }    // namespace blueprint
 }    // namespace nil
 
 #endif    // CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_SELECT_HPP

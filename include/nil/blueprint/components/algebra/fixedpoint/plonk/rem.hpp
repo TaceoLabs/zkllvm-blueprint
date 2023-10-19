@@ -15,7 +15,7 @@ namespace nil {
     namespace blueprint {
         namespace components {
 
-            // Input: x, y as Fixedpoint numbers with \Delta_x = \Delta_y
+            // Input: x, y as fixedpoint numbers with \Delta_x = \Delta_y
             // Output: z = x mod y with \Delta_z = \Delta_x = \Delta_y and sign(z) = sign(y)
 
             // Works by proving x = y + q * z  by having 4 decompositions of y, q, z, and y - z - 1.
@@ -319,7 +319,7 @@ namespace nil {
             }
 
         }    // namespace components
-    }        // namespace blueprint
+    }    // namespace blueprint
 }    // namespace nil
 
 #endif    // CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_REM_HPP

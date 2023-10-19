@@ -15,8 +15,8 @@ namespace nil {
     namespace blueprint {
         namespace components {
 
-            // Input: x as Fixedpoint numbers with \Delta_x
-            // Output: y as Fixedpoint number with huge scale!
+            // Input: x as fixedpoint numbers with \Delta_x
+            // Output: y as fixedpoint number with huge scale!
 
             // Works by decomposing to the pre-comma part and, depending on \Delta_x, one or two 16-bit post-comma parts
             // and fusing lookup tables: y = exp(x) = exp(x_pre) * exp(x_post1) * exp(x_post2)
@@ -255,7 +255,7 @@ namespace nil {
             }
 
         }    // namespace components
-    }        // namespace blueprint
+    }    // namespace blueprint
 }    // namespace nil
 
 #endif    // CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_EXP_HPP
