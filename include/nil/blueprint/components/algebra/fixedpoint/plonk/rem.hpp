@@ -240,39 +240,37 @@ namespace nil {
                 using var = typename plonk_fixedpoint_rem<BlueprintFieldType, ArithmetizationParams>::var;
                 auto m = component.get_m();
 
-                int sign_row = 1 - (int)component.rows_amount;
+                int first_row = 1 - (int)component.rows_amount;
                 auto sign_col = component.rows_amount == 1 ? 3 : 0;
                 auto y_start = component.rows_amount == 1 ? 5 : 3;
                 auto z_start = y_start + m;
                 auto q_start = component.rows_amount == 1 ? z_start + m : 2;
                 auto yz_start = q_start + m;
 
-                auto y = nil::crypto3::math::expression(var(component.W(y_start), 0));
-                auto z = nil::crypto3::math::expression(var(component.W(z_start), 0));
-                auto q = nil::crypto3::math::expression(var(component.W(q_start), sign_row));
-                auto yz = nil::crypto3::math::expression(var(component.W(yz_start), sign_row));
+                auto y = nil::crypto3::math::expression(var(component.W(y_start), first_row));
+                auto z = nil::crypto3::math::expression(var(component.W(z_start), first_row));
+                auto q = nil::crypto3::math::expression(var(component.W(q_start), 0));
+                auto yz = nil::crypto3::math::expression(var(component.W(yz_start), 0));
                 for (auto i = 1; i < m; i++) {
-                    y += var(component.W(y_start + i), 0) * (1ULL << (16 * i));
-                    z += var(component.W(z_start + i), 0) * (1ULL << (16 * i));
-                    q += var(component.W(q_start + i), sign_row) * (1ULL << (16 * i));
-                    yz += var(component.W(yz_start + i), sign_row) * (1ULL << (16 * i));
+                    y += var(component.W(y_start + i), first_row) * (1ULL << (16 * i));
+                    z += var(component.W(z_start + i), first_row) * (1ULL << (16 * i));
+                    q += var(component.W(q_start + i), 0) * (1ULL << (16 * i));
+                    yz += var(component.W(yz_start + i), 0) * (1ULL << (16 * i));
                 }
 
-                auto constraint_1 = var(component.W(0), 0) -
-                                    var(component.W(sign_col + 1), sign_row) * q * var(component.W(1), 0) -
-                                    var(component.W(2), 0);
+                auto constraint_1 = var(component.W(0), first_row) -
+                                    var(component.W(sign_col + 1), 0) * q * var(component.W(1), first_row) -
+                                    var(component.W(2), first_row);
 
-                auto constraint_2 = var(component.W(1), 0) - y * var(component.W(sign_col), sign_row);
+                auto constraint_2 = var(component.W(1), first_row) - y * var(component.W(sign_col), 0);
 
-                auto constraint_3 = var(component.W(2), 0) - z * var(component.W(sign_col), sign_row);
+                auto constraint_3 = var(component.W(2), first_row) - z * var(component.W(sign_col), 0);
 
                 auto constraint_4 = y - z - yz - 1;
 
-                auto constraint_5 =
-                    (var(component.W(sign_col), sign_row) - 1) * (var(component.W(sign_col), sign_row) + 1);
+                auto constraint_5 = (var(component.W(sign_col), 0) - 1) * (var(component.W(sign_col), 0) + 1);
 
-                auto constraint_6 =
-                    (var(component.W(sign_col + 1), sign_row) - 1) * (var(component.W(sign_col + 1), sign_row) + 1);
+                auto constraint_6 = (var(component.W(sign_col + 1), 0) - 1) * (var(component.W(sign_col + 1), 0) + 1);
 
                 // TACEO_TODO extend for lookup constraint
                 return bp.add_gate(
