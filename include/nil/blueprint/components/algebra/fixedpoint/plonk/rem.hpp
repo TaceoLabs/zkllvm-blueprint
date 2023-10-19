@@ -309,6 +309,7 @@ namespace nil {
                 // TACEO_TODO extend for lookup?
                 std::size_t selector_index = generate_gates(component, bp, assignment, instance_input);
 
+                // selector goes onto last row and gate uses all rows
                 assignment.enable_selector(selector_index, start_row_index + component.rows_amount - 1);
 
                 generate_copy_constraints(component, bp, assignment, instance_input, start_row_index);

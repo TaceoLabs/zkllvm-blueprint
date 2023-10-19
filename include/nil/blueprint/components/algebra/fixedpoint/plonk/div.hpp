@@ -76,19 +76,24 @@ namespace nil {
 
                 // TACEO_TODO Update to lookup tables
                 static manifest_type get_manifest(uint8_t m1, uint8_t m2) {
-                    static manifest_type manifest = manifest_type(
-                        std::shared_ptr<manifest_param>(new manifest_single_value_param(5 + 3 * (M(m2) + M(m1)))),
-                        false);
+                    static manifest_type manifest =
+                        manifest_type(std::shared_ptr<manifest_param>(new manifest_range_param(
+                                          5 + (M(m2) + M(m1)), 5 + 3 * (m2 + m1), 3 * (m2 + m1))),
+                                      false);
                     return manifest;
                 }
 
                 constexpr static std::size_t get_rows_amount(std::size_t witness_amount,
-                                                             std::size_t lookup_column_amount) {
-                    return 1;
+                                                             std::size_t lookup_column_amount, uint8_t m1, uint8_t m2) {
+                    if (5 + 3 * (M(m2) + M(m1)) <= witness_amount) {
+                        return 1;
+                    } else {
+                        return 2;
+                    }
                 }
 
                 constexpr static const std::size_t gates_amount = 1;
-                const std::size_t rows_amount = get_rows_amount(this->witness_amount(), 0);
+                const std::size_t rows_amount = get_rows_amount(this->witness_amount(), 0, m1, m2);
 
                 struct input_type {
                     var x = var(0, 0, false);
@@ -158,7 +163,11 @@ namespace nil {
 
                 DivMod<BlueprintFieldType> res = FixedPointHelper<BlueprintFieldType>::round_div_mod(tmp, y);
 
+                // if one row:
                 // | x | y | z | c | s_y | y0 | ... | q0 | ... | yq_0 | ...
+                // else;
+                // first row: | x | y | z | c | s_y | y0 | ...
+                // second row: | q0 | ... | yq_0 | ...
                 assignment.witness(component.W(0), j) = var_value(assignment, instance_input.x);
                 assignment.witness(component.W(1), j) = y;
                 assignment.witness(component.W(2), j) = res.quotient;
@@ -172,7 +181,7 @@ namespace nil {
                     assignment.witness(component.W(4), j) = -BlueprintFieldType::value_type::one();
 
                 } else {
-                    assignment.witness(component.W(4), j) =  BlueprintFieldType::value_type::one();
+                    assignment.witness(component.W(4), j) = BlueprintFieldType::value_type::one();
                 }
 
                 sign = FixedPointHelper<BlueprintFieldType>::decompose(y, decomp_y);
@@ -188,10 +197,15 @@ namespace nil {
 
                 assignment.witness(component.W(3), j) = typename BlueprintFieldType::value_type(decomp_y[0] & 1);
 
+                auto y_start = 5;
+                auto q_start = component.rows_amount == 1 ? y_start + m : 0;
+                auto yq_start = q_start + m;
+                auto q_row = j + component.rows_amount - 1;
+
                 for (auto i = 0; i < m; i++) {
-                    assignment.witness(component.W(5 + i), j) = decomp_y[i];
-                    assignment.witness(component.W(5 + m + i), j) = decomp_q[i];
-                    assignment.witness(component.W(5 + 2 * m + i), j) = decomp_yq[i];
+                    assignment.witness(component.W(y_start + i), j) = decomp_y[i];
+                    assignment.witness(component.W(q_start + i), q_row) = decomp_q[i];
+                    assignment.witness(component.W(yq_start + i), q_row) = decomp_yq[i];
                 }
 
                 return typename plonk_fixedpoint_div<BlueprintFieldType, ArithmetizationParams>::result_type(
@@ -212,26 +226,31 @@ namespace nil {
                 auto m = component.get_m();
                 auto delta = component.get_delta();
 
-                auto y = nil::crypto3::math::expression(var(component.W(5), 0));
-                auto q = nil::crypto3::math::expression(var(component.W(5 + m), 0));
-                auto yq = nil::crypto3::math::expression(var(component.W(5 + 2 * m), 0));
+                int first_row = 1 - (int)component.rows_amount;
+                auto y_start = 5;
+                auto q_start = component.rows_amount == 1 ? y_start + m : 0;
+                auto yq_start = q_start + m;
+
+                auto y = nil::crypto3::math::expression(var(component.W(y_start), first_row));
+                auto q = nil::crypto3::math::expression(var(component.W(q_start), 0));
+                auto yq = nil::crypto3::math::expression(var(component.W(yq_start), 0));
                 for (auto i = 1; i < m; i++) {
-                    y += var(component.W(5 + i), 0) * (1ULL << (16 * i));
-                    q += var(component.W(5 + m + i), 0) * (1ULL << (16 * i));
-                    yq += var(component.W(5 + 2 * m + i), 0) * (1ULL << (16 * i));
+                    y += var(component.W(y_start + i), first_row) * (1ULL << (16 * i));
+                    q += var(component.W(q_start + i), 0) * (1ULL << (16 * i));
+                    yq += var(component.W(yq_start + i), 0) * (1ULL << (16 * i));
                 }
 
-                auto constraint_1 =
-                    2 * (var(component.W(0), 0) * delta - var(component.W(1), 0) * var(component.W(2), 0) - q) + y -
-                    var(component.W(3), 0);
+                auto constraint_1 = 2 * (var(component.W(0), first_row) * delta -
+                                         var(component.W(1), first_row) * var(component.W(2), first_row) - q) +
+                                    y - var(component.W(3), first_row);
 
-                auto constraint_2 = var(component.W(1), 0) - y * var(component.W(4), 0);
+                auto constraint_2 = var(component.W(1), first_row) - y * var(component.W(4), first_row);
 
                 auto constraint_3 = y - q - yq - 1;
 
-                auto constraint_4 = (var(component.W(3), 0) - 1) * var(component.W(3), 0);
+                auto constraint_4 = (var(component.W(3), first_row) - 1) * var(component.W(3), first_row);
 
-                auto constraint_5 = (var(component.W(4), 0) - 1) * (var(component.W(4), 0) + 1);
+                auto constraint_5 = (var(component.W(4), first_row) - 1) * (var(component.W(4), first_row) + 1);
 
                 // TACEO_TODO extend for lookup constraint
                 return bp.add_gate({constraint_1, constraint_2, constraint_3, constraint_4, constraint_5});
@@ -269,7 +288,8 @@ namespace nil {
                 // TACEO_TODO extend for lookup?
                 std::size_t selector_index = generate_gates(component, bp, assignment, instance_input);
 
-                assignment.enable_selector(selector_index, start_row_index);
+                // selector goes onto last row and gate uses all rows
+                assignment.enable_selector(selector_index, start_row_index + component.rows_amount - 1);
 
                 generate_copy_constraints(component, bp, assignment, instance_input, start_row_index);
 
