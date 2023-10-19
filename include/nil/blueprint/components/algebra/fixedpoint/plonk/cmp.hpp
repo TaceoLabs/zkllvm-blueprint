@@ -205,7 +205,7 @@ namespace nil {
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
-            std::size_t generate_gates(
+            std::vector<crypto3::zk::snark::plonk_constraint<BlueprintFieldType>> get_constraints(
                 const plonk_fixedpoint_cmp<BlueprintFieldType, ArithmetizationParams> &component,
                 circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
                 assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
@@ -242,8 +242,20 @@ namespace nil {
                     var(component.W(4), 0) - inv2 * (1 + var(component.W(5), 0)) * (1 - var(component.W(2), 0));
 
                 // TACEO_TODO extend for lookup constraint
-                return bp.add_gate(
-                    {constraint_1, constraint_2, constraint_3, constraint_4, constraint_5, constraint_6});
+                return {constraint_1, constraint_2, constraint_3, constraint_4, constraint_5, constraint_6};
+            }
+
+            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            std::size_t generate_gates(
+                const plonk_fixedpoint_cmp<BlueprintFieldType, ArithmetizationParams> &component,
+                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                    &assignment,
+                const typename plonk_fixedpoint_cmp<BlueprintFieldType, ArithmetizationParams>::input_type
+                    &instance_input) {
+
+                auto constraints = get_constraints(component, bp, assignment, instance_input);
+                return bp.add_gate(constraints);
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
