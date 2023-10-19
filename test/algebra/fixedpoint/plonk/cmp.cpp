@@ -428,7 +428,7 @@ void test_fixedpoint_range(FixedType input, FixedType x_lo, FixedType x_hi) {
         auto real_res_greater = var_value(assignment, real_res.gt) == 1;
         auto real_res_in = var_value(assignment, real_res.in) == 1;
 #ifdef BLUEPRINT_PLONK_PROFILING_ENABLED
-        std::cout << "fixed_point cmp test: "
+        std::cout << "fixed_point range test: "
                   << "\n";
         std::cout << "input_f  :" << input.to_double() << " " << x_lo.to_double() << " " << x_hi.to_double() << "\n";
         std::cout << "input    : " << input.get_value().data << " " << x_lo.get_value().data << " "
@@ -468,7 +468,7 @@ void test_fixedpoint_range(FixedType input, FixedType x_lo, FixedType x_hi) {
     }
     // Is done by the manifest in a real circuit
     component_type component_instance(witness_list,
-                                      std::array<std::uint32_t, 0>(),
+                                      std::array<std::uint32_t, 2>({0, 1}),
                                       std::array<std::uint32_t, 0>(),
                                       FixedType::M_1,
                                       FixedType::M_2,
@@ -531,6 +531,7 @@ void test_components(int i, int j) {
     test_fixedpoint_cmp<FixedType>(x, y);
     test_fixedpoint_max<FixedType>(x, y);
     test_fixedpoint_cmp_min_max<FixedType>(x, y);
+    test_fixedpoint_range<FixedType>(x, x, y);
 }
 
 template<typename FixedType, std::size_t RandomTestsAmount>

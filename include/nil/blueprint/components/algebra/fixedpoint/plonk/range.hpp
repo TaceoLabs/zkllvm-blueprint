@@ -296,11 +296,12 @@ namespace nil {
                 diff_a += var(component.W(decomp_a_start + m), 0) * tmp;
                 diff_b += var(component.W(decomp_b_start + m), 0) * tmp;
 
-                auto constraint_1 =
-                    var(component.W(0), first_row) - component.get_x_lo() - diff_a * var(component.W(8), first_row);
+                auto constraint_1 = var(component.W(0), first_row) -
+                                    var(component.C(0), first_row, true, var::column_type::constant) -
+                                    diff_a * var(component.W(8), first_row);
 
-                auto constraint_2 =
-                    component.get_x_hi() - var(component.W(0), first_row) - diff_b * var(component.W(9), first_row);
+                auto constraint_2 = var(component.C(1), first_row, true, var::column_type::constant) -
+                                    var(component.W(0), first_row) - diff_b * var(component.W(9), first_row);
 
                 auto constraint_3 = (var(component.W(8), first_row) - 1) * (var(component.W(8), first_row) + 1);
 
@@ -316,14 +317,14 @@ namespace nil {
 
                 auto inv2 = typename BlueprintFieldType::value_type(2).inversed();
 
-                auto constraint_9 = var(component.W(3), first_row) -
+                auto constraint_9 = var(component.W(2), first_row) -
                                     inv2 * (1 - var(component.W(8), first_row)) * (1 - var(component.W(4), first_row));
 
-                auto constraint_10 = var(component.W(4), 0) -
+                auto constraint_10 = var(component.W(3), first_row) -
                                      inv2 * (1 - var(component.W(9), first_row)) * (1 - var(component.W(5), first_row));
 
-                auto constraint_11 = var(component.W(2), first_row) -
-                                     (1 - var(component.W(3), first_row)) * (1 - var(component.W(4), first_row));
+                auto constraint_11 = var(component.W(1), first_row) -
+                                     (1 - var(component.W(2), first_row)) * (1 - var(component.W(3), first_row));
 
                 // TACEO_TODO extend for lookup constraint
                 return bp.add_gate({constraint_1, constraint_2, constraint_3, constraint_4, constraint_5, constraint_6,

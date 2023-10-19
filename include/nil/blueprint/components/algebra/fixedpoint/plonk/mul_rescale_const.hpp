@@ -192,9 +192,10 @@ namespace nil {
                     q += var(component.W(2 + i), 0) * (1ULL << (16 * i));
                 }
 
-                auto constraint_1 = 2 * (var(component.W(0), 0) * var(0, 0, true, var::column_type::constant) -
-                                         var(component.W(1), 0) * delta - q) +
-                                    delta;
+                auto constraint_1 =
+                    2 * (var(component.W(0), 0) * var(component.C(0), 0, true, var::column_type::constant) -
+                         var(component.W(1), 0) * delta - q) +
+                    delta;
 
                 // TACEO_TODO extend for lookup constraint
                 return bp.add_gate(constraint_1);
