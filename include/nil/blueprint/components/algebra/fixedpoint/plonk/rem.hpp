@@ -102,11 +102,13 @@ namespace nil {
                 struct result_type {
                     var output = var(0, 0, false);
                     result_type(const fix_rem &component, std::uint32_t start_row_index) {
-                        output = var(component.W(2), start_row_index, false, var::column_type::witness);
+                        auto row = start_row_index + component.rows_amount - 1;
+                        output = var(component.W(2), row, false, var::column_type::witness);
                     }
 
                     result_type(const fix_rem &component, std::size_t start_row_index) {
-                        output = var(component.W(2), start_row_index, false, var::column_type::witness);
+                        auto row = start_row_index + component.rows_amount - 1;
+                        output = var(component.W(2), row, false, var::column_type::witness);
                     }
 
                     std::vector<var> all_vars() const {
@@ -149,6 +151,7 @@ namespace nil {
                 const std::uint32_t start_row_index) {
 
                 const std::size_t j = start_row_index;
+                auto second_row = j + component.rows_amount - 1;
                 auto m = component.get_m();
 
                 auto x = var_value(assignment, instance_input.x);
@@ -164,11 +167,11 @@ namespace nil {
                 // if one row:
                 // | x | y | z | s_y | s_q | y0 | ... | z0 | ... |q0 | ... | yz_0 | ...
                 // else;
-                // first row: | x | y | z  | y0 | ... | z0 | ...
-                // second row: | s_y | s_q | q0 | ... | yz_0 | ...
-                assignment.witness(component.W(0), j) = x;
-                assignment.witness(component.W(1), j) = y;
-                assignment.witness(component.W(2), j) = res.remainder;
+                // first row: | s_y | s_q | q0 | ... | yz_0 | ...
+                // second row: | x | y | z  | y0 | ... | z0 | ...
+                assignment.witness(component.W(0), second_row) = x;
+                assignment.witness(component.W(1), second_row) = y;
+                assignment.witness(component.W(2), second_row) = res.remainder;
 
                 std::vector<uint16_t> decomp_y;
                 std::vector<uint16_t> decomp_z;
@@ -180,21 +183,20 @@ namespace nil {
                 bool sign_y_ = FixedPointHelper<BlueprintFieldType>::decompose(y_abs, decomp_y);
                 BLUEPRINT_RELEASE_ASSERT(!sign_y_);
 
-                auto sign_row = j + component.rows_amount - 1;
                 auto sign_col = component.rows_amount == 1 ? 3 : 0;
                 if (sign_y) {
-                    assignment.witness(component.W(sign_col), sign_row) = -BlueprintFieldType::value_type::one();
+                    assignment.witness(component.W(sign_col), j) = -BlueprintFieldType::value_type::one();
 
                 } else {
-                    assignment.witness(component.W(sign_col), sign_row) = BlueprintFieldType::value_type::one();
+                    assignment.witness(component.W(sign_col), j) = BlueprintFieldType::value_type::one();
                 }
 
                 bool sign_q = FixedPointHelper<BlueprintFieldType>::decompose(res.quotient, decomp_q);
                 if (sign_q) {
-                    assignment.witness(component.W(sign_col + 1), sign_row) = -BlueprintFieldType::value_type::one();
+                    assignment.witness(component.W(sign_col + 1), j) = -BlueprintFieldType::value_type::one();
 
                 } else {
-                    assignment.witness(component.W(sign_col + 1), sign_row) = BlueprintFieldType::value_type::one();
+                    assignment.witness(component.W(sign_col + 1), j) = BlueprintFieldType::value_type::one();
                 }
 
                 auto z_abs = res.remainder;
@@ -218,10 +220,10 @@ namespace nil {
                 auto yz_start = q_start + m;
 
                 for (auto i = 0; i < m; i++) {
-                    assignment.witness(component.W(y_start + i), j) = decomp_y[i];
-                    assignment.witness(component.W(z_start + i), j) = decomp_z[i];
-                    assignment.witness(component.W(q_start + i), sign_row) = decomp_q[i];
-                    assignment.witness(component.W(yz_start + i), sign_row) = decomp_yz[i];
+                    assignment.witness(component.W(y_start + i), second_row) = decomp_y[i];
+                    assignment.witness(component.W(z_start + i), second_row) = decomp_z[i];
+                    assignment.witness(component.W(q_start + i), j) = decomp_q[i];
+                    assignment.witness(component.W(yz_start + i), j) = decomp_yz[i];
                 }
 
                 return typename plonk_fixedpoint_rem<BlueprintFieldType, ArithmetizationParams>::result_type(
@@ -247,30 +249,32 @@ namespace nil {
                 auto q_start = component.rows_amount == 1 ? z_start + m : 2;
                 auto yz_start = q_start + m;
 
-                auto y = nil::crypto3::math::expression(var(component.W(y_start), first_row));
-                auto z = nil::crypto3::math::expression(var(component.W(z_start), first_row));
-                auto q = nil::crypto3::math::expression(var(component.W(q_start), 0));
-                auto yz = nil::crypto3::math::expression(var(component.W(yz_start), 0));
+                auto y = nil::crypto3::math::expression(var(component.W(y_start), 0));
+                auto z = nil::crypto3::math::expression(var(component.W(z_start), 0));
+                auto q = nil::crypto3::math::expression(var(component.W(q_start), first_row));
+                auto yz = nil::crypto3::math::expression(var(component.W(yz_start), first_row));
                 for (auto i = 1; i < m; i++) {
-                    y += var(component.W(y_start + i), first_row) * (1ULL << (16 * i));
-                    z += var(component.W(z_start + i), first_row) * (1ULL << (16 * i));
-                    q += var(component.W(q_start + i), 0) * (1ULL << (16 * i));
-                    yz += var(component.W(yz_start + i), 0) * (1ULL << (16 * i));
+                    y += var(component.W(y_start + i), 0) * (1ULL << (16 * i));
+                    z += var(component.W(z_start + i), 0) * (1ULL << (16 * i));
+                    q += var(component.W(q_start + i), first_row) * (1ULL << (16 * i));
+                    yz += var(component.W(yz_start + i), first_row) * (1ULL << (16 * i));
                 }
 
-                auto constraint_1 = var(component.W(0), first_row) -
-                                    var(component.W(sign_col + 1), 0) * q * var(component.W(1), first_row) -
-                                    var(component.W(2), first_row);
+                auto constraint_1 = var(component.W(0), 0) -
+                                    var(component.W(sign_col + 1), first_row) * q * var(component.W(1), 0) -
+                                    var(component.W(2), 0);
 
-                auto constraint_2 = var(component.W(1), first_row) - y * var(component.W(sign_col), 0);
+                auto constraint_2 = var(component.W(1), 0) - y * var(component.W(sign_col), first_row);
 
-                auto constraint_3 = var(component.W(2), first_row) - z * var(component.W(sign_col), 0);
+                auto constraint_3 = var(component.W(2), 0) - z * var(component.W(sign_col), first_row);
 
                 auto constraint_4 = y - z - yz - 1;
 
-                auto constraint_5 = (var(component.W(sign_col), 0) - 1) * (var(component.W(sign_col), 0) + 1);
+                auto constraint_5 =
+                    (var(component.W(sign_col), first_row) - 1) * (var(component.W(sign_col), first_row) + 1);
 
-                auto constraint_6 = (var(component.W(sign_col + 1), 0) - 1) * (var(component.W(sign_col + 1), 0) + 1);
+                auto constraint_6 =
+                    (var(component.W(sign_col + 1), first_row) - 1) * (var(component.W(sign_col + 1), first_row) + 1);
 
                 // TACEO_TODO extend for lookup constraint
                 return bp.add_gate(
@@ -289,7 +293,7 @@ namespace nil {
 
                 using var = typename plonk_fixedpoint_rem<BlueprintFieldType, ArithmetizationParams>::var;
 
-                const std::size_t j = start_row_index;
+                const std::size_t j = start_row_index + component.rows_amount - 1;
                 var component_x = var(component.W(0), static_cast<int>(j), false);
                 var component_y = var(component.W(1), static_cast<int>(j), false);
                 bp.add_copy_constraint({instance_input.x, component_x});
@@ -319,7 +323,7 @@ namespace nil {
             }
 
         }    // namespace components
-    }    // namespace blueprint
+    }        // namespace blueprint
 }    // namespace nil
 
 #endif    // CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_REM_HPP

@@ -36,6 +36,7 @@ namespace nil {
                 exp_component exp;
                 range_component range;
 
+                // TODO update!
                 static constexpr value_type lo = 0;
                 static constexpr value_type hi = 0;
 
@@ -73,6 +74,14 @@ namespace nil {
                 }
 
             public:
+                const exp_component &get_exp_component() const {
+                    return exp;
+                }
+
+                const range_component &get_range_component() const {
+                    return range;
+                }
+
                 using component_type = plonk_component<BlueprintFieldType, ArithmetizationParams, 2, 0>;
 
                 using var = typename component_type::var;
@@ -118,21 +127,7 @@ namespace nil {
                     }
                 };
 
-                // TODO Update
-                struct result_type {
-                    var output = var(0, 0, false);
-                    result_type(const fix_exp_ranged &component, std::uint32_t start_row_index) {
-                        output = var(component.W(1), start_row_index, false, var::column_type::witness);
-                    }
-
-                    result_type(const fix_exp_ranged &component, std::size_t start_row_index) {
-                        output = var(component.W(1), start_row_index, false, var::column_type::witness);
-                    }
-
-                    std::vector<var> all_vars() const {
-                        return {output};
-                    }
-                };
+                using result_type = typename exp_component::result_type;
 
                 template<typename WitnessContainerType, typename ConstantContainerType,
                          typename PublicInputContainerType>
@@ -167,53 +162,19 @@ namespace nil {
                         instance_input,
                     const std::uint32_t start_row_index) {
 
-                // const std::size_t j = start_row_index;
-                // auto m2 = component.get_m2();
+                // First, we put the range gadget into the trace
+                // Then, we add the exp gadget into new rows
 
-                // // | x | y | x_pre | y_pre | x_post1 | y_post1 |
-                // // if m2 == 2: add | x_post2 | y_post2 |
-                // auto x = var_value(assignment, instance_input.x);
-                // assignment.witness(component.W(0), j) = x;
+                auto range_comp = component.get_range_component();
+                auto range_result = generate_assignments(range_comp, assignment, instance_input, start_row_index);
 
-                // uint64_t pre, post;
-                // bool sign = FixedPointHelper<BlueprintFieldType>::split_exp(x, 16 * m2, pre, post);
+                auto range_rows = range_comp.get_rows_amount();
 
-                // int32_t table_half = FixedPointTables<BlueprintFieldType>::ExpALen / 2;
-                // int32_t input_a = sign ? table_half - (int32_t)pre : table_half + pre;
+                auto exp_comp = component.get_exp_component();
+                auto exp_result =
+                    generate_assignments(exp_comp, assignment, range_result.output, start_row_index + range_rows);
 
-                // auto exp_a = FixedPointTables<BlueprintFieldType>::get_exp_a();
-                // auto exp_b = FixedPointTables<BlueprintFieldType>::get_exp_b();
-
-                // BLUEPRINT_RELEASE_ASSERT(input_a >= 0 && input_a < exp_a.size());
-                // auto output_a = exp_a[input_a];
-                // assignment.witness(component.W(2), j) = input_a;
-                // assignment.witness(component.W(3), j) = output_a;
-
-                // if (m2 == 2) {
-                //     auto exp_c = FixedPointTables<BlueprintFieldType>::get_exp_c();
-                //     uint32_t input_b = post >> 16;
-                //     uint32_t input_c = post & ((1ULL << 16) - 1);
-                //     BLUEPRINT_RELEASE_ASSERT(input_b >= 0 && input_b < exp_b.size());
-                //     BLUEPRINT_RELEASE_ASSERT(input_c >= 0 && input_c < exp_c.size());
-                //     auto output_b = exp_b[input_b];
-                //     auto output_c = exp_c[input_c];
-                //     auto res = output_a * output_b * output_c;
-                //     assignment.witness(component.W(1), j) = res;
-                //     assignment.witness(component.W(4), j) = input_b;
-                //     assignment.witness(component.W(5), j) = output_b;
-                //     assignment.witness(component.W(6), j) = input_c;
-                //     assignment.witness(component.W(7), j) = output_c;
-                // } else {
-                //     BLUEPRINT_RELEASE_ASSERT(post >= 0 && post < exp_b.size());
-                //     auto output_b = exp_b[post];
-                //     auto res = output_a * output_b;
-                //     assignment.witness(component.W(1), j) = res;
-                //     assignment.witness(component.W(4), j) = post;
-                //     assignment.witness(component.W(5), j) = output_b;
-                // }
-
-                return typename plonk_fixedpoint_exp_ranged<BlueprintFieldType, ArithmetizationParams>::result_type(
-                    component, start_row_index);
+                return exp_result;
             }
 
             // TODO Update
@@ -277,12 +238,15 @@ namespace nil {
                         &instance_input,
                     const std::size_t start_row_index) {
 
-                // TACEO_TODO extend for lookup?
-                std::size_t selector_index = generate_gates(component, bp, assignment, instance_input);
+                // Enable the range component
+                auto range_comp = component.get_range_component();
+                auto result = generate_circuit(range_comp, bp, assignment, instance_input, start_row_index);
 
-                assignment.enable_selector(selector_index, start_row_index);
+                // std::size_t selector_index = generate_gates(component, bp, assignment, instance_input);
 
-                generate_copy_constraints(component, bp, assignment, instance_input, start_row_index);
+                // assignment.enable_selector(selector_index, start_row_index);
+
+                // generate_copy_constraints(component, bp, assignment, instance_input, start_row_index);
 
                 return typename plonk_fixedpoint_exp_ranged<BlueprintFieldType, ArithmetizationParams>::result_type(
                     component, start_row_index);

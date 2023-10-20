@@ -134,15 +134,17 @@ namespace nil {
                     var gt = var(0, 0, false);
 
                     result_type(const fix_range &component, std::uint32_t start_row_index) {
-                        in = var(component.W(1), start_row_index, false, var::column_type::witness);
-                        lt = var(component.W(2), start_row_index, false, var::column_type::witness);
-                        gt = var(component.W(3), start_row_index, false, var::column_type::witness);
+                        auto row = start_row_index + component.rows_amount - 1;
+                        in = var(component.W(1), row, false, var::column_type::witness);
+                        lt = var(component.W(2), row, false, var::column_type::witness);
+                        gt = var(component.W(3), row, false, var::column_type::witness);
                     }
 
                     result_type(const fix_range &component, std::size_t start_row_index) {
-                        in = var(component.W(1), start_row_index, false, var::column_type::witness);
-                        lt = var(component.W(2), start_row_index, false, var::column_type::witness);
-                        gt = var(component.W(3), start_row_index, false, var::column_type::witness);
+                        auto row = start_row_index + component.rows_amount - 1;
+                        in = var(component.W(1), row, false, var::column_type::witness);
+                        lt = var(component.W(2), row, false, var::column_type::witness);
+                        gt = var(component.W(3), row, false, var::column_type::witness);
                     }
 
                     std::vector<var> all_vars() const {
@@ -187,6 +189,7 @@ namespace nil {
                     const std::uint32_t start_row_index) {
 
                 const std::size_t j = start_row_index;
+                auto second_row = j + component.rows_amount - 1;
                 auto m = component.get_m();
 
                 auto x = var_value(assignment, instance_input.x);
@@ -194,10 +197,10 @@ namespace nil {
                 // if one row:
                 // | x | in | lt | gt | z_a | z_b | inv_a | inv_b | s_a | s_b | a_0 | ... | b_0 | ...
                 // else;
-                // first row: | x | in | lt | gt | z_a | z_b | inv_a | inv_b | s_a | s_b |
-                // second row: | a_0 | ... | b_0 | ...
+                // first row: | a_0 | ... | b_0 | ...
+                // second row: | x | in | lt | gt | z_a | z_b | inv_a | inv_b | s_a | s_b |
 
-                assignment.witness(component.W(0), j) = x;
+                assignment.witness(component.W(0), second_row) = x;
 
                 auto diff_a = x - component.get_x_lo();
                 auto diff_b = component.get_x_hi() - x;
@@ -215,49 +218,52 @@ namespace nil {
                 BLUEPRINT_RELEASE_ASSERT(decomp_a.size() >= m);
                 BLUEPRINT_RELEASE_ASSERT(decomp_b.size() >= m);
 
-                assignment.witness(component.W(1), j) =
+                assignment.witness(component.W(1), second_row) =
                     typename BlueprintFieldType::value_type((uint64_t)(!sign_a && !sign_b));
-                assignment.witness(component.W(2), j) = typename BlueprintFieldType::value_type((uint64_t)sign_a);
-                assignment.witness(component.W(3), j) = typename BlueprintFieldType::value_type((uint64_t)sign_b);
+                assignment.witness(component.W(2), second_row) =
+                    typename BlueprintFieldType::value_type((uint64_t)sign_a);
+                assignment.witness(component.W(3), second_row) =
+                    typename BlueprintFieldType::value_type((uint64_t)sign_b);
 
                 bool eq_a = diff_a == 0;
                 bool eq_b = diff_b == 0;
-                assignment.witness(component.W(4), j) = typename BlueprintFieldType::value_type((uint64_t)eq_a);
-                assignment.witness(component.W(5), j) = typename BlueprintFieldType::value_type((uint64_t)eq_b);
+                assignment.witness(component.W(4), second_row) =
+                    typename BlueprintFieldType::value_type((uint64_t)eq_a);
+                assignment.witness(component.W(5), second_row) =
+                    typename BlueprintFieldType::value_type((uint64_t)eq_b);
 
                 // if eq: Does not matter what to put here
-                assignment.witness(component.W(6), j) =
+                assignment.witness(component.W(6), second_row) =
                     eq_a ? BlueprintFieldType::value_type::zero() : diff_a.inversed();
-                assignment.witness(component.W(7), j) =
+                assignment.witness(component.W(7), second_row) =
                     eq_b ? BlueprintFieldType::value_type::zero() : diff_b.inversed();
 
-                assignment.witness(component.W(8), j) =
+                assignment.witness(component.W(8), second_row) =
                     sign_a ? -BlueprintFieldType::value_type::one() : BlueprintFieldType::value_type::one();
 
-                assignment.witness(component.W(9), j) =
+                assignment.witness(component.W(9), second_row) =
                     sign_b ? -BlueprintFieldType::value_type::one() : BlueprintFieldType::value_type::one();
 
-                auto decomp_row = j + component.rows_amount - 1;
                 auto decomp_a_start = component.rows_amount == 1 ? 10 : 0;
                 auto decomp_b_start = decomp_a_start + m + 1;
 
                 // Additional limb due to potential overflow of diff
                 if (decomp_a.size() > m) {
                     BLUEPRINT_RELEASE_ASSERT(decomp_a[m] == 0 || decomp_a[m] == 1);
-                    assignment.witness(component.W(decomp_a_start + m), decomp_row) = decomp_a[m];
+                    assignment.witness(component.W(decomp_a_start + m), j) = decomp_a[m];
                 } else {
-                    assignment.witness(component.W(decomp_a_start + m), decomp_row) = 0;
+                    assignment.witness(component.W(decomp_a_start + m), j) = 0;
                 }
                 if (decomp_b.size() > m) {
                     BLUEPRINT_RELEASE_ASSERT(decomp_b[m] == 0 || decomp_b[m] == 1);
-                    assignment.witness(component.W(decomp_b_start + m), decomp_row) = decomp_b[m];
+                    assignment.witness(component.W(decomp_b_start + m), j) = decomp_b[m];
                 } else {
-                    assignment.witness(component.W(decomp_b_start + m), decomp_row) = 0;
+                    assignment.witness(component.W(decomp_b_start + m), j) = 0;
                 }
 
                 for (auto i = 0; i < m; i++) {
-                    assignment.witness(component.W(decomp_a_start + i), decomp_row) = decomp_a[i];
-                    assignment.witness(component.W(decomp_b_start + i), decomp_row) = decomp_b[i];
+                    assignment.witness(component.W(decomp_a_start + i), j) = decomp_a[i];
+                    assignment.witness(component.W(decomp_b_start + i), j) = decomp_b[i];
                 }
 
                 return typename plonk_fixedpoint_range<BlueprintFieldType, ArithmetizationParams>::result_type(
@@ -280,47 +286,46 @@ namespace nil {
                 auto decomp_a_start = component.rows_amount == 1 ? 10 : 0;
                 auto decomp_b_start = decomp_a_start + m + 1;
 
-                auto diff_a = nil::crypto3::math::expression(var(component.W(decomp_a_start), 0));
-                auto diff_b = nil::crypto3::math::expression(var(component.W(decomp_b_start), 0));
+                auto diff_a = nil::crypto3::math::expression(var(component.W(decomp_a_start), first_row));
+                auto diff_b = nil::crypto3::math::expression(var(component.W(decomp_b_start), first_row));
                 for (auto i = 1; i < m; i++) {
-                    diff_a += var(component.W(decomp_a_start + i), 0) * (1ULL << (16 * i));
-                    diff_b += var(component.W(decomp_b_start + i), 0) * (1ULL << (16 * i));
+                    diff_a += var(component.W(decomp_a_start + i), first_row) * (1ULL << (16 * i));
+                    diff_b += var(component.W(decomp_b_start + i), first_row) * (1ULL << (16 * i));
                 }
                 typename BlueprintFieldType::value_type tmp =
                     1ULL << (16 * (m - 1));    // 1ULL << 16m could overflow 64-bit int
                 tmp *= 1ULL << 16;
-                diff_a += var(component.W(decomp_a_start + m), 0) * tmp;
-                diff_b += var(component.W(decomp_b_start + m), 0) * tmp;
+                diff_a += var(component.W(decomp_a_start + m), first_row) * tmp;
+                diff_b += var(component.W(decomp_b_start + m), first_row) * tmp;
 
-                auto constraint_1 = var(component.W(0), first_row) -
-                                    var(component.C(0), first_row, true, var::column_type::constant) -
-                                    diff_a * var(component.W(8), first_row);
+                auto constraint_1 = var(component.W(0), 0) - var(component.C(0), 0, true, var::column_type::constant) -
+                                    diff_a * var(component.W(8), 0);
 
-                auto constraint_2 = var(component.C(1), first_row, true, var::column_type::constant) -
-                                    var(component.W(0), first_row) - diff_b * var(component.W(9), first_row);
+                auto constraint_2 = var(component.C(1), 0, true, var::column_type::constant) - var(component.W(0), 0) -
+                                    diff_b * var(component.W(9), 0);
 
-                auto constraint_3 = (var(component.W(8), first_row) - 1) * (var(component.W(8), first_row) + 1);
+                auto constraint_3 = (var(component.W(8), 0) - 1) * (var(component.W(8), 0) + 1);
 
-                auto constraint_4 = (var(component.W(9), first_row) - 1) * (var(component.W(9), first_row) + 1);
+                auto constraint_4 = (var(component.W(9), 0) - 1) * (var(component.W(9), 0) + 1);
 
-                auto constraint_5 = var(component.W(4), first_row) * diff_a;
+                auto constraint_5 = var(component.W(4), 0) * diff_a;
 
-                auto constraint_6 = var(component.W(5), first_row) * diff_b;
+                auto constraint_6 = var(component.W(5), 0) * diff_b;
 
-                auto constraint_7 = 1 - var(component.W(4), first_row) - var(component.W(6), first_row) * diff_a;
+                auto constraint_7 = 1 - var(component.W(4), 0) - var(component.W(6), 0) * diff_a;
 
-                auto constraint_8 = 1 - var(component.W(5), first_row) - var(component.W(7), first_row) * diff_b;
+                auto constraint_8 = 1 - var(component.W(5), 0) - var(component.W(7), 0) * diff_b;
 
                 auto inv2 = typename BlueprintFieldType::value_type(2).inversed();
 
-                auto constraint_9 = var(component.W(2), first_row) -
-                                    inv2 * (1 - var(component.W(8), first_row)) * (1 - var(component.W(4), first_row));
+                auto constraint_9 =
+                    var(component.W(2), 0) - inv2 * (1 - var(component.W(8), 0)) * (1 - var(component.W(4), 0));
 
-                auto constraint_10 = var(component.W(3), first_row) -
-                                     inv2 * (1 - var(component.W(9), first_row)) * (1 - var(component.W(5), first_row));
+                auto constraint_10 =
+                    var(component.W(3), 0) - inv2 * (1 - var(component.W(9), 0)) * (1 - var(component.W(5), 0));
 
-                auto constraint_11 = var(component.W(1), first_row) -
-                                     (1 - var(component.W(2), first_row)) * (1 - var(component.W(3), first_row));
+                auto constraint_11 =
+                    var(component.W(1), 0) - (1 - var(component.W(2), 0)) * (1 - var(component.W(3), 0));
 
                 // TACEO_TODO extend for lookup constraint
                 return bp.add_gate({constraint_1, constraint_2, constraint_3, constraint_4, constraint_5, constraint_6,
@@ -339,7 +344,7 @@ namespace nil {
 
                 using var = typename plonk_fixedpoint_range<BlueprintFieldType, ArithmetizationParams>::var;
 
-                const std::size_t j = start_row_index;
+                const std::size_t j = start_row_index + component.rows_amount - 1;
                 var component_x = var(component.W(0), static_cast<int>(j), false);
                 bp.add_copy_constraint({instance_input.x, component_x});
             }
@@ -376,8 +381,9 @@ namespace nil {
                     &instance_input,
                 const std::size_t start_row_index) {
 
-                assignment.constant(component.C(0), start_row_index) = component.get_x_lo();
-                assignment.constant(component.C(1), start_row_index) = component.get_x_hi();
+                auto row = start_row_index + component.rows_amount - 1;
+                assignment.constant(component.C(0), row) = component.get_x_lo();
+                assignment.constant(component.C(1), row) = component.get_x_hi();
             }
 
         }    // namespace components
