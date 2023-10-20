@@ -52,6 +52,10 @@ namespace nil {
                     return m2;
                 }
 
+                static std::size_t get_witness_columns(uint8_t m1, uint8_t m2) {
+                    return 8 + M(m2) + M(m1);
+                }
+
                 using component_type = plonk_component<BlueprintFieldType, ArithmetizationParams, 0, 0>;
 
                 using var = typename component_type::var;
@@ -72,7 +76,7 @@ namespace nil {
                 // TACEO_TODO Update to lookup tables
                 static manifest_type get_manifest(uint8_t m1, uint8_t m2) {
                     static manifest_type manifest = manifest_type(
-                        std::shared_ptr<manifest_param>(new manifest_single_value_param(8 + M(m2) + M(m1))), false);
+                        std::shared_ptr<manifest_param>(new manifest_single_value_param(get_witness_columns(m1, m2))), false);
                     return manifest;
                 }
 
@@ -292,7 +296,7 @@ namespace nil {
             }
 
         }    // namespace components
-    }    // namespace blueprint
+    }        // namespace blueprint
 }    // namespace nil
 
 #endif    // CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_CMP_HPP

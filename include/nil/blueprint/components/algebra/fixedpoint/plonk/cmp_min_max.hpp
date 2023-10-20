@@ -28,8 +28,6 @@ namespace nil {
                             BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
             private:
-                uint8_t m1;    // Pre-comma 16-bit limbs
-                uint8_t m2;    // Post-comma 16-bit limbs
                 cmp_component cmp;
 
                 static uint8_t M(uint8_t m) {
@@ -39,9 +37,10 @@ namespace nil {
                     return m;
                 }
 
-                cmp_component instantiate_cmp(uint8_t m1, uint8_t m2) {
+                cmp_component instantiate_cmp(uint8_t m1, uint8_t m2) const {
                     std::vector<std::uint32_t> witness_list;
-                    auto witness_columns = 8 + M(m2) + M(m1);
+                    auto witness_columns = cmp_component::get_witness_columns(m1, m2);
+                    BLUEPRINT_RELEASE_ASSERT(this->witness_amount() >= witness_columns);
                     witness_list.reserve(witness_columns);
                     for (auto i = 0; i < 5; i++) {
                         witness_list.push_back(this->W(i));
@@ -55,18 +54,6 @@ namespace nil {
                 }
 
             public:
-                uint8_t get_m() const {
-                    return m1 + m2;
-                }
-
-                uint8_t get_m1() const {
-                    return m1;
-                }
-
-                uint8_t get_m2() const {
-                    return m2;
-                }
-
                 const cmp_component &get_cmp_component() const {
                     return cmp;
                 }
@@ -89,12 +76,13 @@ namespace nil {
                 }
 
                 static manifest_type get_manifest(uint8_t m1, uint8_t m2) {
-                    static manifest_type manifest =
-                        manifest_type(
-                            // I include the number of witness for cmp before the merge, since merge chooses max and we
-                            // put everything in one row
-                            std::shared_ptr<manifest_param>(new manifest_single_value_param(10 + M(m2) + M(m1))), false)
-                            .merge_with(cmp_component::get_manifest(m1, m2));
+                    static manifest_type manifest = manifest_type(
+                                                        // I include the number of witness for cmp before the merge,
+                                                        // since merge chooses max and we put everything in one row
+                                                        std::shared_ptr<manifest_param>(new manifest_single_value_param(
+                                                            2 + cmp_component::get_witness_columns(m1, m2))),
+                                                        false)
+                                                        .merge_with(cmp_component::get_manifest(m1, m2));
                     return manifest;
                 }
 
@@ -137,15 +125,14 @@ namespace nil {
 
                 template<typename ContainerType>
                 explicit fix_cmp_min_max(ContainerType witness, uint8_t m1, uint8_t m2) :
-                    component_type(witness, {}, {}, get_manifest(m1, m2)), m1(M(m1)), m2(M(m2)),
-                    cmp(instantiate_cmp(m1, m2)) {};
+                    component_type(witness, {}, {}, get_manifest(m1, m2)), cmp(instantiate_cmp(m1, m2)) {};
 
                 template<typename WitnessContainerType, typename ConstantContainerType,
                          typename PublicInputContainerType>
                 fix_cmp_min_max(WitnessContainerType witness, ConstantContainerType constant,
                                 PublicInputContainerType public_input, uint8_t m1, uint8_t m2) :
                     component_type(witness, constant, public_input, get_manifest(m1, m2)),
-                    m1(M(m1)), m2(M(m2)), cmp(instantiate_cmp(m1, m2)) {};
+                    cmp(instantiate_cmp(m1, m2)) {};
 
                 fix_cmp_min_max(
                     std::initializer_list<typename component_type::witness_container_type::value_type> witnesses,
@@ -154,7 +141,7 @@ namespace nil {
                         public_inputs,
                     uint8_t m1, uint8_t m2) :
                     component_type(witnesses, constants, public_inputs, get_manifest(m1, m2)),
-                    m1(M(m1)), m2(M(m2)), cmp(instantiate_cmp(m1, m2)) {};
+                    cmp(instantiate_cmp(m1, m2)) {};
             };
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
@@ -265,7 +252,7 @@ namespace nil {
             }
 
         }    // namespace components
-    }    // namespace blueprint
+    }        // namespace blueprint
 }    // namespace nil
 
 #endif    // CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_CMP_MIN_MAX_HPP

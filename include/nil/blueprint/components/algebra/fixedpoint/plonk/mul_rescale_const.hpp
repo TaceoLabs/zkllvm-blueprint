@@ -107,10 +107,6 @@ namespace nil {
                     }
                 };
 
-                template<typename ContainerType>
-                explicit fix_mul_rescale_const(ContainerType witness, value_type constant_, uint8_t m2) :
-                    component_type(witness, {}, {}, get_manifest(m2)), constant(constant_), m2(M(m2)) {};
-
                 template<typename WitnessContainerType, typename ConstantContainerType,
                          typename PublicInputContainerType>
                 fix_mul_rescale_const(WitnessContainerType witness, ConstantContainerType constant,
@@ -255,7 +251,7 @@ namespace nil {
             }
 
         }    // namespace components
-    }    // namespace blueprint
+    }        // namespace blueprint
 }    // namespace nil
 
 #endif    // CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_MUL_RESCALE_CONST_HPP

@@ -29,7 +29,6 @@ namespace nil {
             private:
                 uint32_t dots;
                 uint32_t dots_per_row;
-                uint8_t m2;    // Post-comma 16-bit limbs
                 rescale_component rescale;
 
                 static uint8_t M(uint8_t m) {
@@ -39,9 +38,10 @@ namespace nil {
                     return m;
                 }
 
-                rescale_component instantiate_rescale(uint8_t m2) {
+                rescale_component instantiate_rescale(uint8_t m2) const {
                     std::vector<std::uint32_t> witness_list;
-                    auto witness_columns = 2 + M(m2);
+                    auto witness_columns = rescale_component::get_witness_columns(m2);
+                    BLUEPRINT_RELEASE_ASSERT(this->witness_amount() >= witness_columns);
                     witness_list.reserve(witness_columns);
                     for (auto i = 0; i < witness_columns; i++) {
                         witness_list.push_back(this->W(i));
@@ -51,10 +51,6 @@ namespace nil {
                 }
 
             public:
-                uint8_t get_m2() const {
-                    return m2;
-                }
-
                 const rescale_component &get_rescale_component() const {
                     return rescale;
                 }
@@ -124,7 +120,7 @@ namespace nil {
                     return rows;
                 }
 
-                const std::size_t rows_amount = get_rows_amount(this->witness_amount(), 0, dots, m2);
+                const std::size_t rows_amount = get_rows_amount(this->witness_amount(), 0, dots, rescale.get_m2());
 
                 struct input_type {
                     std::vector<var> x;
@@ -143,7 +139,7 @@ namespace nil {
 
                 template<typename ContainerType>
                 explicit fix_dot_rescale(ContainerType witness, uint32_t dots, uint8_t m2) :
-                    component_type(witness, {}, {}, get_manifest(dots, m2)), dots(dots), m2(M(m2)),
+                    component_type(witness, {}, {}, get_manifest(dots, m2)), dots(dots),
                     rescale(instantiate_rescale(m2)) {
                     dots_per_row = (this->witness_amount() - 1) / 2;
                 };
@@ -153,7 +149,7 @@ namespace nil {
                 fix_dot_rescale(WitnessContainerType witness, ConstantContainerType constant,
                                 PublicInputContainerType public_input, uint32_t dots, uint8_t m2) :
                     component_type(witness, constant, public_input, get_manifest(dots, m2)),
-                    dots(dots), m2(M(m2)), rescale(instantiate_rescale(m2)) {
+                    dots(dots), rescale(instantiate_rescale(m2)) {
                     dots_per_row = (this->witness_amount() - 1) / 2;
                 };
 
@@ -164,7 +160,7 @@ namespace nil {
                         public_inputs,
                     uint32_t dots, uint8_t m2) :
                     component_type(witnesses, constants, public_inputs, get_manifest(dots, m2)),
-                    dots(dots), m2(M(m2)), rescale(instantiate_rescale(m2)) {
+                    dots(dots), rescale(instantiate_rescale(m2)) {
                     dots_per_row = (this->witness_amount() - 1) / 2;
                 };
             };
@@ -350,7 +346,7 @@ namespace nil {
             }
 
         }    // namespace components
-    }    // namespace blueprint
+    }        // namespace blueprint
 }    // namespace nil
 
 #endif    // CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_DOT_RESCALE_HPP

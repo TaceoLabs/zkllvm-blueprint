@@ -78,6 +78,10 @@ namespace nil {
                     return x_hi;
                 }
 
+                static std::size_t get_witness_columns(std::size_t witness_amount, uint8_t m1, uint8_t m2) {
+                    return get_rows_amount(witness_amount, 0, M(m1), M(m2)) == 1 ? 12 + 2 * (m1 + m2) : 10;
+                }
+
                 using component_type = plonk_component<BlueprintFieldType, ArithmetizationParams, 2, 0>;
 
                 using var = typename component_type::var;
@@ -144,14 +148,6 @@ namespace nil {
                     std::vector<var> all_vars() const {
                         return {in, lt, gt};
                     }
-                };
-
-                template<typename ContainerType>
-                explicit fix_range(ContainerType witness, uint8_t m1, uint8_t m2, const value_type &low,
-                                   const value_type &high) :
-                    component_type(witness, {}, {}, get_manifest(m1, m2)),
-                    m1(M(m1)), m2(M(m2)), x_lo(low), x_hi(high) {
-                    check_range(low, high);
                 };
 
                 template<typename WitnessContainerType, typename ConstantContainerType,
@@ -385,7 +381,7 @@ namespace nil {
             }
 
         }    // namespace components
-    }    // namespace blueprint
+    }        // namespace blueprint
 }    // namespace nil
 
 #endif    // CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_RANGE_HPP
