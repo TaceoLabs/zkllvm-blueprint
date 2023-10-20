@@ -123,6 +123,7 @@ namespace nil {
                 BLUEPRINT_RELEASE_ASSERT(c == 0 || c == 1);
                 auto z = c == 1 ? x : y;
 
+                // trace layout (4 col(s), 1 row(s))
                 // | c | x | y | z |
                 assignment.witness(component.W(0), j) = c;
                 assignment.witness(component.W(1), j) = x;
@@ -146,9 +147,19 @@ namespace nil {
                 // Output: z = c == true ? x : y
                 // is equivalent to: z = c * (x - y) + y
 
+                // constraint description
+                //     c is component.W(0)
+                //     x is component.W(1)
+                //     y is component.W(2)
+                //     z is component.W(3)
+                // from the report: z = cx + (1 - c)y
+                // reformulated as: 0 = c(x - y) + y - z
                 auto constraint_1 = var(component.W(0), 0) * (var(component.W(1), 0) - var(component.W(2), 0)) +
                                     var(component.W(2), 0) - var(component.W(3), 0);
 
+                // constraint description
+                //     c is component.W(0)
+                // 0 = c(c - 1)
                 auto constraint_2 = var(component.W(0), 0) * (var(component.W(0), 0) - 1);
 
                 return bp.add_gate({constraint_1, constraint_2});
