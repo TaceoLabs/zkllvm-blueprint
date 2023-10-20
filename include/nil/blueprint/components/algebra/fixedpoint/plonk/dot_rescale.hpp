@@ -88,7 +88,7 @@ namespace nil {
                     }
 
                     std::uint32_t gates_amount() const override {
-                        return 2;
+                        return 3;
                     }
                 };
 

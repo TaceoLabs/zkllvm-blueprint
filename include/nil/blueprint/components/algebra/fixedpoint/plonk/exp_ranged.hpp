@@ -10,9 +10,9 @@ namespace nil {
 
             // Input: x as fixedpoint numbers with \Delta_x
             // Output: y as fixedpoint number with huge scale!
+            // Additionally clips output to  a predefined min/max range if the values are to small/large
 
-            // Works by decomposing to the pre-comma part and, depending on \Delta_x, one or two 16-bit post-comma parts
-            // and fusing lookup tables: y = exp(x) = exp(x_pre) * exp(x_post1) * exp(x_post2)
+            // Uses the range gadget for clipping, and modifies the constraints of the exp gadget accordingly
 
             template<typename ArithmetizationType, typename FieldType, typename NonNativePolicyType>
             class fix_exp_ranged;
@@ -39,6 +39,8 @@ namespace nil {
                 // TODO update!
                 static constexpr value_type lo = 0;
                 static constexpr value_type hi = 0;
+                static constexpr value_type exp_min = 0;
+                static constexpr value_type exp_max = 0;
 
                 static uint8_t M(uint8_t m) {
                     if (m == 0 || m > 2) {
@@ -82,6 +84,14 @@ namespace nil {
                     return range;
                 }
 
+                static constexpr value_type get_exp_min() {
+                    return exp_min;
+                }
+
+                static constexpr value_type get_exp_max() {
+                    return exp_max;
+                }
+
                 using component_type = plonk_component<BlueprintFieldType, ArithmetizationParams, 2, 0>;
 
                 using var = typename component_type::var;
@@ -90,43 +100,33 @@ namespace nil {
                 class gate_manifest_type : public component_gate_manifest {
                 public:
                     std::uint32_t gates_amount() const override {
-                        return fix_exp_ranged::gates_amount;
+                        return 2;
                     }
                 };
 
-                // TODO Update
                 static gate_manifest get_gate_manifest(std::size_t witness_amount, std::size_t lookup_column_amount) {
-                    static gate_manifest manifest = gate_manifest(gate_manifest_type());
+                    static gate_manifest manifest =
+                        exp_component::get_gate_manifest(witness_amount, lookup_column_amount)
+                            .merge_with(range_component::get_gate_manifest(witness_amount, lookup_column_amount));
                     return manifest;
                 }
 
-                // TACEO_TODO Update to lookup tables
-                // TODO Update
                 static manifest_type get_manifest(uint8_t m1, uint8_t m2) {
-                    static manifest_type manifest = manifest_type(
-                        std::shared_ptr<manifest_param>(new manifest_single_value_param(4 + 2 * M(m2))), false);
+                    static manifest_type manifest =
+                        exp_component::get_manifest(m2).merge_with(range_component::get_manifest(m1, m2));
                     return manifest;
                 }
 
-                // TODO Update
                 constexpr static std::size_t get_rows_amount(std::size_t witness_amount,
-                                                             std::size_t lookup_column_amount) {
-                    return 1;
+                                                             std::size_t lookup_column_amount, uint8_t m1, uint8_t m2) {
+                    return range_component::get_rows_amount(witness_amount, lookup_column_amount, m1, m2) +
+                           exp_component::get_rows_amount(witness_amount, lookup_column_amount);
                 }
 
-                // TODO Update
-                constexpr static const std::size_t gates_amount = 1;
-                const std::size_t rows_amount = get_rows_amount(this->witness_amount(), 0);
+                const std::size_t rows_amount =
+                    get_rows_amount(this->witness_amount(), 0, range.get_m1(), range.get_m2());
 
-                // TODO Update
-                struct input_type {
-                    var x = var(0, 0, false);
-
-                    std::vector<var> all_vars() const {
-                        return {x};
-                    }
-                };
-
+                using input_type = typename exp_component::input_type;
                 using result_type = typename exp_component::result_type;
 
                 template<typename WitnessContainerType, typename ConstantContainerType,
@@ -151,7 +151,6 @@ namespace nil {
                 fix_exp_ranged<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                                BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
-            // TODO Update
             template<typename BlueprintFieldType, typename ArithmetizationParams>
             typename plonk_fixedpoint_exp_ranged<BlueprintFieldType, ArithmetizationParams>::result_type
                 generate_assignments(
@@ -165,21 +164,24 @@ namespace nil {
                 // First, we put the range gadget into the trace
                 // Then, we add the exp gadget into new rows
 
-                auto range_comp = component.get_range_component();
-                auto range_result = generate_assignments(range_comp, assignment, instance_input, start_row_index);
+                typename plonk_fixedpoint_exp_ranged<BlueprintFieldType,
+                                                     ArithmetizationParams>::range_component::input_type range_input;
+                range_input.x = instance_input.x;
 
-                auto range_rows = range_comp.get_rows_amount();
+                auto range_comp = component.get_range_component();
+                auto range_result = generate_assignments(range_comp, assignment, range_input, start_row_index);
+
+                auto range_rows = range_comp.rows_amount;
 
                 auto exp_comp = component.get_exp_component();
                 auto exp_result =
-                    generate_assignments(exp_comp, assignment, range_result.output, start_row_index + range_rows);
+                    generate_assignments(exp_comp, assignment, instance_input, start_row_index + range_rows);
 
                 return exp_result;
             }
 
-            // TODO Update
             template<typename BlueprintFieldType, typename ArithmetizationParams>
-            std::size_t generate_gates(
+            std::size_t generate_exp_gates(
                 const plonk_fixedpoint_exp_ranged<BlueprintFieldType, ArithmetizationParams> &component,
                 circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
                 assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
@@ -188,45 +190,32 @@ namespace nil {
                     &instance_input) {
 
                 using var = typename plonk_fixedpoint_exp_ranged<BlueprintFieldType, ArithmetizationParams>::var;
-                // auto m2 = component.get_m2();
-                // auto delta = component.get_delta();
-                // uint32_t table_half = FixedPointTables<BlueprintFieldType>::ExpALen / 2;
 
-                // auto constraint_1 = delta * (var(component.W(2), 0) - table_half) - var(component.W(0), 0);
-                // auto constraint_2 = nil::crypto3::math::expression(var(component.W(3), 0) * var(component.W(5), 0));
+                auto exp_comp = component.get_exp_component();
+                auto range_comp = component.get_range_component();
 
-                // if (m2 == 2) {
-                //     constraint_1 += (1ULL << 16) * var(component.W(4), 0) + var(component.W(6), 0);
-                //     constraint_2 *= var(component.W(7), 0);
-                // } else {
-                //     constraint_1 += var(component.W(4), 0);
-                // }
-                // constraint_2 -= var(component.W(1), 0);
+                typename plonk_fixedpoint_range<BlueprintFieldType, ArithmetizationParams>::result_type range_output(
+                    range_comp, (std::uint32_t)0);
 
-                // // TACEO_TODO extend for lookup constraint
-                // return bp.add_gate({constraint_1, constraint_2});
-                return bp.add_gate({});
+                typename plonk_fixedpoint_exp<BlueprintFieldType, ArithmetizationParams>::result_type exp_output(
+                    exp_comp, (std::uint32_t)0);
+
+                auto constraints = get_constraints(exp_comp, bp, assignment, instance_input, false);
+
+                auto in = var(range_output.in.index, -1);
+                auto lt = var(range_output.lt.index, -1);
+                auto gt = var(range_output.gt.index, -1);
+                auto y = var(exp_output.output.index, 0);
+                auto min = var(component.C(0), 0, true, var::column_type::constant);
+                auto max = var(component.C(1), 0, true, var::column_type::constant);
+
+                constraints[0] *= in;
+                constraints[1] *= in;
+                constraints[1] += lt * min + gt * max - y;
+
+                return bp.add_gate(constraints);
             }
 
-            // TODO Update
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
-            void generate_copy_constraints(
-                const plonk_fixedpoint_exp_ranged<BlueprintFieldType, ArithmetizationParams> &component,
-                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
-                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
-                    &assignment,
-                const typename plonk_fixedpoint_exp_ranged<BlueprintFieldType, ArithmetizationParams>::input_type
-                    &instance_input,
-                const std::size_t start_row_index) {
-
-                using var = typename plonk_fixedpoint_exp_ranged<BlueprintFieldType, ArithmetizationParams>::var;
-
-                const std::size_t j = start_row_index;
-                var component_x = var(component.W(0), static_cast<int>(j), false);
-                bp.add_copy_constraint({instance_input.x, component_x});
-            }
-
-            // TODO Update
             template<typename BlueprintFieldType, typename ArithmetizationParams>
             typename plonk_fixedpoint_exp_ranged<BlueprintFieldType, ArithmetizationParams>::result_type
                 generate_circuit(
@@ -238,18 +227,45 @@ namespace nil {
                         &instance_input,
                     const std::size_t start_row_index) {
 
+                typename plonk_fixedpoint_exp_ranged<BlueprintFieldType,
+                                                     ArithmetizationParams>::range_component::input_type range_input;
+                range_input.x = instance_input.x;
+
                 // Enable the range component
                 auto range_comp = component.get_range_component();
-                auto result = generate_circuit(range_comp, bp, assignment, instance_input, start_row_index);
+                std::size_t range_selector = generate_gates(range_comp, bp, assignment, range_input);
+                assignment.enable_selector(range_selector, start_row_index);
+                generate_copy_constraints(range_comp, bp, assignment, range_input, start_row_index);
+                generate_assignments_constant(range_comp, assignment, range_input, start_row_index);
 
-                // std::size_t selector_index = generate_gates(component, bp, assignment, instance_input);
+                auto exp_row = start_row_index + range_comp.rows_amount;
 
-                // assignment.enable_selector(selector_index, start_row_index);
+                // We slightly modify the exp component
+                std::size_t exp_selector = generate_exp_gates(component, bp, assignment, instance_input);
+                assignment.enable_selector(exp_selector, exp_row);
 
-                // generate_copy_constraints(component, bp, assignment, instance_input, start_row_index);
+                // Enable the copy constraints of exp
+                auto exp_comp = component.get_exp_component();
+                generate_copy_constraints(exp_comp, bp, assignment, instance_input, exp_row);
+
+                // Finally, we have to put the min/max values into the constant columns
+                generate_assignments_constant(component, assignment, instance_input, exp_row);
 
                 return typename plonk_fixedpoint_exp_ranged<BlueprintFieldType, ArithmetizationParams>::result_type(
-                    component, start_row_index);
+                    exp_comp, exp_row);
+            }
+
+            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            void generate_assignments_constant(
+                const plonk_fixedpoint_exp_ranged<BlueprintFieldType, ArithmetizationParams> &component,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                    &assignment,
+                const typename plonk_fixedpoint_exp_ranged<BlueprintFieldType, ArithmetizationParams>::input_type
+                    &instance_input,
+                const std::size_t row_index) {
+
+                assignment.constant(component.C(0), row_index) = component.get_exp_min();
+                assignment.constant(component.C(1), row_index) = component.get_exp_max();
             }
 
         }    // namespace components
