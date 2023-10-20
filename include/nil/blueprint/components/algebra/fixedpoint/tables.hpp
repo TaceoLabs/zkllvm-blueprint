@@ -28,7 +28,7 @@ namespace nil {
                 static constexpr uint16_t ExpBScale = 16;
                 static constexpr uint16_t ExpCScale = 16;
 
-                static constexpr uint32_t ExpALen = 151;
+                static constexpr uint32_t ExpALen = 141;
                 static constexpr uint32_t ExpBLen = (1 << 16);
                 static constexpr uint32_t ExpCLen = (1 << 16);
 
@@ -38,6 +38,8 @@ namespace nil {
 
                 template<uint8_t M2>
                 static constexpr uint16_t get_exp_scale();
+                static value_type get_lowest_exp_input(uint8_t m2);
+                static value_type get_highest_exp_input(uint8_t m2);
             };
 
             template<typename BlueprintFieldType>
@@ -117,8 +119,32 @@ namespace nil {
                 }
             }
 
+            template<typename BlueprintFieldType>
+            typename FixedPointTables<BlueprintFieldType>::value_type
+                FixedPointTables<BlueprintFieldType>::get_highest_exp_input(uint8_t m2) {
+                uint64_t delta = 1ULL << 16;
+                value_type res = ExpALen / 2;
+                res = res * delta + ExpBLen - 1;
+                if (m2 == 2) {
+                    res = res * delta + ExpCLen - 1;
+                }
+                return res;
+            }
+
+            template<typename BlueprintFieldType>
+            typename FixedPointTables<BlueprintFieldType>::value_type
+                FixedPointTables<BlueprintFieldType>::get_lowest_exp_input(uint8_t m2) {
+                uint64_t delta = 1ULL << 16;
+                value_type res = ExpALen / 2;
+                res = res * delta;
+                if (m2 == 2) {
+                    res = res * delta;
+                }
+                return -res;
+            }
+
         }    // namespace components
-    }    // namespace blueprint
+    }        // namespace blueprint
 }    // namespace nil
 
 #endif    // CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_HPP

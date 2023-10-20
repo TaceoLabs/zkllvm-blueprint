@@ -1,6 +1,8 @@
 #ifndef CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_EXP_RANGED_HPP
 #define CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_EXP_RANGED_HPP
 
+#include "nil/blueprint/components/algebra/fixedpoint/tables.hpp"
+
 #include "nil/blueprint/components/algebra/fixedpoint/plonk/exp.hpp"
 #include "nil/blueprint/components/algebra/fixedpoint/plonk/range.hpp"
 
@@ -33,20 +35,42 @@ namespace nil {
                               BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
             private:
+                const value_type lo;
+                const value_type hi;
+                const value_type exp_min;
+                const value_type exp_max;
+
                 exp_component exp;
                 range_component range;
-
-                // TODO update!
-                static constexpr value_type lo = 0;
-                static constexpr value_type hi = 0;
-                static constexpr value_type exp_min = 0;
-                static constexpr value_type exp_max = 0;
 
                 static uint8_t M(uint8_t m) {
                     if (m == 0 || m > 2) {
                         BLUEPRINT_RELEASE_ASSERT(false);
                     }
                     return m;
+                }
+
+                static value_type calc_max(const value_type &hi, uint8_t m1, uint8_t m2) {
+                    if (m1 == 1 && m2 == 1) {
+                        FixedPoint<BlueprintFieldType, 1, 1> tmp(hi, FixedPoint<BlueprintFieldType, 1, 1>::SCALE);
+                        auto res = tmp.exp();
+                        return res.get_value();
+                    } else if (m1 == 2 && m2 == 1) {
+                        FixedPoint<BlueprintFieldType, 2, 1> tmp(hi, FixedPoint<BlueprintFieldType, 2, 1>::SCALE);
+                        auto res = tmp.exp();
+                        return res.get_value();
+                    } else if (m1 == 1 && m2 == 2) {
+                        FixedPoint<BlueprintFieldType, 1, 2> tmp(hi, FixedPoint<BlueprintFieldType, 1, 2>::SCALE);
+                        auto res = tmp.exp();
+                        return res.get_value();
+                    } else if (m1 == 2 && m2 == 2) {
+                        FixedPoint<BlueprintFieldType, 2, 2> tmp(hi, FixedPoint<BlueprintFieldType, 2, 2>::SCALE);
+                        auto res = tmp.exp();
+                        return res.get_value();
+                    } else {
+                        BLUEPRINT_RELEASE_ASSERT(false);
+                        return 0;
+                    }
                 }
 
                 exp_component instantiate_exp(uint8_t m2) const {
@@ -84,11 +108,11 @@ namespace nil {
                     return range;
                 }
 
-                static constexpr value_type get_exp_min() {
+                const value_type get_exp_min() const {
                     return exp_min;
                 }
 
-                static constexpr value_type get_exp_max() {
+                const value_type get_exp_max() const {
                     return exp_max;
                 }
 
@@ -134,7 +158,11 @@ namespace nil {
                 fix_exp_ranged(WitnessContainerType witness, ConstantContainerType constant,
                                PublicInputContainerType public_input, uint8_t m1, uint8_t m2) :
                     component_type(witness, constant, public_input, get_manifest(m1, m2)),
-                    exp(instantiate_exp(m2)), range(instantiate_range(m1, m2, lo, hi)) {};
+                    lo(FixedPointTables<BlueprintFieldType>::get_lowest_exp_input(m2)),
+                    hi(FixedPointTables<BlueprintFieldType>::get_highest_exp_input(m2)), exp_min(0),
+                    exp_max(calc_max(hi, m1, m2)), exp(instantiate_exp(m2)), range(instantiate_range(m1, m2, lo, hi)) {
+                    ;
+                };
 
                 fix_exp_ranged(
                     std::initializer_list<typename component_type::witness_container_type::value_type> witnesses,
@@ -172,10 +200,17 @@ namespace nil {
                 auto range_result = generate_assignments(range_comp, assignment, range_input, start_row_index);
 
                 auto range_rows = range_comp.rows_amount;
+                auto exp_row = start_row_index + range_rows;
 
                 auto exp_comp = component.get_exp_component();
-                auto exp_result =
-                    generate_assignments(exp_comp, assignment, instance_input, start_row_index + range_rows);
+                auto exp_result = generate_assignments(exp_comp, assignment, instance_input, exp_row, false);
+
+                // update output if out of range!
+                if (var_value(assignment, range_result.lt) == BlueprintFieldType::value_type::one()) {
+                    assignment.witness(exp_result.output.index, exp_row) = component.get_exp_min();
+                } else if (var_value(assignment, range_result.gt) == BlueprintFieldType::value_type::one()) {
+                    assignment.witness(exp_result.output.index, exp_row) = component.get_exp_max();
+                }
 
                 return exp_result;
             }

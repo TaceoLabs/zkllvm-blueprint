@@ -141,7 +141,7 @@ namespace nil {
                     &assignment,
                 const typename plonk_fixedpoint_exp<BlueprintFieldType, ArithmetizationParams>::input_type
                     instance_input,
-                const std::uint32_t start_row_index) {
+                const std::uint32_t start_row_index, bool assert_on_out_of_range = true) {
 
                 const std::size_t j = start_row_index;
                 auto m2 = component.get_m2();
@@ -155,14 +155,19 @@ namespace nil {
                 bool sign = FixedPointHelper<BlueprintFieldType>::split_exp(x, 16 * m2, pre, post);
 
                 int32_t table_half = FixedPointTables<BlueprintFieldType>::ExpALen / 2;
-                int32_t input_a = sign ? table_half - (int32_t)pre : table_half + pre;
+                int64_t input_a = sign ? table_half - (int64_t)pre : table_half + pre;
 
                 auto exp_a = FixedPointTables<BlueprintFieldType>::get_exp_a();
                 auto exp_b = FixedPointTables<BlueprintFieldType>::get_exp_b();
 
-                BLUEPRINT_RELEASE_ASSERT(input_a >= 0 && input_a < exp_a.size());
-                auto output_a = exp_a[input_a];
-                assignment.witness(component.W(2), j) = input_a;
+                auto output_a = exp_a[0];
+                if (input_a >= 0 && input_a < exp_a.size()) {
+                    output_a = exp_a[input_a];
+                    assignment.witness(component.W(2), j) = input_a;
+                } else {
+                    BLUEPRINT_RELEASE_ASSERT(!assert_on_out_of_range);
+                    assignment.witness(component.W(2), j) = 0;
+                }
                 assignment.witness(component.W(3), j) = output_a;
 
                 if (m2 == 2) {

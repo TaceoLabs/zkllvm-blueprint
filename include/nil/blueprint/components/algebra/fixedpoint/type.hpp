@@ -474,15 +474,21 @@ namespace nil {
                 auto exp_a = FixedPointTables<BlueprintFieldType>::get_exp_a();
                 auto exp_b = FixedPointTables<BlueprintFieldType>::get_exp_b();
 
-                uint64_t pre = 0;
-                uint64_t post = 0;
+                uint64_t pre, post;
                 bool sign = helper::split_exp(value, scale, pre, post);
 
                 int32_t table_half = FixedPointTables<BlueprintFieldType>::ExpALen / 2;
+
+                // Clip result if necessary
                 if (pre > table_half) {
+                    if (sign) {
+                        return FixedPoint(0, FixedPointTables<BlueprintFieldType>::template get_exp_scale<M2>());
+                    }
                     pre = table_half;
+                    post = (1ULL << (16 * M2)) - 1;
                 }
-                int32_t input_a = sign ? table_half - (int32_t)pre : table_half + pre;
+
+                int64_t input_a = sign ? table_half - (int64_t)pre : table_half + pre;
 
                 if (M2 == 2) {
                     auto exp_c = FixedPointTables<BlueprintFieldType>::get_exp_c();
@@ -537,7 +543,7 @@ namespace nil {
             }
 
         }    // namespace components
-    }    // namespace blueprint
+    }        // namespace blueprint
 }    // namespace nil
 
 #endif    // CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_HPP
