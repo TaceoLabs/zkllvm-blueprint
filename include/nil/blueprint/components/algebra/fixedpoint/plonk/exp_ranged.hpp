@@ -269,7 +269,7 @@ namespace nil {
                 // Enable the range component
                 auto range_comp = component.get_range_component();
                 std::size_t range_selector = generate_gates(range_comp, bp, assignment, range_input);
-                assignment.enable_selector(range_selector, start_row_index);
+                assignment.enable_selector(range_selector, start_row_index + range_comp.rows_amount - 1);
                 generate_copy_constraints(range_comp, bp, assignment, range_input, start_row_index);
                 generate_assignments_constant(range_comp, assignment, range_input, start_row_index);
 
