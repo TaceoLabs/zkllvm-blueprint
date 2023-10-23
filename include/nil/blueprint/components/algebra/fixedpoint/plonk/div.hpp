@@ -15,7 +15,7 @@ namespace nil {
     namespace blueprint {
         namespace components {
 
-            // Input: x, y as Fixedpoint numbers with \Delta_x = \Delta_y
+            // Input: x, y as fixedpoint numbers with \Delta_x = \Delta_y
             // Output: z = round(\Delta_z * x / y) with \Delta_z = \Delta_x = \Delta_y
 
             // Works by proving z = round(\Delta_z * x / y) via 2x\Delta_z + |y| - c = 2zy + 2q and proving 0 <= q < |y|
@@ -53,7 +53,7 @@ namespace nil {
                     return m2;
                 }
 
-                uint64_t get_scale() const {
+                uint64_t get_delta() const {
                     return 1ULL << (16 * m2);
                 }
 
@@ -76,19 +76,24 @@ namespace nil {
 
                 // TACEO_TODO Update to lookup tables
                 static manifest_type get_manifest(uint8_t m1, uint8_t m2) {
-                    static manifest_type manifest = manifest_type(
-                        std::shared_ptr<manifest_param>(new manifest_single_value_param(5 + 3 * (M(m2) + M(m1)))),
-                        false);
+                    static manifest_type manifest =
+                        manifest_type(std::shared_ptr<manifest_param>(new manifest_range_param(
+                                          5 + (M(m2) + M(m1)), 5 + 3 * (m2 + m1), 3 * (m2 + m1))),
+                                      false);
                     return manifest;
                 }
 
                 constexpr static std::size_t get_rows_amount(std::size_t witness_amount,
-                                                             std::size_t lookup_column_amount) {
-                    return 1;
+                                                             std::size_t lookup_column_amount, uint8_t m1, uint8_t m2) {
+                    if (5 + 3 * (M(m2) + M(m1)) <= witness_amount) {
+                        return 1;
+                    } else {
+                        return 2;
+                    }
                 }
 
                 constexpr static const std::size_t gates_amount = 1;
-                const std::size_t rows_amount = get_rows_amount(this->witness_amount(), 0);
+                const std::size_t rows_amount = get_rows_amount(this->witness_amount(), 0, m1, m2);
 
                 struct input_type {
                     var x = var(0, 0, false);
@@ -102,11 +107,13 @@ namespace nil {
                 struct result_type {
                     var output = var(0, 0, false);
                     result_type(const fix_div &component, std::uint32_t start_row_index) {
-                        output = var(component.W(2), start_row_index, false, var::column_type::witness);
+                        auto row = start_row_index + component.rows_amount - 1;
+                        output = var(component.W(2), row, false, var::column_type::witness);
                     }
 
                     result_type(const fix_div &component, std::size_t start_row_index) {
-                        output = var(component.W(2), start_row_index, false, var::column_type::witness);
+                        auto row = start_row_index + component.rows_amount - 1;
+                        output = var(component.W(2), row, false, var::column_type::witness);
                     }
 
                     std::vector<var> all_vars() const {
@@ -149,31 +156,32 @@ namespace nil {
                 const std::uint32_t start_row_index) {
 
                 const std::size_t j = start_row_index;
+                auto second_row = j + component.rows_amount - 1;
                 auto m = component.get_m();
 
                 typename BlueprintFieldType::value_type tmp =
-                    var_value(assignment, instance_input.x) * component.get_scale();
+                    var_value(assignment, instance_input.x) * component.get_delta();
 
                 auto y = var_value(assignment, instance_input.y);
 
                 DivMod<BlueprintFieldType> res = FixedPointHelper<BlueprintFieldType>::round_div_mod(tmp, y);
 
+                // if one row:
                 // | x | y | z | c | s_y | y0 | ... | q0 | ... | yq_0 | ...
-                assignment.witness(component.W(0), j) = var_value(assignment, instance_input.x);
-                assignment.witness(component.W(1), j) = y;
-                assignment.witness(component.W(2), j) = res.quotient;
+                // else;
+                // first row: | q0 | ... | yq_0 | ...
+                // second row: | x | y | z | c | s_y | y0 | ...
+                assignment.witness(component.W(0), second_row) = var_value(assignment, instance_input.x);
+                assignment.witness(component.W(1), second_row) = y;
+                assignment.witness(component.W(2), second_row) = res.quotient;
 
                 std::vector<uint16_t> decomp_y;
                 std::vector<uint16_t> decomp_q;
                 std::vector<uint16_t> decomp_yq;
 
                 bool sign = FixedPointHelper<BlueprintFieldType>::abs(y);
-                if (sign) {
-                    assignment.witness(component.W(4), j) = -typename BlueprintFieldType::value_type(1);
-
-                } else {
-                    assignment.witness(component.W(4), j) = typename BlueprintFieldType::value_type(1);
-                }
+                assignment.witness(component.W(4), second_row) =
+                    sign ? -BlueprintFieldType::value_type::one() : BlueprintFieldType::value_type::one();
 
                 sign = FixedPointHelper<BlueprintFieldType>::decompose(y, decomp_y);
                 BLUEPRINT_RELEASE_ASSERT(!sign);
@@ -186,12 +194,17 @@ namespace nil {
                 BLUEPRINT_RELEASE_ASSERT(decomp_q.size() >= m);
                 BLUEPRINT_RELEASE_ASSERT(decomp_yq.size() >= m);
 
-                assignment.witness(component.W(3), j) = typename BlueprintFieldType::value_type(decomp_y[0] & 1);
+                assignment.witness(component.W(3), second_row) =
+                    typename BlueprintFieldType::value_type(decomp_y[0] & 1);
+
+                auto y_start = 5;
+                auto q_start = component.rows_amount == 1 ? y_start + m : 0;
+                auto yq_start = q_start + m;
 
                 for (auto i = 0; i < m; i++) {
-                    assignment.witness(component.W(5 + i), j) = decomp_y[i];
-                    assignment.witness(component.W(5 + m + i), j) = decomp_q[i];
-                    assignment.witness(component.W(5 + 2 * m + i), j) = decomp_yq[i];
+                    assignment.witness(component.W(y_start + i), second_row) = decomp_y[i];
+                    assignment.witness(component.W(q_start + i), j) = decomp_q[i];
+                    assignment.witness(component.W(yq_start + i), j) = decomp_yq[i];
                 }
 
                 return typename plonk_fixedpoint_div<BlueprintFieldType, ArithmetizationParams>::result_type(
@@ -210,15 +223,20 @@ namespace nil {
                 using var = typename plonk_fixedpoint_div<BlueprintFieldType, ArithmetizationParams>::var;
                 // 2x\Delta_z + |y| - c = 2zy + 2q and proving 0 <= q < |y|
                 auto m = component.get_m();
-                auto delta = component.get_scale();
+                auto delta = component.get_delta();
 
-                auto y = nil::crypto3::math::expression(var(component.W(5), 0));
-                auto q = nil::crypto3::math::expression(var(component.W(5 + m), 0));
-                auto yq = nil::crypto3::math::expression(var(component.W(5 + 2 * m), 0));
+                int first_row = 1 - (int)component.rows_amount;
+                auto y_start = 5;
+                auto q_start = component.rows_amount == 1 ? y_start + m : 0;
+                auto yq_start = q_start + m;
+
+                auto y = nil::crypto3::math::expression(var(component.W(y_start), 0));
+                auto q = nil::crypto3::math::expression(var(component.W(q_start), first_row));
+                auto yq = nil::crypto3::math::expression(var(component.W(yq_start), first_row));
                 for (auto i = 1; i < m; i++) {
-                    y += var(component.W(5 + i), 0) * (1ULL << (16 * i));
-                    q += var(component.W(5 + m + i), 0) * (1ULL << (16 * i));
-                    yq += var(component.W(5 + 2 * m + i), 0) * (1ULL << (16 * i));
+                    y += var(component.W(y_start + i), 0) * (1ULL << (16 * i));
+                    q += var(component.W(q_start + i), first_row) * (1ULL << (16 * i));
+                    yq += var(component.W(yq_start + i), first_row) * (1ULL << (16 * i));
                 }
 
                 auto constraint_1 =
@@ -249,7 +267,7 @@ namespace nil {
 
                 using var = typename plonk_fixedpoint_div<BlueprintFieldType, ArithmetizationParams>::var;
 
-                const std::size_t j = start_row_index;
+                const std::size_t j = start_row_index + component.rows_amount - 1;
                 var component_x = var(component.W(0), static_cast<int>(j), false);
                 var component_y = var(component.W(1), static_cast<int>(j), false);
                 bp.add_copy_constraint({instance_input.x, component_x});
@@ -269,7 +287,8 @@ namespace nil {
                 // TACEO_TODO extend for lookup?
                 std::size_t selector_index = generate_gates(component, bp, assignment, instance_input);
 
-                assignment.enable_selector(selector_index, start_row_index);
+                // selector goes onto last row and gate uses all rows
+                assignment.enable_selector(selector_index, start_row_index + component.rows_amount - 1);
 
                 generate_copy_constraints(component, bp, assignment, instance_input, start_row_index);
 

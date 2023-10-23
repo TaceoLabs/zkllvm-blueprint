@@ -1,5 +1,5 @@
-#ifndef CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_MUL_RESCALE_CONST_HPP
-#define CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_MUL_RESCALE_CONST_HPP
+#ifndef CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_RESCALE_HPP
+#define CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_RESCALE_HPP
 
 #include <nil/crypto3/zk/snark/arithmetization/plonk/constraint_system.hpp>
 
@@ -15,20 +15,19 @@ namespace nil {
     namespace blueprint {
         namespace components {
 
-            // Input: x, y as fixedpoint numbers with \Delta_x = \Delta_y, y is public
-            // Output: z = Rescale(x * y) with \Delta_z = \Delta_x = \Delta_y
+            // Input: x as fixedpoint numbers with \Delta_x
+            // Output: z = Rescale(x) with \Delta_z
 
-            // Works by proving z = round(x*y/\Delta) via 2xy + \Delta = 2z\Delta + 2q and proving 0 <= q < \Delta via a
+            // Works by proving z = round(x\Delta) via 2x + \Delta = 2z\Delta + 2q and proving 0 <= q < \Delta via a
             // lookup table
 
             template<typename ArithmetizationType, typename FieldType, typename NonNativePolicyType>
-            class fix_mul_rescale_const;
+            class fix_rescale;
 
             template<typename BlueprintFieldType, typename ArithmetizationParams, typename NonNativePolicyType>
-            class fix_mul_rescale_const<
-                crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
-                BlueprintFieldType, NonNativePolicyType>
-                : public plonk_component<BlueprintFieldType, ArithmetizationParams, 1, 0> {
+            class fix_rescale<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                              BlueprintFieldType, NonNativePolicyType>
+                : public plonk_component<BlueprintFieldType, ArithmetizationParams, 0, 0> {
 
             private:
                 uint8_t m2;    // Post-comma 16-bit limbs
@@ -49,18 +48,19 @@ namespace nil {
                     return 1ULL << (16 * m2);
                 }
 
-                using component_type = plonk_component<BlueprintFieldType, ArithmetizationParams, 1, 0>;
+                static std::size_t get_witness_columns(uint8_t m2) {
+                    return 2 + M(m2) ;
+                }
+
+                using component_type = plonk_component<BlueprintFieldType, ArithmetizationParams, 0, 0>;
 
                 using var = typename component_type::var;
-                using value_type = typename BlueprintFieldType::value_type;
                 using manifest_type = plonk_component_manifest;
-
-                value_type constant;
 
                 class gate_manifest_type : public component_gate_manifest {
                 public:
                     std::uint32_t gates_amount() const override {
-                        return fix_mul_rescale_const::gates_amount;
+                        return fix_rescale::gates_amount;
                     }
                 };
 
@@ -72,7 +72,7 @@ namespace nil {
                 // TACEO_TODO Update to lookup tables
                 static manifest_type get_manifest(uint8_t m2) {
                     static manifest_type manifest = manifest_type(
-                        std::shared_ptr<manifest_param>(new manifest_single_value_param(2 + M(m2))), true);
+                        std::shared_ptr<manifest_param>(new manifest_single_value_param(get_witness_columns(m2))), false);
                     return manifest;
                 }
 
@@ -94,11 +94,11 @@ namespace nil {
 
                 struct result_type {
                     var output = var(0, 0, false);
-                    result_type(const fix_mul_rescale_const &component, std::uint32_t start_row_index) {
+                    result_type(const fix_rescale &component, std::uint32_t start_row_index) {
                         output = var(component.W(1), start_row_index, false, var::column_type::witness);
                     }
 
-                    result_type(const fix_mul_rescale_const &component, std::size_t start_row_index) {
+                    result_type(const fix_rescale &component, std::size_t start_row_index) {
                         output = var(component.W(1), start_row_index, false, var::column_type::witness);
                     }
 
@@ -107,45 +107,49 @@ namespace nil {
                     }
                 };
 
+                template<typename ContainerType>
+                explicit fix_rescale(ContainerType witness, uint8_t m2) :
+                    component_type(witness, {}, {}, get_manifest(m2)), m2(M(m2)) {};
+
                 template<typename WitnessContainerType, typename ConstantContainerType,
                          typename PublicInputContainerType>
-                fix_mul_rescale_const(WitnessContainerType witness, ConstantContainerType constant,
-                                      PublicInputContainerType public_input, value_type constant_, int8_t m2) :
+                fix_rescale(WitnessContainerType witness, ConstantContainerType constant,
+                            PublicInputContainerType public_input, uint8_t m2) :
                     component_type(witness, constant, public_input, get_manifest(m2)),
-                    constant(constant_), m2(M(m2)) {};
+                    m2(M(m2)) {};
 
-                fix_mul_rescale_const(
-                    std::initializer_list<typename component_type::witness_container_type::value_type> witnesses,
-                    std::initializer_list<typename component_type::constant_container_type::value_type> constants,
-                    std::initializer_list<typename component_type::public_input_container_type::value_type>
-                        public_inputs,
-                    value_type constant_, uint8_t m2) :
+                fix_rescale(std::initializer_list<typename component_type::witness_container_type::value_type>
+                                witnesses,
+                            std::initializer_list<typename component_type::constant_container_type::value_type>
+                                constants,
+                            std::initializer_list<typename component_type::public_input_container_type::value_type>
+                                public_inputs,
+                            uint8_t m2) :
                     component_type(witnesses, constants, public_inputs, get_manifest(m2)),
-                    constant(constant_), m2(M(m2)) {};
+                    m2(M(m2)) {};
             };
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
-            using plonk_fixedpoint_mul_rescale_const = fix_mul_rescale_const<
-                crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
-                BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
+            using plonk_fixedpoint_rescale =
+                fix_rescale<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                            BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
-            typename plonk_fixedpoint_mul_rescale_const<BlueprintFieldType, ArithmetizationParams>::result_type
+            typename plonk_fixedpoint_rescale<BlueprintFieldType, ArithmetizationParams>::result_type
                 generate_assignments(
-                    const plonk_fixedpoint_mul_rescale_const<BlueprintFieldType, ArithmetizationParams> &component,
+                    const plonk_fixedpoint_rescale<BlueprintFieldType, ArithmetizationParams> &component,
                     assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                         &assignment,
-                    const typename plonk_fixedpoint_mul_rescale_const<BlueprintFieldType,
-                                                                      ArithmetizationParams>::input_type instance_input,
+                    const typename plonk_fixedpoint_rescale<BlueprintFieldType, ArithmetizationParams>::input_type
+                        instance_input,
                     const std::uint32_t start_row_index) {
 
                 const std::size_t j = start_row_index;
 
-                typename BlueprintFieldType::value_type tmp =
-                    var_value(assignment, instance_input.x) * component.constant;
+                typename BlueprintFieldType::value_type x = var_value(assignment, instance_input.x);
 
                 DivMod<BlueprintFieldType> res =
-                    FixedPointHelper<BlueprintFieldType>::round_div_mod(tmp, component.get_delta());
+                    FixedPointHelper<BlueprintFieldType>::round_div_mod(x, component.get_delta());
 
                 // | x | z | q0 | ... |
                 assignment.witness(component.W(0), j) = var_value(assignment, instance_input.x);
@@ -164,22 +168,21 @@ namespace nil {
                     }
                 }
 
-                return
-                    typename plonk_fixedpoint_mul_rescale_const<BlueprintFieldType, ArithmetizationParams>::result_type(
-                        component, start_row_index);
+                return typename plonk_fixedpoint_rescale<BlueprintFieldType, ArithmetizationParams>::result_type(
+                    component, start_row_index);
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
             std::size_t generate_gates(
-                const plonk_fixedpoint_mul_rescale_const<BlueprintFieldType, ArithmetizationParams> &component,
+                const plonk_fixedpoint_rescale<BlueprintFieldType, ArithmetizationParams> &component,
                 circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
                 assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                     &assignment,
-                const typename plonk_fixedpoint_mul_rescale_const<BlueprintFieldType, ArithmetizationParams>::input_type
+                const typename plonk_fixedpoint_rescale<BlueprintFieldType, ArithmetizationParams>::input_type
                     &instance_input) {
 
-                using var = typename plonk_fixedpoint_mul_rescale_const<BlueprintFieldType, ArithmetizationParams>::var;
-                // 2xy + \Delta = 2z\Delta + 2q and proving 0 <= q < \Delta via a lookup table. Delta is a multiple of
+                using var = typename plonk_fixedpoint_rescale<BlueprintFieldType, ArithmetizationParams>::var;
+                // 2x + \Delta = 2z\Delta + 2q and proving 0 <= q < \Delta via a lookup table. Delta is a multiple of
                 // 2^16, hence q could be decomposed into 16-bit limbs
                 auto delta = component.get_delta();
 
@@ -188,10 +191,7 @@ namespace nil {
                     q += var(component.W(2 + i), 0) * (1ULL << (16 * i));
                 }
 
-                auto constraint_1 =
-                    2 * (var(component.W(0), 0) * var(component.C(0), 0, true, var::column_type::constant) -
-                         var(component.W(1), 0) * delta - q) +
-                    delta;
+                auto constraint_1 = 2 * (var(component.W(0), 0) - var(component.W(1), 0) * delta - q) + delta;
 
                 // TACEO_TODO extend for lookup constraint
                 return bp.add_gate(constraint_1);
@@ -199,15 +199,15 @@ namespace nil {
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
             void generate_copy_constraints(
-                const plonk_fixedpoint_mul_rescale_const<BlueprintFieldType, ArithmetizationParams> &component,
+                const plonk_fixedpoint_rescale<BlueprintFieldType, ArithmetizationParams> &component,
                 circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
                 assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                     &assignment,
-                const typename plonk_fixedpoint_mul_rescale_const<BlueprintFieldType, ArithmetizationParams>::input_type
+                const typename plonk_fixedpoint_rescale<BlueprintFieldType, ArithmetizationParams>::input_type
                     &instance_input,
                 const std::size_t start_row_index) {
 
-                using var = typename plonk_fixedpoint_mul_rescale_const<BlueprintFieldType, ArithmetizationParams>::var;
+                using var = typename plonk_fixedpoint_rescale<BlueprintFieldType, ArithmetizationParams>::var;
 
                 const std::size_t j = start_row_index;
                 var component_x = var(component.W(0), static_cast<int>(j), false);
@@ -215,15 +215,14 @@ namespace nil {
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
-            typename plonk_fixedpoint_mul_rescale_const<BlueprintFieldType, ArithmetizationParams>::result_type
-                generate_circuit(
-                    const plonk_fixedpoint_mul_rescale_const<BlueprintFieldType, ArithmetizationParams> &component,
-                    circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
-                    assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
-                        &assignment,
-                    const typename plonk_fixedpoint_mul_rescale_const<
-                        BlueprintFieldType, ArithmetizationParams>::input_type &instance_input,
-                    const std::size_t start_row_index) {
+            typename plonk_fixedpoint_rescale<BlueprintFieldType, ArithmetizationParams>::result_type generate_circuit(
+                const plonk_fixedpoint_rescale<BlueprintFieldType, ArithmetizationParams> &component,
+                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                    &assignment,
+                const typename plonk_fixedpoint_rescale<BlueprintFieldType, ArithmetizationParams>::input_type
+                    &instance_input,
+                const std::size_t start_row_index) {
 
                 // TACEO_TODO extend for lookup?
                 std::size_t selector_index = generate_gates(component, bp, assignment, instance_input);
@@ -231,27 +230,13 @@ namespace nil {
                 assignment.enable_selector(selector_index, start_row_index);
 
                 generate_copy_constraints(component, bp, assignment, instance_input, start_row_index);
-                generate_assignments_constant(component, assignment, instance_input, start_row_index);
 
-                return
-                    typename plonk_fixedpoint_mul_rescale_const<BlueprintFieldType, ArithmetizationParams>::result_type(
-                        component, start_row_index);
-            }
-
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
-            void generate_assignments_constant(
-                const plonk_fixedpoint_mul_rescale_const<BlueprintFieldType, ArithmetizationParams> &component,
-                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
-                    &assignment,
-                const typename plonk_fixedpoint_mul_rescale_const<BlueprintFieldType, ArithmetizationParams>::input_type
-                    &instance_input,
-                const std::size_t start_row_index) {
-
-                assignment.constant(component.C(0), start_row_index) = component.constant;
+                return typename plonk_fixedpoint_rescale<BlueprintFieldType, ArithmetizationParams>::result_type(
+                    component, start_row_index);
             }
 
         }    // namespace components
     }        // namespace blueprint
 }    // namespace nil
 
-#endif    // CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_MUL_RESCALE_CONST_HPP
+#endif    // CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_RESCALE_HPP

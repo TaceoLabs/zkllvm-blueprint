@@ -13,7 +13,7 @@ namespace nil {
     namespace blueprint {
         namespace components {
 
-            // Input: x as Fixedpoint number
+            // Input: x as fixedpoint number
             // Output: z = -x
 
             template<typename ArithmetizationType, typename FieldType, typename NonNativePolicyType>
@@ -176,7 +176,7 @@ namespace nil {
             }
 
         }    // namespace components
-    }        // namespace blueprint
+    }    // namespace blueprint
 }    // namespace nil
 
 #endif    // CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_NEG_HPP
