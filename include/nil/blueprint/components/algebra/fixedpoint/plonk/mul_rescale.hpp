@@ -67,7 +67,8 @@ namespace nil {
                 }
 
                 // TACEO_TODO Update to lookup tables
-                static manifest_type get_manifest(uint8_t m2) {
+                // we do not use _m1 but we need it for call to ManifestHelper
+                static manifest_type get_manifest(uint8_t _m1, uint8_t m2) {
                     static manifest_type manifest = manifest_type(
                         std::shared_ptr<manifest_param>(new manifest_single_value_param(3 + M(m2))), false);
                     return manifest;
@@ -107,13 +108,13 @@ namespace nil {
 
                 template<typename ContainerType>
                 explicit fix_mul_rescale(ContainerType witness, uint8_t m2) :
-                    component_type(witness, {}, {}, get_manifest(m2)), m2(M(m2)) {};
+                    component_type(witness, {}, {}, get_manifest(0, m2)), m2(M(m2)) {};
 
                 template<typename WitnessContainerType, typename ConstantContainerType,
                          typename PublicInputContainerType>
                 fix_mul_rescale(WitnessContainerType witness, ConstantContainerType constant,
                                 PublicInputContainerType public_input, uint8_t m2) :
-                    component_type(witness, constant, public_input, get_manifest(m2)),
+                    component_type(witness, constant, public_input, get_manifest(0, m2)),
                     m2(M(m2)) {};
 
                 fix_mul_rescale(std::initializer_list<typename component_type::witness_container_type::value_type>
@@ -123,7 +124,7 @@ namespace nil {
                                 std::initializer_list<typename component_type::public_input_container_type::value_type>
                                     public_inputs,
                                 uint8_t m2) :
-                    component_type(witnesses, constants, public_inputs, get_manifest(m2)),
+                    component_type(witnesses, constants, public_inputs, get_manifest(0, m2)),
                     m2(M(m2)) {};
             };
 
