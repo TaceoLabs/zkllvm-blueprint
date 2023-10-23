@@ -24,7 +24,7 @@ namespace nil {
                 FixedPointTables(const FixedPointTables &) = delete;
                 FixedPointTables &operator=(const FixedPointTables &) = delete;
 
-                static constexpr uint16_t ExpAScale = 128;
+                static constexpr uint16_t ExpAScale = 112;
                 static constexpr uint16_t ExpBScale = 16;
                 static constexpr uint16_t ExpCScale = 16;
 
