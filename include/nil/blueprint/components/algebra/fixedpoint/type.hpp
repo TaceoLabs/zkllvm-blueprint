@@ -79,7 +79,7 @@ namespace nil {
 
             public:
                 static constexpr uint8_t M_1 = M1;
-                static constexpr uint8_t M_2 = M1;
+                static constexpr uint8_t M_2 = M2;
                 static constexpr uint16_t SCALE = 16 * M2;
                 static constexpr uint64_t DELTA = (1ULL << SCALE);
 
@@ -93,6 +93,8 @@ namespace nil {
                 FixedPoint &operator=(const FixedPoint &) = default;
 
                 FixedPoint exp() const;
+
+                static FixedPoint max();
 
                 bool operator==(const FixedPoint &other) const;
                 bool operator!=(const FixedPoint &other) const;
@@ -476,6 +478,16 @@ namespace nil {
                 }
 
                 return FixedPoint(divmod.remainder, scale);
+            }
+
+            template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
+            FixedPoint<BlueprintFieldType, M1, M2> FixedPoint<BlueprintFieldType, M1, M2>::max() {
+                if (M1 == 2 && M2 == 2) {
+                    return (FixedPoint((uint64_t)(-1), SCALE));
+                } else if (M1 + M2 < 4) {
+                    return (FixedPoint((uint64_t)(1ULL << (16 * (M1 + M2)) - 1), SCALE));
+                }
+                BLUEPRINT_RELEASE_ASSERT(false);
             }
 
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>

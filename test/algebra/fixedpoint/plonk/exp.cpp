@@ -116,8 +116,7 @@ void test_fixedpoint_exp_ranged(FixedType input) {
 
     typename component_type::input_type instance_input = {var(0, 0, false, var::column_type::public_input)};
 
-    auto max = nil::blueprint::components::FixedPointTables<BlueprintFieldType>::get_highest_exp_input(FixedType::M_2);
-    auto max_exp = FixedType(max, FixedType::SCALE).exp();
+    auto max_exp = FixedType::max();
     auto max_exp_f = max_exp.to_double();
 
     double expected_res_f = exp(input.to_double());
@@ -125,6 +124,9 @@ void test_fixedpoint_exp_ranged(FixedType input) {
         expected_res_f = max_exp_f;
     }
     auto expected_res = input.exp();
+    if (expected_res > max_exp) {
+        expected_res = max_exp;
+    }
 
     auto result_check = [&expected_res, &expected_res_f, input](AssignmentType &assignment,
                                                                 typename component_type::result_type &real_res) {
@@ -138,6 +140,12 @@ void test_fixedpoint_exp_ranged(FixedType input) {
         std::cout << "expected: " << expected_res_f << "\n";
         std::cout << "real    : " << real_res_f << "\n\n";
 #endif
+        std::vector<uint16_t> decomp;
+        BLUEPRINT_RELEASE_ASSERT(!FixedType::helper::decompose(real_res_.get_value(), decomp));
+        while (decomp.size() > 1 && decomp[decomp.size() - 1] == 0) {
+            decomp.pop_back();
+        }
+        BLUEPRINT_RELEASE_ASSERT(decomp.size() <= FixedType::M_2 + FixedType::M_1);
         if (!doubleEquals(expected_res_f, real_res_f, EPSILON) || expected_res != real_res_) {
             std::cout << "expected        : " << expected_res.get_value().data << "\n";
             std::cout << "real            : " << real_res_.get_value().data << "\n\n";

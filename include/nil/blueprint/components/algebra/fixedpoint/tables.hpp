@@ -40,6 +40,8 @@ namespace nil {
                 static constexpr uint16_t get_exp_scale();
                 static value_type get_lowest_exp_input(uint8_t m2);
                 static value_type get_highest_exp_input(uint8_t m2);
+                // Highest to still get m2 + m1 limbs
+                static value_type get_highest_valid_exp_input(uint8_t m1, uint8_t m2);
             };
 
             template<typename BlueprintFieldType>
@@ -137,6 +139,24 @@ namespace nil {
                     res = res * delta + ExpCLen - 1;
                 }
                 return res;
+            }
+
+            // Highest values which still produce a result with only m1+m2 limbs
+            template<typename BlueprintFieldType>
+            typename FixedPointTables<BlueprintFieldType>::value_type
+                FixedPointTables<BlueprintFieldType>::get_highest_valid_exp_input(uint8_t m1, uint8_t m2) {
+                if (m1 == 1 && m2 == 1) {
+                    return 726818;
+                } else if (m1 == 2 && m2 == 1) {
+                    return 1453635;
+                } else if (m1 == 1 && m2 == 2) {
+                    return 47632809983;
+                } else if (m1 == 2 && m2 == 2) {
+                    return 95265488895;
+                } else {
+                    BLUEPRINT_RELEASE_ASSERT(false);
+                    return 0;
+                }
             }
 
             template<typename BlueprintFieldType>

@@ -50,23 +50,19 @@ namespace nil {
                     return m;
                 }
 
-                static value_type calc_max(const value_type &hi, uint8_t m1, uint8_t m2) {
+                static value_type calc_max(uint8_t m1, uint8_t m2) {
                     if (m1 == 1 && m2 == 1) {
-                        FixedPoint<BlueprintFieldType, 1, 1> tmp(hi, FixedPoint<BlueprintFieldType, 1, 1>::SCALE);
-                        auto res = tmp.exp();
-                        return res.get_value();
+                        auto max = FixedPoint<BlueprintFieldType, 1, 1>::max();
+                        return max.get_value();
                     } else if (m1 == 2 && m2 == 1) {
-                        FixedPoint<BlueprintFieldType, 2, 1> tmp(hi, FixedPoint<BlueprintFieldType, 2, 1>::SCALE);
-                        auto res = tmp.exp();
-                        return res.get_value();
+                        auto max = FixedPoint<BlueprintFieldType, 2, 1>::max();
+                        return max.get_value();
                     } else if (m1 == 1 && m2 == 2) {
-                        FixedPoint<BlueprintFieldType, 1, 2> tmp(hi, FixedPoint<BlueprintFieldType, 1, 2>::SCALE);
-                        auto res = tmp.exp();
-                        return res.get_value();
+                        auto max = FixedPoint<BlueprintFieldType, 1, 2>::max();
+                        return max.get_value();
                     } else if (m1 == 2 && m2 == 2) {
-                        FixedPoint<BlueprintFieldType, 2, 2> tmp(hi, FixedPoint<BlueprintFieldType, 2, 2>::SCALE);
-                        auto res = tmp.exp();
-                        return res.get_value();
+                        auto max = FixedPoint<BlueprintFieldType, 2, 2>::max();
+                        return max.get_value();
                     } else {
                         BLUEPRINT_RELEASE_ASSERT(false);
                         return 0;
@@ -159,8 +155,8 @@ namespace nil {
                                PublicInputContainerType public_input, uint8_t m1, uint8_t m2) :
                     component_type(witness, constant, public_input, get_manifest(m1, m2)),
                     lo(FixedPointTables<BlueprintFieldType>::get_lowest_exp_input(m2)),
-                    hi(FixedPointTables<BlueprintFieldType>::get_highest_exp_input(m2)), exp_min(0),
-                    exp_max(calc_max(hi, m1, m2)), exp(instantiate_exp(m2)), range(instantiate_range(m1, m2, lo, hi)) {
+                    hi(FixedPointTables<BlueprintFieldType>::get_highest_valid_exp_input(m1, m2)), exp_min(0),
+                    exp_max(calc_max(m1, m2)), exp(instantiate_exp(m2)), range(instantiate_range(m1, m2, lo, hi)) {
                     ;
                 };
 
@@ -171,7 +167,10 @@ namespace nil {
                         public_inputs,
                     uint8_t m1, uint8_t m2) :
                     component_type(witnesses, constants, public_inputs, get_manifest(m1, m2)),
-                    exp(instantiate_exp(m2)), range(instantiate_range(m1, m2, lo, hi)) {};
+                    lo(FixedPointTables<BlueprintFieldType>::get_lowest_exp_input(m2)),
+                    hi(FixedPointTables<BlueprintFieldType>::get_highest_valid_exp_input(m1, m2)), exp_min(0),
+                    exp_max(calc_max(m1, m2)), exp(instantiate_exp(m2)),
+                    range(instantiate_range(m1, m2, lo, hi)) {};
             };
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
