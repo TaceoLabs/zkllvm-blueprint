@@ -488,6 +488,7 @@ namespace nil {
                     return (FixedPoint((uint64_t)(1ULL << (16 * (M1 + M2)) - 1), SCALE));
                 }
                 BLUEPRINT_RELEASE_ASSERT(false);
+                return FixedPoint(0, SCALE);
             }
 
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
