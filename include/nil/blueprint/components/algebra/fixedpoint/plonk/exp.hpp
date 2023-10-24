@@ -1,25 +1,18 @@
 #ifndef CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_EXP_HPP
 #define CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_EXP_HPP
 
-#include <nil/crypto3/zk/snark/arithmetization/plonk/constraint_system.hpp>
-
-#include <nil/blueprint/blueprint/plonk/assignment.hpp>
-#include <nil/blueprint/blueprint/plonk/circuit.hpp>
-#include <nil/blueprint/component.hpp>
-#include <nil/blueprint/manifest.hpp>
-#include <nil/blueprint/basic_non_native_policy.hpp>
-
-#include "nil/blueprint/components/algebra/fixedpoint/type.hpp"
+#include "nil/blueprint/components/algebra/fixedpoint/plonk/rescale.hpp"
 
 namespace nil {
     namespace blueprint {
         namespace components {
 
             // Input: x as fixedpoint numbers with \Delta_x
-            // Output: y as fixedpoint number with huge scale!
+            // Output: y as fixedpoint number with \Delta_y = \Delta_y
 
             // Works by decomposing to the pre-comma part and, depending on \Delta_x, one or two 16-bit post-comma parts
             // and fusing lookup tables: y = exp(x) = exp(x_pre) * exp(x_post1) * exp(x_post2)
+            // followed by a rescale
 
             template<typename ArithmetizationType, typename FieldType, typename NonNativePolicyType>
             class fix_exp;
@@ -29,8 +22,14 @@ namespace nil {
                           BlueprintFieldType, NonNativePolicyType>
                 : public plonk_component<BlueprintFieldType, ArithmetizationParams, 0, 0> {
 
+            public:
+                using rescale_component =
+                    fix_rescale<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                                BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
+
             private:
                 uint8_t m2;    // Post-comma 16-bit limbs
+                rescale_component rescale;
 
                 static uint8_t M(uint8_t m) {
                     if (m == 0 || m > 2) {
@@ -39,17 +38,35 @@ namespace nil {
                     return m;
                 }
 
+                rescale_component instantiate_rescale(uint8_t m2) const {
+                    std::vector<std::uint32_t> witness_list;
+                    auto witness_columns = rescale_component::get_witness_columns(m2);
+                    BLUEPRINT_RELEASE_ASSERT(this->witness_amount() >= witness_columns);
+                    witness_list.reserve(witness_columns);
+                    witness_list.push_back(this->W(4 + 2 * m2));    // y_mul = input
+                    witness_list.push_back(this->W(1));             // z = output
+                    for (auto i = 2; i < witness_columns; i++) {
+                        witness_list.push_back(this->W(4 + 2 * m2 + i));
+                    }
+                    return rescale_component(witness_list, std::array<std::uint32_t, 0>(),
+                                             std::array<std::uint32_t, 0>(), m2);
+                }
+
             public:
+                const rescale_component &get_rescale_component() const {
+                    return rescale;
+                }
+
                 uint8_t get_m2() const {
-                    return m2;
+                    return rescale.get_m2();
                 }
 
                 uint64_t get_delta() const {
-                    return 1ULL << (16 * m2);
+                    return rescale.get_delta();
                 }
 
                 static std::size_t get_witness_columns(uint8_t m2) {
-                    return 4 + 2 * M(m2);
+                    return 4 + 2 * M(m2) + rescale_component::get_witness_columns(m2);
                 }
 
                 using component_type = plonk_component<BlueprintFieldType, ArithmetizationParams, 0, 0>;
@@ -110,14 +127,14 @@ namespace nil {
 
                 template<typename ContainerType>
                 explicit fix_exp(ContainerType witness, uint8_t m2) :
-                    component_type(witness, {}, {}, get_manifest(m2)), m2(M(m2)) {};
+                    component_type(witness, {}, {}, get_manifest(m2)), m2(M(m2)), rescale(instantiate_rescale(m2)) {};
 
                 template<typename WitnessContainerType, typename ConstantContainerType,
                          typename PublicInputContainerType>
                 fix_exp(WitnessContainerType witness, ConstantContainerType constant,
                         PublicInputContainerType public_input, uint8_t m2) :
                     component_type(witness, constant, public_input, get_manifest(m2)),
-                    m2(M(m2)) {};
+                    m2(M(m2)), rescale(instantiate_rescale(m2)) {};
 
                 fix_exp(std::initializer_list<typename component_type::witness_container_type::value_type> witnesses,
                         std::initializer_list<typename component_type::constant_container_type::value_type>
@@ -126,7 +143,7 @@ namespace nil {
                             public_inputs,
                         uint8_t m2) :
                     component_type(witnesses, constants, public_inputs, get_manifest(m2)),
-                    m2(M(m2)) {};
+                    m2(M(m2)), rescale(instantiate_rescale(m2)) {};
             };
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
@@ -148,6 +165,8 @@ namespace nil {
 
                 // | x | y | x_pre | y_pre | x_post1 | y_post1 |
                 // if m2 == 2: add | x_post2 | y_post2 |
+                // Then rescale: | y_mul | q0 | ... | where y of this component is actually the output of rescale (z)
+
                 auto x = var_value(assignment, instance_input.x);
                 assignment.witness(component.W(0), j) = x;
 
@@ -157,7 +176,8 @@ namespace nil {
                 int32_t table_half = FixedPointTables<BlueprintFieldType>::ExpALen / 2;
                 int64_t input_a = sign ? table_half - (int64_t)pre : table_half + pre;
 
-                auto exp_a = FixedPointTables<BlueprintFieldType>::get_exp_a();
+                auto exp_a = m2 == 1 ? FixedPointTables<BlueprintFieldType>::get_exp_a_16() :
+                                       FixedPointTables<BlueprintFieldType>::get_exp_a_32();
                 auto exp_b = FixedPointTables<BlueprintFieldType>::get_exp_b();
 
                 auto output_a = exp_a[0];
@@ -170,6 +190,7 @@ namespace nil {
                 }
                 assignment.witness(component.W(3), j) = output_a;
 
+                auto y_mul_col = 8;
                 if (m2 == 2) {
                     auto exp_c = FixedPointTables<BlueprintFieldType>::get_exp_c();
                     uint32_t input_b = post >> 16;
@@ -179,19 +200,28 @@ namespace nil {
                     auto output_b = exp_b[input_b];
                     auto output_c = exp_c[input_c];
                     auto res = output_a * output_b * output_c;
-                    assignment.witness(component.W(1), j) = res;
+                    assignment.witness(component.W(y_mul_col), j) = res;
                     assignment.witness(component.W(4), j) = input_b;
                     assignment.witness(component.W(5), j) = output_b;
                     assignment.witness(component.W(6), j) = input_c;
                     assignment.witness(component.W(7), j) = output_c;
                 } else {
+                    y_mul_col = 6;
                     BLUEPRINT_RELEASE_ASSERT(post >= 0 && post < exp_b.size());
                     auto output_b = exp_b[post];
                     auto res = output_a * output_b;
-                    assignment.witness(component.W(1), j) = res;
+                    assignment.witness(component.W(y_mul_col), j) = res;
                     assignment.witness(component.W(4), j) = post;
                     assignment.witness(component.W(5), j) = output_b;
                 }
+
+                // Assign rescale
+                using var = typename plonk_fixedpoint_exp<BlueprintFieldType, ArithmetizationParams>::var;
+                typename plonk_fixedpoint_exp<BlueprintFieldType, ArithmetizationParams>::rescale_component::input_type
+                    rescale_input;
+                rescale_input.x = var(component.W(y_mul_col), j);
+                auto rescale_comp = component.get_rescale_component();
+                generate_assignments(rescale_comp, assignment, rescale_input, j);
 
                 return typename plonk_fixedpoint_exp<BlueprintFieldType, ArithmetizationParams>::result_type(
                     component, start_row_index);
@@ -204,30 +234,44 @@ namespace nil {
                 assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                     &assignment,
                 const typename plonk_fixedpoint_exp<BlueprintFieldType, ArithmetizationParams>::input_type
-                    &instance_input,
-                bool with_output_rhs = true) {
+                    &instance_input) {
 
                 using var = typename plonk_fixedpoint_exp<BlueprintFieldType, ArithmetizationParams>::var;
                 auto m2 = component.get_m2();
                 auto delta = component.get_delta();
                 uint32_t table_half = FixedPointTables<BlueprintFieldType>::ExpALen / 2;
 
-                auto constraint_1 = delta * (var(component.W(2), 0) - table_half) - var(component.W(0), 0);
-                auto constraint_2 = nil::crypto3::math::expression(var(component.W(3), 0) * var(component.W(5), 0));
+                auto exp_in = var(component.W(0), 0);
+                auto tab_a_in = var(component.W(2), 0);
+                auto tab_a_out = var(component.W(3), 0);
+                auto tab_b_in = var(component.W(4), 0);
+                auto tab_b_out = var(component.W(5), 0);
 
+                auto constraint_1 = delta * (tab_a_in - table_half) - exp_in;
+                auto constraint_2 = nil::crypto3::math::expression(tab_a_out * tab_b_out);
+
+                auto y_mul_col = 8;
                 if (m2 == 2) {
-                    constraint_1 += (1ULL << 16) * var(component.W(4), 0) + var(component.W(6), 0);
-                    constraint_2 *= var(component.W(7), 0);
+                    auto tab_c_in = var(component.W(6), 0);
+                    auto tab_c_out = var(component.W(7), 0);
+                    constraint_1 += (1ULL << 16) * tab_b_in + tab_c_in;
+                    constraint_2 *= tab_c_out;
                 } else {
-                    constraint_1 += var(component.W(4), 0);
+                    y_mul_col = 6;
+                    constraint_1 += tab_b_in;
                 }
-                if (with_output_rhs) {
-                    // Don't add output rhs, e.g., for extending with range check
-                    constraint_2 -= var(component.W(1), 0);
-                }
+                auto y_mul = var(component.W(y_mul_col), 0);
+                constraint_2 -= y_mul;
+
+                // Constrain rescale
+                typename plonk_fixedpoint_exp<BlueprintFieldType, ArithmetizationParams>::rescale_component::input_type
+                    rescale_input;
+                rescale_input.x = var(component.W(y_mul_col), 0);
+                auto rescale_comp = component.get_rescale_component();
+                auto constraint_3 = get_constraint(rescale_comp, bp, assignment, rescale_input);
 
                 // TACEO_TODO extend for lookup constraint
-                return {constraint_1, constraint_2};
+                return {constraint_1, constraint_2, constraint_3};
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>

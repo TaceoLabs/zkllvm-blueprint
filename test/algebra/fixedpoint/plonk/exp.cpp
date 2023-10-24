@@ -30,13 +30,14 @@ static constexpr double EPSILON = 0.001;
 bool doubleEquals(double a, double b, double epsilon) {
     // Essentially equal from
     // https://stackoverflow.com/questions/17333/how-do-you-compare-float-and-double-while-accounting-for-precision-loss
-    return fabs(a - b) <= ((fabs(a) > fabs(b) ? fabs(b) : fabs(a)) * epsilon);
+    // or just smaller epsilon
+    return fabs(a - b) < epsilon || fabs(a - b) <= ((fabs(a) > fabs(b) ? fabs(b) : fabs(a)) * epsilon);
 }
 
 template<typename FixedType>
 void test_fixedpoint_exp(FixedType input) {
     using BlueprintFieldType = typename FixedType::field_type;
-    constexpr std::size_t WitnessColumns = 4 + 2 * FixedType::M_2;
+    constexpr std::size_t WitnessColumns = 6 + 3 * FixedType::M_2;
     constexpr std::size_t PublicInputColumns = 1;
     constexpr std::size_t ConstantColumns = 0;
     constexpr std::size_t SelectorColumns = 1;
@@ -59,9 +60,7 @@ void test_fixedpoint_exp(FixedType input) {
 
     auto result_check = [&expected_res, &expected_res_f, input](AssignmentType &assignment,
                                                                 typename component_type::result_type &real_res) {
-        auto real_res_ = FixedType(
-            var_value(assignment, real_res.output),
-            nil::blueprint::components::FixedPointTables<BlueprintFieldType>::template get_exp_scale<FixedType::M_2>());
+        auto real_res_ = FixedType(var_value(assignment, real_res.output), FixedType::SCALE);
         double real_res_f = real_res_.to_double();
 #ifdef BLUEPRINT_PLONK_PROFILING_ENABLED
         std::cout << "fixed_point exp test: "
@@ -129,9 +128,7 @@ void test_fixedpoint_exp_ranged(FixedType input) {
 
     auto result_check = [&expected_res, &expected_res_f, input](AssignmentType &assignment,
                                                                 typename component_type::result_type &real_res) {
-        auto real_res_ = FixedType(
-            var_value(assignment, real_res.output),
-            nil::blueprint::components::FixedPointTables<BlueprintFieldType>::template get_exp_scale<FixedType::M_2>());
+        auto real_res_ = FixedType(var_value(assignment, real_res.output), FixedType::SCALE);
         double real_res_f = real_res_.to_double();
 #ifdef BLUEPRINT_PLONK_PROFILING_ENABLED
         std::cout << "fixed_point exp ranged test: "

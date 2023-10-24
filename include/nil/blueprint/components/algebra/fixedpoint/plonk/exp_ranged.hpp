@@ -235,7 +235,7 @@ namespace nil {
                 typename plonk_fixedpoint_exp<BlueprintFieldType, ArithmetizationParams>::result_type exp_output(
                     exp_comp, (std::uint32_t)0);
 
-                auto constraints = get_constraints(exp_comp, bp, assignment, instance_input, false);
+                auto constraints = get_constraints(exp_comp, bp, assignment, instance_input);
 
                 auto in = var(range_output.in.index, -1);
                 auto lt = var(range_output.lt.index, -1);
@@ -245,8 +245,8 @@ namespace nil {
                 auto max = var(component.C(1), 0, true, var::column_type::constant);
 
                 constraints[0] *= in;
-                constraints[1] *= in;
-                constraints[1] += lt * min + gt * max - y;
+                constraints[2] *= in;
+                constraints[2] += (1 - in) * (lt * min + gt * max - y);
 
                 return bp.add_gate(constraints);
             }

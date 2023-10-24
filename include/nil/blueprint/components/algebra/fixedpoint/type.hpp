@@ -471,7 +471,8 @@ namespace nil {
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
             FixedPoint<BlueprintFieldType, M1, M2> FixedPoint<BlueprintFieldType, M1, M2>::exp() const {
                 BLUEPRINT_RELEASE_ASSERT(scale == SCALE);
-                auto exp_a = FixedPointTables<BlueprintFieldType>::get_exp_a();
+                auto exp_a = M2 == 1 ? FixedPointTables<BlueprintFieldType>::get_exp_a_16() :
+                                       FixedPointTables<BlueprintFieldType>::get_exp_a_32();
                 auto exp_b = FixedPointTables<BlueprintFieldType>::get_exp_b();
 
                 uint64_t pre, post;
@@ -482,13 +483,15 @@ namespace nil {
                 // Clip result if necessary
                 if (pre > table_half) {
                     if (sign) {
-                        return FixedPoint(0, FixedPointTables<BlueprintFieldType>::template get_exp_scale<M2>());
+                        return FixedPoint(0, SCALE);
                     }
                     pre = table_half;
                     post = (1ULL << (16 * M2)) - 1;
                 }
 
                 int64_t input_a = sign ? table_half - (int64_t)pre : table_half + pre;
+
+                value_type res;
 
                 if (M2 == 2) {
                     auto exp_c = FixedPointTables<BlueprintFieldType>::get_exp_c();
@@ -498,14 +501,16 @@ namespace nil {
                     BLUEPRINT_RELEASE_ASSERT(input_a >= 0 && input_a < exp_a.size());
                     BLUEPRINT_RELEASE_ASSERT(input_b >= 0 && input_b < exp_b.size());
                     BLUEPRINT_RELEASE_ASSERT(input_c >= 0 && input_c < exp_c.size());
-                    value_type res = exp_a[input_a] * exp_b[input_b] * exp_c[input_c];
-                    return FixedPoint(res, FixedPointTables<BlueprintFieldType>::template get_exp_scale<M2>());
+                    res = exp_a[input_a] * exp_b[input_b] * exp_c[input_c];
                 } else {
                     BLUEPRINT_RELEASE_ASSERT(input_a >= 0 && input_a < exp_a.size());
                     BLUEPRINT_RELEASE_ASSERT(post >= 0 && post < exp_b.size());
-                    value_type res = exp_a[input_a] * exp_b[post];
-                    return FixedPoint(res, FixedPointTables<BlueprintFieldType>::template get_exp_scale<M2>());
+                    res = exp_a[input_a] * exp_b[post];
                 }
+
+                auto fix = FixedPoint(res, FixedPointTables<BlueprintFieldType>::template get_exp_scale<M2>());
+                fix.rescale();
+                return fix;
             }
 
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
