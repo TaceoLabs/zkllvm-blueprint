@@ -142,6 +142,8 @@ namespace nil {
 
                 // trace layout (4 col(s), 1 row(s))
                 // | c | x | y | z |
+                // ! CODE DUPLICATION !
+                // If you modify this block incl. comments, change it for all blocks defining CellPositions in this file
                 auto c_pos = CellPosition {component.W(0), start_row_index};
                 auto x_pos = CellPosition {component.W(1), start_row_index};
                 auto y_pos = CellPosition {component.W(2), start_row_index};
@@ -174,6 +176,8 @@ namespace nil {
 
                 // trace layout (4 col(s), 1 row(s))
                 // | c | x | y | z |
+                // ! CODE DUPLICATION !
+                // If you modify this block incl. comments, change it for all blocks defining CellPositions in this file
                 auto c_pos = CellPosition {component.W(0), start_row_index};
                 auto x_pos = CellPosition {component.W(1), start_row_index};
                 auto y_pos = CellPosition {component.W(2), start_row_index};
@@ -204,6 +208,8 @@ namespace nil {
 
                 // trace layout (4 col(s), 1 row(s))
                 // | c | x | y | z |
+                // ! CODE DUPLICATION !
+                // If you modify this block incl. comments, change it for all blocks defining CellPositions in this file
                 auto c_pos = CellPosition {component.W(0), start_row_index};
                 auto x_pos = CellPosition {component.W(1), start_row_index};
                 auto y_pos = CellPosition {component.W(2), start_row_index};
