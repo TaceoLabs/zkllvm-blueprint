@@ -22,9 +22,9 @@ namespace nil {
              * If x and y are fixed point values the user needs to ensure that the deltas of x and y match (the scale
              * must be the same).
              *
-             * Input:  x, y ... field elements
-             *         c    ... boolean selector (field element): 0 or 1.
-             * Output: z    ... c == true ? x : y
+             * Input:    x, y ... field elements
+             *           c    ... boolean selector (field element): 0 or 1.
+             * Output:   z    ... c == true ? x : y
              *
              * The input gets defined via the fix_select::input_type struct and the output gets defined via the
              * fix_select::result_type struct.

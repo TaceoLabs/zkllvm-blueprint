@@ -15,12 +15,22 @@ namespace nil {
     namespace blueprint {
         namespace components {
 
-            // Input: x as fixedpoint numbers with \Delta_x
-            // Output: z = Rescale(x) with \Delta_z
-
-            // Works by proving z = round(x\Delta) via 2x + \Delta = 2z\Delta + 2q and proving 0 <= q < \Delta via a
+            // Works by proving y = round(x/delta) via 2x + delta = 2 y delta + 2q and proving 0 <= q < delta via a
             // lookup table
 
+            /**
+             * Component representing a rescale operation having input x (with delta_x) and output y (with delta_y)
+             *
+             * This component calculates y = rescale(x) = x / 16^m2 (y is a "right shift" of x by m2 16-bit limbs).
+             *
+             * Input:    x  ... field element
+             * Output:   y  ... field element
+             *
+             * Argument: m2 ... number of 16-bit limbs for rescaling
+             *
+             * Rescaling is an operation required for fixed-point arithmetic after some operations, e.g. multiplication,
+             * to "get the decimal separator in the right place".
+             */
             template<typename ArithmetizationType, typename FieldType, typename NonNativePolicyType>
             class fix_rescale;
 
@@ -40,10 +50,16 @@ namespace nil {
                 }
 
             public:
+                /**
+                 * returns the number of 16-bit limbs after the decimal separator
+                 */
                 uint8_t get_m2() const {
                     return m2;
                 }
 
+                /**
+                 * returns the delta for the rescale operation (2^(16 * m2))
+                 */
                 uint64_t get_delta() const {
                     return 1ULL << (16 * m2);
                 }
@@ -85,6 +101,9 @@ namespace nil {
                 constexpr static const std::size_t gates_amount = 1;
                 const std::size_t rows_amount = get_rows_amount(this->witness_amount(), 0);
 
+                /**
+                 * Describes the input x
+                 */
                 struct input_type {
                     var x = var(0, 0, false);
 
@@ -93,6 +112,9 @@ namespace nil {
                     }
                 };
 
+                /**
+                 * describes the output y
+                 */
                 struct result_type {
                     var output = var(0, 0, false);
                     result_type(const fix_rescale &component, std::uint32_t start_row_index) {
@@ -145,27 +167,30 @@ namespace nil {
                         instance_input,
                     const std::uint32_t start_row_index) {
 
-                const std::size_t j = start_row_index;
+                auto x_val = var_value(assignment, instance_input.x);
+                auto tmp = FixedPointHelper<BlueprintFieldType>::round_div_mod(x_val, component.get_delta());
+                auto y_val = tmp.quotient;
 
-                typename BlueprintFieldType::value_type x = var_value(assignment, instance_input.x);
+                // trace layout (2 + m2 col(s), 1 row(s))
+                // | x | y | q0 | ... | qm2-1 |
+                // ! CODE DUPLICATION !
+                // If you modify this block incl. comments, change it for all blocks defining CellPositions in this file
+                auto x_pos = CellPosition {component.W(0), start_row_index};
+                auto y_pos = CellPosition {component.W(1), start_row_index};
 
-                DivMod<BlueprintFieldType> res =
-                    FixedPointHelper<BlueprintFieldType>::round_div_mod(x, component.get_delta());
-
-                // | x | z | q0 | ... |
-                assignment.witness(component.W(0), j) = var_value(assignment, instance_input.x);
-                assignment.witness(component.W(1), j) = res.quotient;
+                assignment.witness(x_pos.column, x_pos.row) = x_val;
+                assignment.witness(y_pos.column, y_pos.row) = y_val;
 
                 if (component.get_m2() == 1) {
-                    assignment.witness(component.W(2), j) = res.remainder;
+                    assignment.witness(component.W(2), start_row_index) = tmp.remainder;    // q0
                 } else {
                     std::vector<uint16_t> decomp;
-                    bool sign = FixedPointHelper<BlueprintFieldType>::decompose(res.remainder, decomp);
+                    bool sign = FixedPointHelper<BlueprintFieldType>::decompose(tmp.remainder, decomp);
                     BLUEPRINT_RELEASE_ASSERT(!sign);
                     // is ok because decomp is at least of size 4 and the biggest we have is 32.32
                     BLUEPRINT_RELEASE_ASSERT(decomp.size() >= component.get_m2());
                     for (auto i = 0; i < component.get_m2(); i++) {
-                        assignment.witness(component.W(2 + i), j) = decomp[i];
+                        assignment.witness(component.W(2 + i), start_row_index) = decomp[i];    // qi for i in [0, m2)
                     }
                 }
 
@@ -182,20 +207,28 @@ namespace nil {
                 const typename plonk_fixedpoint_rescale<BlueprintFieldType, ArithmetizationParams>::input_type
                     &instance_input) {
 
+                std::uint32_t start_row_index = 0;
                 using var = typename plonk_fixedpoint_rescale<BlueprintFieldType, ArithmetizationParams>::var;
-                // 2x + \Delta = 2z\Delta + 2q and proving 0 <= q < \Delta via a lookup table. Delta is a multiple of
+                // 2x + delta = 2 y delta + 2q and proving 0 <= q < delta via a lookup table. Delta is a multiple of
                 // 2^16, hence q could be decomposed into 16-bit limbs
                 auto delta = component.get_delta();
 
-                auto q = nil::crypto3::math::expression(var(component.W(2), 0));
+                // trace layout (2 + m2 col(s), 1 row(s))
+                // | x | y | q0 | ... | qm2-1 |
+                // ! CODE DUPLICATION !
+                // If you modify this block incl. comments, change it for all blocks defining CellPositions in this file
+                auto x_pos = CellPosition {component.W(0), start_row_index};
+                auto y_pos = CellPosition {component.W(1), start_row_index};
+
+                auto q = nil::crypto3::math::expression(var(component.W(2), start_row_index));
                 for (auto i = 1; i < component.get_m2(); i++) {
-                    q += var(component.W(2 + i), 0) * (1ULL << (16 * i));
+                    q += var(component.W(2 + i), start_row_index) * (1ULL << (16 * i));    // qi for i in [0, m2)
                 }
 
-                auto in = var(component.W(0), 0);
-                auto out = var(component.W(1), 0);
+                auto x = var(x_pos.column, x_pos.row);
+                auto y = var(y_pos.column, y_pos.row);
 
-                auto constraint = 2 * (in - out * delta - q) + delta;
+                auto constraint = 2 * (x - y * delta - q) + delta;
 
                 // TACEO_TODO extend for lookup constraint
                 return constraint;
@@ -226,9 +259,14 @@ namespace nil {
 
                 using var = typename plonk_fixedpoint_rescale<BlueprintFieldType, ArithmetizationParams>::var;
 
-                const std::size_t j = start_row_index;
-                var component_x = var(component.W(0), static_cast<int>(j), false);
-                bp.add_copy_constraint({instance_input.x, component_x});
+                // trace layout (2 + m2 col(s), 1 row(s))
+                // | x | y | q0 | ... | qm2-1 |
+                // ! CODE DUPLICATION !
+                // If you modify this block incl. comments, change it for all blocks defining CellPositions in this file
+                auto x_pos = CellPosition {component.W(0), start_row_index};
+                
+                var x = var(x_pos.column, x_pos.row, false);
+                bp.add_copy_constraint({instance_input.x, x});
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
