@@ -19,6 +19,16 @@ namespace nil {
                 value_type remainder;
             };
 
+            /**
+             * Defines the position (column and row indices) of a cell for easier handling thereof in functions.
+             *
+             * Using uint64_t to be on the safe side for any computations as of today.
+             */
+            struct CellPosition {
+                uint64_t column;
+                uint64_t row;
+            };
+
             template<typename BlueprintFieldType>
             class FixedPointHelper {
             public:

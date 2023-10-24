@@ -12,11 +12,23 @@
 namespace nil {
     namespace blueprint {
         namespace components {
-
-            // Input: x, y as fixedpoint numbers with \Delta_x = \Delta_y
-            // Input: c: boolean selector
-            // Output: z = c == true ? x : y
-
+            /**
+             * Component representing a select operation having inputs x and y, a selector c, and an output z. The
+             * selector c must be either 0 or 1, values x and y are field elements. z = x if c == 1 and z
+             * = y if c == 0.
+             *
+             * TACEO_TODO: this is not really bound to fixedpoint representation, is it?
+             *
+             * If x and y are fixed point values the user needs to ensure that the deltas of x and y match (the scale
+             * must be the same).
+             *
+             * Input:  x, y ... field elements
+             *         c    ... boolean selector (field element): 0 or 1.
+             * Output: z    ... c == true ? x : y
+             *
+             * The input gets defined via the fix_select::input_type struct and the output gets defined via the
+             * fix_select::result_type struct.
+             */
             template<typename ArithmetizationType, typename FieldType, typename NonNativePolicyType>
             class fix_select;
 
@@ -57,6 +69,9 @@ namespace nil {
                 constexpr static const std::size_t gates_amount = 1;
                 const std::size_t rows_amount = get_rows_amount(this->witness_amount(), 0);
 
+                /**
+                 * Describes the inputs x, y, and c of the fix_select component.
+                 */
                 struct input_type {
                     var c = var(0, 0, false);
                     var x = var(0, 0, false);
@@ -67,6 +82,9 @@ namespace nil {
                     }
                 };
 
+                /**
+                 * Describes the output z of the fix_select component.
+                 */
                 struct result_type {
                     var output = var(0, 0, false);
                     result_type(const fix_select &component, std::uint32_t start_row_index) {
@@ -114,21 +132,26 @@ namespace nil {
                         instance_input,
                     const std::uint32_t start_row_index) {
 
-                const std::size_t j = start_row_index;
+                // getting the values of the inputs at the input location
+                auto c_val = var_value(assignment, instance_input.c);
+                auto x_val = var_value(assignment, instance_input.x);
+                auto y_val = var_value(assignment, instance_input.y);
 
-                auto c = var_value(assignment, instance_input.c);
-                auto x = var_value(assignment, instance_input.x);
-                auto y = var_value(assignment, instance_input.y);
-
-                BLUEPRINT_RELEASE_ASSERT(c == 0 || c == 1);
-                auto z = c == 1 ? x : y;
+                BLUEPRINT_RELEASE_ASSERT(c_val == 0 || c_val == 1);
+                auto z_val = c_val == 1 ? x_val : y_val;
 
                 // trace layout (4 col(s), 1 row(s))
                 // | c | x | y | z |
-                assignment.witness(component.W(0), j) = c;
-                assignment.witness(component.W(1), j) = x;
-                assignment.witness(component.W(2), j) = y;
-                assignment.witness(component.W(3), j) = z;
+                auto c_pos = CellPosition {component.W(0), start_row_index};
+                auto x_pos = CellPosition {component.W(1), start_row_index};
+                auto y_pos = CellPosition {component.W(2), start_row_index};
+                auto z_pos = CellPosition {component.W(3), start_row_index};
+
+                // writing the values of the inputs/output to this gate's internal state variables
+                assignment.witness(c_pos.column, c_pos.row) = c_val;
+                assignment.witness(x_pos.column, x_pos.row) = x_val;
+                assignment.witness(y_pos.column, y_pos.row) = y_val;
+                assignment.witness(z_pos.column, z_pos.row) = z_val;
 
                 return typename plonk_fixedpoint_select<BlueprintFieldType, ArithmetizationParams>::result_type(
                     component, start_row_index);
@@ -147,20 +170,22 @@ namespace nil {
                 // Output: z = c == true ? x : y
                 // is equivalent to: z = c * (x - y) + y
 
-                // constraint description
-                //     c is component.W(0)
-                //     x is component.W(1)
-                //     y is component.W(2)
-                //     z is component.W(3)
-                // from the report: z = cx + (1 - c)y
-                // reformulated as: 0 = c(x - y) + y - z
-                auto constraint_1 = var(component.W(0), 0) * (var(component.W(1), 0) - var(component.W(2), 0)) +
-                                    var(component.W(2), 0) - var(component.W(3), 0);
+                const std::size_t start_row_index = 0;
 
-                // constraint description
-                //     c is component.W(0)
-                // 0 = c(c - 1)
-                auto constraint_2 = var(component.W(0), 0) * (var(component.W(0), 0) - 1);
+                // trace layout (4 col(s), 1 row(s))
+                // | c | x | y | z |
+                auto c_pos = CellPosition {component.W(0), start_row_index};
+                auto x_pos = CellPosition {component.W(1), start_row_index};
+                auto y_pos = CellPosition {component.W(2), start_row_index};
+                auto z_pos = CellPosition {component.W(3), start_row_index};
+
+                auto c = var(c_pos.row, c_pos.column);
+                auto x = var(x_pos.row, x_pos.column);
+                auto y = var(y_pos.row, y_pos.column);
+                auto z = var(z_pos.row, z_pos.column);
+
+                auto constraint_1 = c * (x - y) + y - z;
+                auto constraint_2 = c * (c - 1);
 
                 return bp.add_gate({constraint_1, constraint_2});
             }
@@ -177,13 +202,19 @@ namespace nil {
 
                 using var = typename plonk_fixedpoint_select<BlueprintFieldType, ArithmetizationParams>::var;
 
-                const std::size_t j = start_row_index;
-                var component_c = var(component.W(0), static_cast<int>(j), false);
-                var component_x = var(component.W(1), static_cast<int>(j), false);
-                var component_y = var(component.W(2), static_cast<int>(j), false);
-                bp.add_copy_constraint({instance_input.c, component_c});
-                bp.add_copy_constraint({instance_input.x, component_x});
-                bp.add_copy_constraint({component_y, instance_input.y});
+                // trace layout (4 col(s), 1 row(s))
+                // | c | x | y | z |
+                auto c_pos = CellPosition {component.W(0), start_row_index};
+                auto x_pos = CellPosition {component.W(1), start_row_index};
+                auto y_pos = CellPosition {component.W(2), start_row_index};
+
+                var c = var(c_pos.row, c_pos.column, false);
+                var x = var(x_pos.row, x_pos.column, false);
+                var y = var(y_pos.row, y_pos.column, false);
+
+                bp.add_copy_constraint({instance_input.c, c});
+                bp.add_copy_constraint({instance_input.x, x});
+                bp.add_copy_constraint({instance_input.y, y});
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
@@ -207,7 +238,7 @@ namespace nil {
             }
 
         }    // namespace components
-    }    // namespace blueprint
+    }        // namespace blueprint
 }    // namespace nil
 
 #endif    // CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_SELECT_HPP
