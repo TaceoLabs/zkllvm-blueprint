@@ -43,10 +43,10 @@ namespace nil {
                     auto witness_columns = rescale_component::get_witness_columns(m2);
                     BLUEPRINT_RELEASE_ASSERT(this->witness_amount() >= witness_columns);
                     witness_list.reserve(witness_columns);
-                    witness_list.push_back(this->W(4 + 2 * m2));    // y_mul = input
+                    witness_list.push_back(this->W(5 + m2));    // y_mul = input
                     witness_list.push_back(this->W(1));             // z = output
                     for (auto i = 2; i < witness_columns; i++) {
-                        witness_list.push_back(this->W(4 + 2 * m2 + i));
+                        witness_list.push_back(this->W(5 + m2 + i));
                     }
                     return rescale_component(witness_list, std::array<std::uint32_t, 0>(),
                                              std::array<std::uint32_t, 0>(), m2);
@@ -66,7 +66,7 @@ namespace nil {
                 }
 
                 static std::size_t get_witness_columns(uint8_t m2) {
-                    return 4 + 2 * M(m2) + rescale_component::get_witness_columns(m2);
+                    return 5 + M(m2) + rescale_component::get_witness_columns(m2);
                 }
 
                 using component_type = plonk_component<BlueprintFieldType, ArithmetizationParams, 0, 0>;
@@ -164,7 +164,7 @@ namespace nil {
                 auto m2 = component.get_m2();
 
                 // | x | y | x_pre | y_pre | x_post1 | y_post1 |
-                // if m2 == 2: add | x_post2 | y_post2 |
+                // if m2 == 2: add | x_post2 |
                 // Then rescale: | y_mul | q0 | ... | where y of this component is actually the output of rescale (z)
 
                 auto x = var_value(assignment, instance_input.x);
@@ -178,7 +178,8 @@ namespace nil {
 
                 auto exp_a = m2 == 1 ? FixedPointTables<BlueprintFieldType>::get_exp_a_16() :
                                        FixedPointTables<BlueprintFieldType>::get_exp_a_32();
-                auto exp_b = FixedPointTables<BlueprintFieldType>::get_exp_b();
+                auto exp_b = m2 == 1 ?  FixedPointTables<BlueprintFieldType>::get_exp_b_16():
+                                       FixedPointTables<BlueprintFieldType>::get_exp_b_32();
 
                 auto output_a = exp_a[0];
                 if (input_a >= 0 && input_a < exp_a.size()) {
@@ -190,23 +191,20 @@ namespace nil {
                 }
                 assignment.witness(component.W(3), j) = output_a;
 
-                auto y_mul_col = 8;
+                auto y_mul_col = 7;
                 if (m2 == 2) {
-                    auto exp_c = FixedPointTables<BlueprintFieldType>::get_exp_c();
                     uint32_t input_b = post >> 16;
                     uint32_t input_c = post & ((1ULL << 16) - 1);
                     BLUEPRINT_RELEASE_ASSERT(input_b >= 0 && input_b < exp_b.size());
-                    BLUEPRINT_RELEASE_ASSERT(input_c >= 0 && input_c < exp_c.size());
+                    BLUEPRINT_RELEASE_ASSERT(input_c >= 0 && input_c < exp_b.size());
                     auto output_b = exp_b[input_b];
-                    auto output_c = exp_c[input_c];
-                    auto res = output_a * output_b * output_c;
+                    auto res = output_a * output_b;
                     assignment.witness(component.W(y_mul_col), j) = res;
                     assignment.witness(component.W(4), j) = input_b;
                     assignment.witness(component.W(5), j) = output_b;
                     assignment.witness(component.W(6), j) = input_c;
-                    assignment.witness(component.W(7), j) = output_c;
                 } else {
-                    y_mul_col = 6;
+                    y_mul_col = 5;
                     BLUEPRINT_RELEASE_ASSERT(post >= 0 && post < exp_b.size());
                     auto output_b = exp_b[post];
                     auto res = output_a * output_b;
@@ -250,14 +248,12 @@ namespace nil {
                 auto constraint_1 = delta * (tab_a_in - table_half) - exp_in;
                 auto constraint_2 = nil::crypto3::math::expression(tab_a_out * tab_b_out);
 
-                auto y_mul_col = 8;
+                auto y_mul_col = 7;
                 if (m2 == 2) {
                     auto tab_c_in = var(component.W(6), 0);
-                    auto tab_c_out = var(component.W(7), 0);
                     constraint_1 += (1ULL << 16) * tab_b_in + tab_c_in;
-                    constraint_2 *= tab_c_out;
                 } else {
-                    y_mul_col = 6;
+                    y_mul_col = 5;
                     constraint_1 += tab_b_in;
                 }
                 auto y_mul = var(component.W(y_mul_col), 0);

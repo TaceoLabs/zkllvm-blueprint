@@ -496,7 +496,8 @@ namespace nil {
                 BLUEPRINT_RELEASE_ASSERT(scale == SCALE);
                 auto exp_a = M2 == 1 ? FixedPointTables<BlueprintFieldType>::get_exp_a_16() :
                                        FixedPointTables<BlueprintFieldType>::get_exp_a_32();
-                auto exp_b = FixedPointTables<BlueprintFieldType>::get_exp_b();
+                auto exp_b = M2 == 1 ?  FixedPointTables<BlueprintFieldType>::get_exp_b_16():
+                                       FixedPointTables<BlueprintFieldType>::get_exp_b_32();
 
                 uint64_t pre, post;
                 bool sign = helper::split_exp(value, scale, pre, post);
@@ -517,14 +518,13 @@ namespace nil {
                 value_type res;
 
                 if (M2 == 2) {
-                    auto exp_c = FixedPointTables<BlueprintFieldType>::get_exp_c();
                     uint32_t input_b = post >> 16;
                     uint32_t input_c = post & ((1ULL << 16) - 1);
 
                     BLUEPRINT_RELEASE_ASSERT(input_a >= 0 && input_a < exp_a.size());
                     BLUEPRINT_RELEASE_ASSERT(input_b >= 0 && input_b < exp_b.size());
-                    BLUEPRINT_RELEASE_ASSERT(input_c >= 0 && input_c < exp_c.size());
-                    res = exp_a[input_a] * exp_b[input_b] * exp_c[input_c];
+                    BLUEPRINT_RELEASE_ASSERT(input_c >= 0 && input_c < exp_b.size());
+                    res = exp_a[input_a] * exp_b[input_b];
                 } else {
                     BLUEPRINT_RELEASE_ASSERT(input_a >= 0 && input_a < exp_a.size());
                     BLUEPRINT_RELEASE_ASSERT(post >= 0 && post < exp_b.size());
