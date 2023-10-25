@@ -204,7 +204,7 @@ namespace nil {
                     assignment.witness(component.W(5), j) = output_b;
                     assignment.witness(component.W(6), j) = input_c;
                 } else {
-                    y_mul_col = 5;
+                    y_mul_col = 6;
                     BLUEPRINT_RELEASE_ASSERT(post >= 0 && post < exp_b.size());
                     auto output_b = exp_b[post];
                     auto res = output_a * output_b;
@@ -253,7 +253,7 @@ namespace nil {
                     auto tab_c_in = var(component.W(6), 0);
                     constraint_1 += (1ULL << 16) * tab_b_in + tab_c_in;
                 } else {
-                    y_mul_col = 5;
+                    y_mul_col = 6;
                     constraint_1 += tab_b_in;
                 }
                 auto y_mul = var(component.W(y_mul_col), 0);
