@@ -183,10 +183,10 @@ namespace nil {
                 auto y_pos = CellPosition {component.W(2), start_row_index};
                 auto z_pos = CellPosition {component.W(3), start_row_index};
 
-                auto c = var(c_pos.row, c_pos.column);
-                auto x = var(x_pos.row, x_pos.column);
-                auto y = var(y_pos.row, y_pos.column);
-                auto z = var(z_pos.row, z_pos.column);
+                auto c = var(c_pos.column, c_pos.row);
+                auto x = var(x_pos.column, x_pos.row);
+                auto y = var(y_pos.column, y_pos.row);
+                auto z = var(z_pos.column, z_pos.row);
 
                 auto constraint_1 = c * (x - y) + y - z;
                 auto constraint_2 = c * (c - 1);
@@ -214,9 +214,9 @@ namespace nil {
                 auto x_pos = CellPosition {component.W(1), start_row_index};
                 auto y_pos = CellPosition {component.W(2), start_row_index};
 
-                var c = var(c_pos.row, c_pos.column, false);
-                var x = var(x_pos.row, x_pos.column, false);
-                var y = var(y_pos.row, y_pos.column, false);
+                var c = var(c_pos.column, c_pos.row, false);
+                var x = var(x_pos.column, x_pos.row, false);
+                var y = var(y_pos.column, y_pos.row, false);
 
                 bp.add_copy_constraint({instance_input.c, c});
                 bp.add_copy_constraint({instance_input.x, x});
