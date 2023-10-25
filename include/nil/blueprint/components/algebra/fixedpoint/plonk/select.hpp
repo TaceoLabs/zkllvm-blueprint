@@ -88,11 +88,31 @@ namespace nil {
                 struct result_type {
                     var output = var(0, 0, false);
                     result_type(const fix_select &component, std::uint32_t start_row_index) {
-                        output = var(component.W(3), start_row_index, false, var::column_type::witness);
+                        // trace layout (4 col(s), 1 row(s))
+                        //
+                        //  r\c| 0 | 1 | 2 | 3 |
+                        // +---+---+---+---+---+
+                        // | 0 | c | x | y | z |
+                        //
+                        // ! CODE DUPLICATION !
+                        // If you modify this block incl. comments, change it for all blocks defining CellPositions in
+                        // this file
+                        auto z_pos = CellPosition {component.W(3), start_row_index};
+                        output = var(z_pos.column, z_pos.row, false, var::column_type::witness);
                     }
 
                     result_type(const fix_select &component, std::size_t start_row_index) {
-                        output = var(component.W(3), start_row_index, false, var::column_type::witness);
+                        // trace layout (4 col(s), 1 row(s))
+                        //
+                        //  r\c| 0 | 1 | 2 | 3 |
+                        // +---+---+---+---+---+
+                        // | 0 | c | x | y | z |
+                        //
+                        // ! CODE DUPLICATION !
+                        // If you modify this block incl. comments, change it for all blocks defining CellPositions in
+                        // this file
+                        auto z_pos = CellPosition {component.W(3), start_row_index};
+                        output = var(z_pos.column, z_pos.row, false, var::column_type::witness);
                     }
 
                     std::vector<var> all_vars() const {
@@ -141,7 +161,11 @@ namespace nil {
                 auto z_val = c_val == 1 ? x_val : y_val;
 
                 // trace layout (4 col(s), 1 row(s))
-                // | c | x | y | z |
+                //
+                //  r\c| 0 | 1 | 2 | 3 |
+                // +---+---+---+---+---+
+                // | 0 | c | x | y | z |
+                //
                 // ! CODE DUPLICATION !
                 // If you modify this block incl. comments, change it for all blocks defining CellPositions in this file
                 auto c_pos = CellPosition {component.W(0), start_row_index};
@@ -175,7 +199,11 @@ namespace nil {
                 const std::size_t start_row_index = 0;
 
                 // trace layout (4 col(s), 1 row(s))
-                // | c | x | y | z |
+                //
+                //  r\c| 0 | 1 | 2 | 3 |
+                // +---+---+---+---+---+
+                // | 0 | c | x | y | z |
+                //
                 // ! CODE DUPLICATION !
                 // If you modify this block incl. comments, change it for all blocks defining CellPositions in this file
                 auto c_pos = CellPosition {component.W(0), start_row_index};
@@ -207,7 +235,11 @@ namespace nil {
                 using var = typename plonk_fixedpoint_select<BlueprintFieldType, ArithmetizationParams>::var;
 
                 // trace layout (4 col(s), 1 row(s))
-                // | c | x | y | z |
+                //
+                //  r\c| 0 | 1 | 2 | 3 |
+                // +---+---+---+---+---+
+                // | 0 | c | x | y | z |
+                //
                 // ! CODE DUPLICATION !
                 // If you modify this block incl. comments, change it for all blocks defining CellPositions in this file
                 auto c_pos = CellPosition {component.W(0), start_row_index};

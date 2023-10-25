@@ -25,8 +25,14 @@ namespace nil {
              * Using uint64_t to be on the safe side for any computations as of today.
              */
             struct CellPosition {
-                uint64_t column;
-                uint64_t row;
+                int64_t column;
+                int64_t row;
+
+            public:
+                CellPosition() : column(0), row(0) {
+                }
+                CellPosition(int64_t column, int64_t row) : column(column), row(row) {
+                }
             };
 
             template<typename BlueprintFieldType>

@@ -102,7 +102,7 @@ namespace nil {
                 const std::size_t rows_amount = get_rows_amount(this->witness_amount(), 0);
 
                 /**
-                 * Describes the input x
+                 * Describes the input x of the fix_rescale component.
                  */
                 struct input_type {
                     var x = var(0, 0, false);
@@ -113,16 +113,36 @@ namespace nil {
                 };
 
                 /**
-                 * describes the output y
+                 * Describes the output y of the fix_rescale component.
                  */
                 struct result_type {
                     var output = var(0, 0, false);
                     result_type(const fix_rescale &component, std::uint32_t start_row_index) {
-                        output = var(component.W(1), start_row_index, false, var::column_type::witness);
+                        // trace layout (2 + m2 col(s), 1 row(s))
+                        //
+                        //  r\c| 0 | 1 | 2  | .. | 2 + m2 - 1 |
+                        // +---+---+---+----+----+------------+
+                        // | 0 | x | y | q0 | .. | qm2-1      |
+                        //
+                        // ! CODE DUPLICATION !
+                        // If you modify this block incl. comments, change it for all blocks defining CellPositions in
+                        // this file
+                        auto y_pos = CellPosition {component.W(1), start_row_index};
+                        output = var(y_pos.column, y_pos.row, false, var::column_type::witness);
                     }
 
                     result_type(const fix_rescale &component, std::size_t start_row_index) {
-                        output = var(component.W(1), start_row_index, false, var::column_type::witness);
+                        // trace layout (2 + m2 col(s), 1 row(s))
+                        //
+                        //  r\c| 0 | 1 | 2  | .. | 2 + m2 - 1 |
+                        // +---+---+---+----+----+------------+
+                        // | 0 | x | y | q0 | .. | qm2-1      |
+                        //
+                        // ! CODE DUPLICATION !
+                        // If you modify this block incl. comments, change it for all blocks defining CellPositions in
+                        // this file
+                        auto y_pos = CellPosition {component.W(1), start_row_index};
+                        output = var(y_pos.column, y_pos.row, false, var::column_type::witness);
                     }
 
                     std::vector<var> all_vars() const {
@@ -167,22 +187,29 @@ namespace nil {
                         instance_input,
                     const std::uint32_t start_row_index) {
 
+                auto m2 = component.get_m2();
+
                 auto x_val = var_value(assignment, instance_input.x);
                 auto tmp = FixedPointHelper<BlueprintFieldType>::round_div_mod(x_val, component.get_delta());
                 auto y_val = tmp.quotient;
 
                 // trace layout (2 + m2 col(s), 1 row(s))
-                // | x | y | q0 | ... | qm2-1 |
+                //
+                //  r\c| 0 | 1 | 2  | .. | 2 + m2 - 1 |
+                // +---+---+---+----+----+------------+
+                // | 0 | x | y | q0 | .. | qm2-1      |
+                //
                 // ! CODE DUPLICATION !
                 // If you modify this block incl. comments, change it for all blocks defining CellPositions in this file
                 auto x_pos = CellPosition {component.W(0), start_row_index};
                 auto y_pos = CellPosition {component.W(1), start_row_index};
+                auto q_pos = CellPosition {component.W(2 + 0 * m2), start_row_index};    // occupies m2 cells
 
                 assignment.witness(x_pos.column, x_pos.row) = x_val;
                 assignment.witness(y_pos.column, y_pos.row) = y_val;
 
                 if (component.get_m2() == 1) {
-                    assignment.witness(component.W(2), start_row_index) = tmp.remainder;    // q0
+                    assignment.witness(q_pos.column, q_pos.row) = tmp.remainder;    // q0
                 } else {
                     std::vector<uint16_t> decomp;
                     bool sign = FixedPointHelper<BlueprintFieldType>::decompose(tmp.remainder, decomp);
@@ -190,7 +217,7 @@ namespace nil {
                     // is ok because decomp is at least of size 4 and the biggest we have is 32.32
                     BLUEPRINT_RELEASE_ASSERT(decomp.size() >= component.get_m2());
                     for (auto i = 0; i < component.get_m2(); i++) {
-                        assignment.witness(component.W(2 + i), start_row_index) = decomp[i];    // qi for i in [0, m2)
+                        assignment.witness(q_pos.column + i, q_pos.row) = decomp[i];    // qi for i in [0, m2)
                     }
                 }
 
@@ -207,6 +234,8 @@ namespace nil {
                 const typename plonk_fixedpoint_rescale<BlueprintFieldType, ArithmetizationParams>::input_type
                     &instance_input) {
 
+                auto m2 = component.get_m2();
+
                 std::uint32_t start_row_index = 0;
                 using var = typename plonk_fixedpoint_rescale<BlueprintFieldType, ArithmetizationParams>::var;
                 // 2x + delta = 2 y delta + 2q and proving 0 <= q < delta via a lookup table. Delta is a multiple of
@@ -214,15 +243,20 @@ namespace nil {
                 auto delta = component.get_delta();
 
                 // trace layout (2 + m2 col(s), 1 row(s))
-                // | x | y | q0 | ... | qm2-1 |
+                //
+                //  r\c| 0 | 1 | 2  | .. | 2 + m2 - 1 |
+                // +---+---+---+----+----+------------+
+                // | 0 | x | y | q0 | .. | qm2-1      |
+                //
                 // ! CODE DUPLICATION !
                 // If you modify this block incl. comments, change it for all blocks defining CellPositions in this file
                 auto x_pos = CellPosition {component.W(0), start_row_index};
                 auto y_pos = CellPosition {component.W(1), start_row_index};
+                auto q_pos = CellPosition {component.W(2 + 0 * m2), start_row_index};    // occupies m2 cells
 
-                auto q = nil::crypto3::math::expression(var(component.W(2), start_row_index));
-                for (auto i = 1; i < component.get_m2(); i++) {
-                    q += var(component.W(2 + i), start_row_index) * (1ULL << (16 * i));    // qi for i in [0, m2)
+                auto q = nil::crypto3::math::expression(var(q_pos.column, q_pos.row));
+                for (auto i = 1; i < m2; i++) {
+                    q += var(q_pos.column + i, q_pos.row) * (1ULL << (16 * i));    // qi for i in [0, m2)
                 }
 
                 auto x = var(x_pos.column, x_pos.row);
@@ -260,11 +294,15 @@ namespace nil {
                 using var = typename plonk_fixedpoint_rescale<BlueprintFieldType, ArithmetizationParams>::var;
 
                 // trace layout (2 + m2 col(s), 1 row(s))
-                // | x | y | q0 | ... | qm2-1 |
+                //
+                //  r\c| 0 | 1 | 2  | .. | 2 + m2 - 1 |
+                // +---+---+---+----+----+------------+
+                // | 0 | x | y | q0 | .. | qm2-1      |
+                //
                 // ! CODE DUPLICATION !
                 // If you modify this block incl. comments, change it for all blocks defining CellPositions in this file
                 auto x_pos = CellPosition {component.W(0), start_row_index};
-                
+
                 var x = var(x_pos.column, x_pos.row, false);
                 bp.add_copy_constraint({instance_input.x, x});
             }
