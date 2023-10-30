@@ -401,12 +401,6 @@ namespace nil {
                     d0 += var(d0_pos.column + i, d0_pos.row) * (1ULL << (16 * i));
                 }
 
-                if (component.rows_amount == 2) {
-                    std::cout << "start_row_index: " << start_row_index << std::endl;
-                    std::cout << "z_pos.row: " << z_pos.row << std::endl;
-                    std::cout << "s_y_pos.row: " << s_y_pos.row << std::endl;
-                }
-
                 auto x = var(x_pos.column, x_pos.row);
                 auto y = var(y_pos.column, y_pos.row);
                 auto z = var(z_pos.column, z_pos.row);
