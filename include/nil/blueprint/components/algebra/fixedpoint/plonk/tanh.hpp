@@ -358,7 +358,7 @@ namespace nil {
                     &instance_input) {
                 using var = typename plonk_fixedpoint_tanh<BlueprintFieldType, ArithmetizationParams>::var;
 
-                const int64_t start_row_index = 1 - component.rows_amount;
+                const int64_t start_row_index = (int64_t)1 - component.rows_amount;
                 const auto var_pos = component.get_var_pos(start_row_index);
 
                 // range output
@@ -475,18 +475,18 @@ namespace nil {
                 // Enable the exp component
                 std::size_t exp_selector = generate_gates(exp_comp, bp, assignment, exp_input);
                 assignment.enable_selector(exp_selector, exp_row + exp_comp.rows_amount - 1);
-                generate_copy_constraints(exp_comp, bp, assignment, exp_input, start_row_index);
+                generate_copy_constraints(exp_comp, bp, assignment, exp_input, exp_row);
 
                 // Enable the div component
                 std::size_t div_selector = generate_gates(div_comp, bp, assignment, div_input);
                 assignment.enable_selector(div_selector, div_row + div_comp.rows_amount - 1);
-                generate_copy_constraints(div_comp, bp, assignment, div_input, start_row_index);
+                generate_copy_constraints(div_comp, bp, assignment, div_input, div_row);
 
                 // Enable the range component
                 std::size_t range_selector = generate_gates(range_comp, bp, assignment, range_input);
                 assignment.enable_selector(range_selector, range_row + range_comp.rows_amount - 1);
-                generate_copy_constraints(range_comp, bp, assignment, range_input, start_row_index);
-                generate_assignments_constant(range_comp, assignment, range_input, start_row_index);
+                generate_copy_constraints(range_comp, bp, assignment, range_input, range_row);
+                generate_assignments_constant(range_comp, assignment, range_input, range_row);
 
                 // Enable the tanh component
                 std::size_t tanh_selector = generate_gates(component, bp, assignment, instance_input);
@@ -510,7 +510,7 @@ namespace nil {
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
 
                 assignment.constant(magic(var_pos.const_min)) = component.get_tanh_min();
-                assignment.constant(magic(var_pos.const_min)) = component.get_tanh_max();
+                assignment.constant(magic(var_pos.const_max)) = component.get_tanh_max();
             }
 
         }    // namespace components
