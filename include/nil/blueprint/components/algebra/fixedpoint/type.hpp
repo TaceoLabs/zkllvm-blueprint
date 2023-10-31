@@ -8,6 +8,9 @@
 #include <nil/crypto3/multiprecision/cpp_int/divide.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/tables.hpp>
 
+// macro for getting a variable list from a cell position for fixedpoint components
+#define magic(x) x.column, x.row
+
 namespace nil {
     namespace blueprint {
         namespace components {
@@ -28,7 +31,6 @@ namespace nil {
                 int64_t column;
                 int64_t row;
 
-            public:
                 CellPosition() : column(0), row(0) {
                 }
                 CellPosition(int64_t column, int64_t row) : column(column), row(row) {

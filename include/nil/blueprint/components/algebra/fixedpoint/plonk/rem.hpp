@@ -110,79 +110,71 @@ namespace nil {
                     }
                 };
 
+                struct FixRemVarPositions {
+                    CellPosition x, y, z, s_y, s_a, y0, z0, a0, d0;
+                };
+
+                FixRemVarPositions get_var_pos(const int64_t start_row_index) const {
+
+                    auto m = this->get_m();
+                    FixRemVarPositions pos;
+                    switch (this->rows_amount) {
+                        case 1:
+
+                            // trace layout (5 + 4*m col(s), 1 row(s))
+                            //
+                            //  r\c|0|1|2| 3 | 4 | 5 |..| 5+m-1| 5+m|..|5+2m-1|5+2m|..|5+3m-1|5+3m|..|5+4m-1|
+                            // +---+-+-+-+---+---+---+--+------+----+--+------+----+--+------+----+--+------+
+                            // | 0 |x|y|z|s_y|s_a|y0 |..| ym-1 | z0 |..| zm-1 | a0 |..| am-1 | d_0|..| dm-1 |
+
+                            pos.x = CellPosition(this->W(0), start_row_index);
+                            pos.y = CellPosition(this->W(1), start_row_index);
+                            pos.z = CellPosition(this->W(2), start_row_index);
+                            pos.s_y = CellPosition(this->W(3), start_row_index);
+                            pos.s_a = CellPosition(this->W(4), start_row_index);
+                            pos.y0 = CellPosition(this->W(5 + 0 * m), start_row_index);    // occupies m cells
+                            pos.z0 = CellPosition(this->W(5 + 1 * m), start_row_index);    // occupies m cells
+                            pos.a0 = CellPosition(this->W(5 + 2 * m), start_row_index);    // occupies m cells
+                            pos.d0 = CellPosition(this->W(5 + 3 * m), start_row_index);    // occupies m cells
+                            break;
+                        case 2:
+
+                            // trace layout (3 + 2*m col(s), 2 row(s))
+                            //
+                            //  r\c|  0  |  1  | 2  | 3  | 2+m-1 | 2+m  | 3+m | 2+2m-1 | 3+2m-1   |
+                            // +---+-----+-----+----+----+-------+------+-----+--------+----------+
+                            // | 0 | s_y | s_a | a0 | .. | am-1  | d_0  | ..  | d_m-1  | <unused> |
+                            // | 1 | x   | y   | z  | y0 | ..    | ym-1 | z0  | ..     | zm-1     |
+
+                            pos.s_y = CellPosition(this->W(0), start_row_index);
+                            pos.s_a = CellPosition(this->W(1), start_row_index);
+                            pos.a0 = CellPosition(this->W(2 + 0 * m), start_row_index);    // occupies m cells
+                            pos.d0 = CellPosition(this->W(2 + 1 * m), start_row_index);    // occupies m cells
+                            pos.x = CellPosition(this->W(0), start_row_index + 1);
+                            pos.y = CellPosition(this->W(1), start_row_index + 1);
+                            pos.z = CellPosition(this->W(2), start_row_index + 1);
+                            pos.y0 = CellPosition(this->W(3 + 0 * m), start_row_index + 1);    // occupies m cells
+                            pos.z0 = CellPosition(this->W(3 + 1 * m), start_row_index + 1);    // occupies m cells
+                            break;
+                        default:
+                            BLUEPRINT_RELEASE_ASSERT(false && "rows_amount must be 1 or 2");
+                    }
+                    return pos;
+                }
+
                 /**
                  * Describes the output z of the fix_rem component.
                  */
                 struct result_type {
                     var output = var(0, 0, false);
                     result_type(const fix_rem &component, std::uint32_t start_row_index) {
-                        auto m = component.get_m();
-                        CellPosition z_pos;
-                        switch (component.rows_amount) {
-                            case 1:
-                                // trace layout (5 + 4*m col(s), 1 row(s))
-                                //
-                                //  r\c|0|1|2| 3 | 4   | 5  |..| 5+m-1| 5+m|..|5+2m-1|5+2m|..|5+3m-1|5+3m| .. |5+4m-1|
-                                // +---+-+-+-+---+-----+----+--+------+----+--+------+----+--+------+----+----+------+
-                                // | 0 |x|y|z|s_y| s_a | y0 |..| ym-1 | z0 |..| zm-1 |a0  |..| am-1 | d_0| .. | dm-1 |
-                                //
-                                // ! CODE DUPLICATION !
-                                // If you modify this block incl. comments, change it for all blocks defining
-                                // CellPositions in this file
-                                z_pos = CellPosition(component.W(2), start_row_index);
-                                break;
-                            case 2:
-                                // trace layout (3 + 2*m col(s), 2 row(s))
-                                //
-                                //  r\c|  0  |  1  | 2  |  3 |2+m-1| 2+m  | 3+m| 2+2m-1| 3+2m-1   |
-                                // +---+-----+-----+----+----+-----+------+----+-------+----------+
-                                // | 0 | s_y | s_a | a0 | .. | am-1| d_0  | .. | d_m-1 | <unused> |
-                                // | 1 | x   | y   | z  | y0 | ..  | ym-1 | z0 |  ..   | zm-1     |
-                                //
-                                // ! CODE DUPLICATION !
-                                // If you modify this block incl. comments, change it for all blocks defining
-                                // CellPositions in this file
-                                z_pos = CellPosition(component.W(2), start_row_index + 1);
-                                break;
-                            default:
-                                BLUEPRINT_RELEASE_ASSERT(false && "rows_amount must be 1 or 2");
-                        }
-                        output = var(z_pos.column, z_pos.row, false, var::column_type::witness);
+                        const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
+                        output = var(magic(var_pos.z), false);
                     }
 
                     result_type(const fix_rem &component, std::size_t start_row_index) {
-                        auto m = component.get_m();
-                        CellPosition z_pos;
-                        switch (component.rows_amount) {
-                            case 1:
-                                // trace layout (5 + 4*m col(s), 1 row(s))
-                                //
-                                //  r\c|0|1|2| 3 | 4   | 5  |..| 5+m-1| 5+m|..|5+2m-1|5+2m|..|5+3m-1|5+3m| .. |5+4m-1|
-                                // +---+-+-+-+---+-----+----+--+------+----+--+------+----+--+------+----+----+------+
-                                // | 0 |x|y|z|s_y| s_a | y0 |..| ym-1 | z0 |..| zm-1 |a0  |..| am-1 | d_0| .. | dm-1 |
-                                //
-                                // ! CODE DUPLICATION !
-                                // If you modify this block incl. comments, change it for all blocks defining
-                                // CellPositions in this file
-                                z_pos = CellPosition(component.W(2), start_row_index);
-                                break;
-                            case 2:
-                                // trace layout (3 + 2*m col(s), 2 row(s))
-                                //
-                                //  r\c|  0  |  1  | 2  |  3 |2+m-1| 2+m  | 3+m| 2+2m-1| 3+2m-1   |
-                                // +---+-----+-----+----+----+-----+------+----+-------+----------+
-                                // | 0 | s_y | s_a | a0 | .. | am-1| d_0  | .. | d_m-1 | <unused> |
-                                // | 1 | x   | y   | z  | y0 | ..  | ym-1 | z0 |  ..   | zm-1     |
-                                //
-                                // ! CODE DUPLICATION !
-                                // If you modify this block incl. comments, change it for all blocks defining
-                                // CellPositions in this file
-                                z_pos = CellPosition(component.W(2), start_row_index + 1);
-                                break;
-                            default:
-                                BLUEPRINT_RELEASE_ASSERT(false && "rows_amount must be 1 or 2");
-                        }
-                        output = var(z_pos.column, z_pos.row, false, var::column_type::witness);
+                        const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
+                        output = var(magic(var_pos.z), false);
                     }
 
                     std::vector<var> all_vars() const {
@@ -223,54 +215,7 @@ namespace nil {
                 const typename plonk_fixedpoint_rem<BlueprintFieldType, ArithmetizationParams>::input_type
                     instance_input,
                 const std::uint32_t start_row_index) {
-
-                auto m = component.get_m();
-                CellPosition x_pos, y_pos, z_pos, s_y_pos, s_a_pos, y0_pos, z0_pos, a0_pos, d0_pos;
-                switch (component.rows_amount) {
-                    case 1:
-                        // trace layout (5 + 4*m col(s), 1 row(s))
-                        //
-                        //  r\c|0|1|2| 3 | 4   | 5  |..| 5+m-1| 5+m|..|5+2m-1|5+2m|..|5+3m-1|5+3m| .. |5+4m-1|
-                        // +---+-+-+-+---+-----+----+--+------+----+--+------+----+--+------+----+----+------+
-                        // | 0 |x|y|z|s_y| s_a | y0 |..| ym-1 | z0 |..| zm-1 |a0  |..| am-1 | d_0| .. | dm-1 |
-                        //
-                        // ! CODE DUPLICATION !
-                        // If you modify this block incl. comments, change it for all blocks defining
-                        // CellPositions in this file
-                        x_pos = CellPosition(component.W(0), start_row_index);
-                        y_pos = CellPosition(component.W(1), start_row_index);
-                        z_pos = CellPosition(component.W(2), start_row_index);
-                        s_y_pos = CellPosition(component.W(3), start_row_index);
-                        s_a_pos = CellPosition(component.W(4), start_row_index);
-                        y0_pos = CellPosition(component.W(5 + 0 * m), start_row_index);    // occupies m cells
-                        z0_pos = CellPosition(component.W(5 + 1 * m), start_row_index);    // occupies m cells
-                        a0_pos = CellPosition(component.W(5 + 2 * m), start_row_index);    // occupies m cells
-                        d0_pos = CellPosition(component.W(5 + 3 * m), start_row_index);    // occupies m cells
-                        break;
-                    case 2:
-                        // trace layout (3 + 2*m col(s), 2 row(s))
-                        //
-                        //  r\c|  0  |  1  | 2  |  3 |2+m-1| 2+m  | 3+m| 2+2m-1| 3+2m-1   |
-                        // +---+-----+-----+----+----+-----+------+----+-------+----------+
-                        // | 0 | s_y | s_a | a0 | .. | am-1| d_0  | .. | d_m-1 | <unused> |
-                        // | 1 | x   | y   | z  | y0 | ..  | ym-1 | z0 |  ..   | zm-1     |
-                        //
-                        // ! CODE DUPLICATION !
-                        // If you modify this block incl. comments, change it for all blocks defining
-                        // CellPositions in this file
-                        s_y_pos = CellPosition(component.W(0), start_row_index);
-                        s_a_pos = CellPosition(component.W(1), start_row_index);
-                        a0_pos = CellPosition(component.W(2 + 0 * m), start_row_index);    // occupies m cells
-                        d0_pos = CellPosition(component.W(2 + 1 * m), start_row_index);    // occupies m cells
-                        x_pos = CellPosition(component.W(0), start_row_index + 1);
-                        y_pos = CellPosition(component.W(1), start_row_index + 1);
-                        z_pos = CellPosition(component.W(2), start_row_index + 1);
-                        y0_pos = CellPosition(component.W(3 + 0 * m), start_row_index + 1);    // occupies m cells
-                        z0_pos = CellPosition(component.W(3 + 1 * m), start_row_index + 1);    // occupies m cells
-                        break;
-                    default:
-                        BLUEPRINT_RELEASE_ASSERT(false && "rows_amount must be 1 or 2");
-                }
+                const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
 
                 auto x_val = var_value(assignment, instance_input.x);
                 auto y_val = var_value(assignment, instance_input.y);
@@ -283,9 +228,9 @@ namespace nil {
                 }
                 auto z_val = tmp.remainder;
 
-                assignment.witness(x_pos.column, x_pos.row) = x_val;
-                assignment.witness(y_pos.column, y_pos.row) = y_val;
-                assignment.witness(z_pos.column, z_pos.row) = z_val;
+                assignment.witness(magic(var_pos.x)) = x_val;
+                assignment.witness(magic(var_pos.y)) = y_val;
+                assignment.witness(magic(var_pos.z)) = z_val;
 
                 std::vector<uint16_t> y0_val;
                 std::vector<uint16_t> z0_val;
@@ -299,11 +244,11 @@ namespace nil {
                 bool sign_y_ = FixedPointHelper<BlueprintFieldType>::decompose(y_abs, y0_val);
                 BLUEPRINT_RELEASE_ASSERT(!sign_y_);
                 auto s_y_val = sign_y ? -one : one;
-                assignment.witness(s_y_pos.column, s_y_pos.row) = s_y_val;
+                assignment.witness(magic(var_pos.s_y)) = s_y_val;
 
                 bool sign_a = FixedPointHelper<BlueprintFieldType>::decompose(tmp.quotient, a0_val);
                 auto s_a_val = sign_a ? -one : one;
-                assignment.witness(s_a_pos.column, s_a_pos.row) = s_a_val;
+                assignment.witness(magic(var_pos.s_a)) = s_a_val;
 
                 auto z_abs = z_val;
                 bool sign_z = FixedPointHelper<BlueprintFieldType>::abs(z_abs);
@@ -315,16 +260,17 @@ namespace nil {
                 BLUEPRINT_RELEASE_ASSERT(!sign);
 
                 // is ok because decomp is at least of size 4 and the biggest we have is 32.32
+                auto m = component.get_m();
                 BLUEPRINT_RELEASE_ASSERT(y0_val.size() >= m);
                 BLUEPRINT_RELEASE_ASSERT(z0_val.size() >= m);
                 BLUEPRINT_RELEASE_ASSERT(a0_val.size() >= m);
                 BLUEPRINT_RELEASE_ASSERT(d0_val.size() >= m);
 
                 for (auto i = 0; i < m; i++) {
-                    assignment.witness(y0_pos.column + i, y0_pos.row) = y0_val[i];
-                    assignment.witness(z0_pos.column + i, z0_pos.row) = z0_val[i];
-                    assignment.witness(a0_pos.column + i, a0_pos.row) = a0_val[i];
-                    assignment.witness(d0_pos.column + i, d0_pos.row) = d0_val[i];
+                    assignment.witness(var_pos.y0.column + i, var_pos.y0.row) = y0_val[i];
+                    assignment.witness(var_pos.z0.column + i, var_pos.z0.row) = z0_val[i];
+                    assignment.witness(var_pos.a0.column + i, var_pos.a0.row) = a0_val[i];
+                    assignment.witness(var_pos.d0.column + i, var_pos.d0.row) = d0_val[i];
                 }
 
                 return typename plonk_fixedpoint_rem<BlueprintFieldType, ArithmetizationParams>::result_type(
@@ -343,73 +289,35 @@ namespace nil {
                 using var = typename plonk_fixedpoint_rem<BlueprintFieldType, ArithmetizationParams>::var;
                 auto m = component.get_m();
                 const int64_t start_row_index = 1 - static_cast<int64_t>(component.rows_amount);
-                CellPosition x_pos, y_pos, z_pos, s_y_pos, s_a_pos, y0_pos, z0_pos, a0_pos, d0_pos;
-                switch (component.rows_amount) {
-                    case 1:
-                        // trace layout (5 + 4*m col(s), 1 row(s))
-                        //
-                        //  r\c|0|1|2| 3 | 4   | 5  |..| 5+m-1| 5+m|..|5+2m-1|5+2m|..|5+3m-1|5+3m| .. |5+4m-1|
-                        // +---+-+-+-+---+-----+----+--+------+----+--+------+----+--+------+----+----+------+
-                        // | 0 |x|y|z|s_y| s_a | y0 |..| ym-1 | z0 |..| zm-1 |a0  |..| am-1 | d_0| .. | dm-1 |
-                        //
-                        // ! CODE DUPLICATION !
-                        // If you modify this block incl. comments, change it for all blocks defining
-                        // CellPositions in this file
-                        x_pos = CellPosition(component.W(0), start_row_index);
-                        y_pos = CellPosition(component.W(1), start_row_index);
-                        z_pos = CellPosition(component.W(2), start_row_index);
-                        s_y_pos = CellPosition(component.W(3), start_row_index);
-                        s_a_pos = CellPosition(component.W(4), start_row_index);
-                        y0_pos = CellPosition(component.W(5 + 0 * m), start_row_index);    // occupies m cells
-                        z0_pos = CellPosition(component.W(5 + 1 * m), start_row_index);    // occupies m cells
-                        a0_pos = CellPosition(component.W(5 + 2 * m), start_row_index);    // occupies m cells
-                        d0_pos = CellPosition(component.W(5 + 3 * m), start_row_index);    // occupies m cells
-                        break;
-                    case 2:
-                        // trace layout (3 + 2*m col(s), 2 row(s))
-                        //
-                        //  r\c|  0  |  1  | 2  |  3 |2+m-1| 2+m  | 3+m| 2+2m-1| 3+2m-1   |
-                        // +---+-----+-----+----+----+-----+------+----+-------+----------+
-                        // | 0 | s_y | s_a | a0 | .. | am-1| d_0  | .. | d_m-1 | <unused> |
-                        // | 1 | x   | y   | z  | y0 | ..  | ym-1 | z0 |  ..   | zm-1     |
-                        //
-                        // ! CODE DUPLICATION !
-                        // If you modify this block incl. comments, change it for all blocks defining
-                        // CellPositions in this file
-                        s_y_pos = CellPosition(component.W(0), start_row_index);
-                        s_a_pos = CellPosition(component.W(1), start_row_index);
-                        a0_pos = CellPosition(component.W(2 + 0 * m), start_row_index);    // occupies m cells
-                        d0_pos = CellPosition(component.W(2 + 1 * m), start_row_index);    // occupies m cells
-                        x_pos = CellPosition(component.W(0), start_row_index + 1);
-                        y_pos = CellPosition(component.W(1), start_row_index + 1);
-                        z_pos = CellPosition(component.W(2), start_row_index + 1);
-                        y0_pos = CellPosition(component.W(3 + 0 * m), start_row_index + 1);    // occupies m cells
-                        z0_pos = CellPosition(component.W(3 + 1 * m), start_row_index + 1);    // occupies m cells
-                        break;
-                    default:
-                        BLUEPRINT_RELEASE_ASSERT(false && "rows_amount must be 1 or 2");
-                }
+                const auto var_pos = component.get_var_pos(start_row_index);
 
-                auto y0 = nil::crypto3::math::expression(var(y0_pos.column, y0_pos.row));
-                auto z0 = nil::crypto3::math::expression(var(z0_pos.column, z0_pos.row));
-                auto a0 = nil::crypto3::math::expression(var(a0_pos.column, a0_pos.row));
-                auto d0 = nil::crypto3::math::expression(var(d0_pos.column, d0_pos.row));
+                auto y0 = nil::crypto3::math::expression(var(magic(var_pos.y0)));
+                auto z0 = nil::crypto3::math::expression(var(magic(var_pos.z0)));
+                auto a0 = nil::crypto3::math::expression(var(magic(var_pos.a0)));
+                auto d0 = nil::crypto3::math::expression(var(magic(var_pos.d0)));
                 for (auto i = 1; i < m; i++) {
-                    y0 += var(y0_pos.column + i, y0_pos.row) * (1ULL << (16 * i));
-                    z0 += var(z0_pos.column + i, z0_pos.row) * (1ULL << (16 * i));
-                    a0 += var(a0_pos.column + i, a0_pos.row) * (1ULL << (16 * i));
-                    d0 += var(d0_pos.column + i, d0_pos.row) * (1ULL << (16 * i));
+                    y0 += var(var_pos.y0.column + i, var_pos.y0.row) * (1ULL << (16 * i));
+                    z0 += var(var_pos.z0.column + i, var_pos.z0.row) * (1ULL << (16 * i));
+                    a0 += var(var_pos.a0.column + i, var_pos.a0.row) * (1ULL << (16 * i));
+                    d0 += var(var_pos.d0.column + i, var_pos.d0.row) * (1ULL << (16 * i));
                 }
 
-                auto x = var(x_pos.column, x_pos.row);
-                auto y = var(y_pos.column, y_pos.row);
-                auto z = var(z_pos.column, z_pos.row);
-                auto s_a = var(s_a_pos.column, s_a_pos.row);
-                auto s_y = var(s_y_pos.column, s_y_pos.row);
+                auto x = var(magic(var_pos.x));
+                auto y = var(magic(var_pos.y));
+                auto z = var(magic(var_pos.z));
+                auto s_a = var(magic(var_pos.s_a));
+                auto s_y = var(magic(var_pos.s_y));
 
                 // TACEO_TODO extend for lookup constraint
-                return bp.add_gate({x - s_a * a0 * y - z, y - y0 * s_y, z - z0 * s_y, y0 - z0 - d0 - 1,
-                                    (s_y - 1) * (s_y + 1), (s_a - 1) * (s_a + 1)});
+                auto constraint_1 = x - s_a * a0 * y - z;
+                auto constraint_2 = y - s_y * y0;
+                auto constraint_3 = z - s_y * z0;
+                auto constraint_4 = y0 - z0 - d0 - 1;
+                auto constraint_5 = (s_y - 1) * (s_y + 1);
+                auto constraint_6 = (s_a - 1) * (s_a + 1);
+
+                return bp.add_gate(
+                    {constraint_1, constraint_2, constraint_3, constraint_4, constraint_5, constraint_6});
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
@@ -424,41 +332,10 @@ namespace nil {
 
                 using var = typename plonk_fixedpoint_rem<BlueprintFieldType, ArithmetizationParams>::var;
                 auto m = component.get_m();
-                CellPosition x_pos, y_pos;
-                switch (component.rows_amount) {
-                    case 1:
-                        // trace layout (5 + 4*m col(s), 1 row(s))
-                        //
-                        //  r\c|0|1|2| 3 | 4   | 5  |..| 5+m-1| 5+m|..|5+2m-1|5+2m|..|5+3m-1|5+3m| .. |5+4m-1|
-                        // +---+-+-+-+---+-----+----+--+------+----+--+------+----+--+------+----+----+------+
-                        // | 0 |x|y|z|s_y| s_a | y0 |..| ym-1 | z0 |..| zm-1 |a0  |..| am-1 | d_0| .. | dm-1 |
-                        //
-                        // ! CODE DUPLICATION !
-                        // If you modify this block incl. comments, change it for all blocks defining
-                        // CellPositions in this file
-                        x_pos = CellPosition(component.W(0), start_row_index);
-                        y_pos = CellPosition(component.W(1), start_row_index);
-                        break;
-                    case 2:
-                        // trace layout (3 + 2*m col(s), 2 row(s))
-                        //
-                        //  r\c|  0  |  1  | 2  |  3 |2+m-1| 2+m  | 3+m| 2+2m-1| 3+2m-1   |
-                        // +---+-----+-----+----+----+-----+------+----+-------+----------+
-                        // | 0 | s_y | s_a | a0 | .. | am-1| d_0  | .. | d_m-1 | <unused> |
-                        // | 1 | x   | y   | z  | y0 | ..  | ym-1 | z0 |  ..   | zm-1     |
-                        //
-                        // ! CODE DUPLICATION !
-                        // If you modify this block incl. comments, change it for all blocks defining
-                        // CellPositions in this file
-                        x_pos = CellPosition(component.W(0), start_row_index + 1);
-                        y_pos = CellPosition(component.W(1), start_row_index + 1);
-                        break;
-                    default:
-                        BLUEPRINT_RELEASE_ASSERT(false && "rows_amount must be 1 or 2");
-                }
+                const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
 
-                auto x = var(x_pos.column, x_pos.row);
-                auto y = var(y_pos.column, y_pos.row);
+                auto x = var(magic(var_pos.x));
+                auto y = var(magic(var_pos.y));
                 bp.add_copy_constraint({instance_input.x, x});
                 bp.add_copy_constraint({instance_input.y, y});
             }
