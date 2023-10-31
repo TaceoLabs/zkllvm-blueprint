@@ -101,6 +101,7 @@ namespace nil {
                 FixedPoint exp() const;
 
                 static FixedPoint max();
+                bool geq_0() const;
 
                 bool operator==(const FixedPoint &other) const;
                 bool operator!=(const FixedPoint &other) const;
@@ -393,6 +394,13 @@ namespace nil {
             }
 
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
+            bool FixedPoint<BlueprintFieldType, M1, M2>::geq_0() const {
+                auto a_abs = value;
+                bool sign_a = helper::abs(a_abs);
+                return !sign_a;
+            }
+
+            template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
             bool FixedPoint<BlueprintFieldType, M1, M2>::operator==(
                 const FixedPoint<BlueprintFieldType, M1, M2> &other) const {
                 BLUEPRINT_RELEASE_ASSERT(scale == other.scale);
@@ -502,7 +510,7 @@ namespace nil {
                 BLUEPRINT_RELEASE_ASSERT(scale == SCALE);
                 auto exp_a = M2 == 1 ? FixedPointTables<BlueprintFieldType>::get_exp_a_16() :
                                        FixedPointTables<BlueprintFieldType>::get_exp_a_32();
-                auto exp_b = M2 == 1 ?  FixedPointTables<BlueprintFieldType>::get_exp_b_16():
+                auto exp_b = M2 == 1 ? FixedPointTables<BlueprintFieldType>::get_exp_b_16() :
                                        FixedPointTables<BlueprintFieldType>::get_exp_b_32();
 
                 uint64_t pre, post;
