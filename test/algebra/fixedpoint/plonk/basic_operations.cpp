@@ -172,8 +172,7 @@ void test_fixedpoint_rescale(FixedType input) {
     typename component_type::input_type instance_input = {var(0, 0, false, var::column_type::public_input)};
 
     double expected_res_f = input.to_double();
-    auto expected_res = input;
-    expected_res.rescale();
+    auto expected_res = input.rescale();
 
     auto result_check = [&expected_res, &expected_res_f, input](AssignmentType &assignment,
                                                                 typename component_type::result_type &real_res) {

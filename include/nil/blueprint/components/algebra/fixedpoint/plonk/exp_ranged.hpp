@@ -1,8 +1,6 @@
 #ifndef CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_EXP_RANGED_HPP
 #define CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_EXP_RANGED_HPP
 
-#include "nil/blueprint/components/algebra/fixedpoint/tables.hpp"
-
 #include "nil/blueprint/components/algebra/fixedpoint/plonk/exp.hpp"
 #include "nil/blueprint/components/algebra/fixedpoint/plonk/range.hpp"
 
@@ -11,8 +9,8 @@ namespace nil {
         namespace components {
 
             // Input: x as fixedpoint numbers with \Delta_x
-            // Output: y as fixedpoint number with huge scale!
-            // Additionally clips output to  a predefined min/max range if the values are to small/large
+            // Output: y as fixedpoint number with \Delta_y = \Delta_y
+            // Additionally clips output to  a predefined min/max range if the values are too small/large
 
             // Uses the range gadget for clipping, and modifies the constraints of the exp gadget accordingly
 
@@ -169,8 +167,7 @@ namespace nil {
                     component_type(witnesses, constants, public_inputs, get_manifest(m1, m2)),
                     lo(FixedPointTables<BlueprintFieldType>::get_lowest_exp_input(m2)),
                     hi(FixedPointTables<BlueprintFieldType>::get_highest_valid_exp_input(m1, m2)), exp_min(0),
-                    exp_max(calc_max(m1, m2)), exp(instantiate_exp(m2)),
-                    range(instantiate_range(m1, m2, lo, hi)) {};
+                    exp_max(calc_max(m1, m2)), exp(instantiate_exp(m2)), range(instantiate_range(m1, m2, lo, hi)) {};
             };
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>

@@ -100,8 +100,6 @@ namespace nil {
                 FixedPoint(const FixedPoint &) = default;
                 FixedPoint &operator=(const FixedPoint &) = default;
 
-                FixedPoint exp() const;
-
                 static FixedPoint max();
                 bool geq_0() const;
 
@@ -119,8 +117,11 @@ namespace nil {
                 FixedPoint operator%(const FixedPoint &other) const;
                 FixedPoint operator-() const;
 
-                void rescale();
+                FixedPoint exp() const;
+                FixedPoint rescale() const;
                 static FixedPoint dot(const std::vector<FixedPoint> &, const std::vector<FixedPoint> &);
+
+                FixedPoint tanh() const;
 
                 double to_double() const;
                 value_type get_value() const {
@@ -548,8 +549,7 @@ namespace nil {
                 }
 
                 auto fix = FixedPoint(res, FixedPointTables<BlueprintFieldType>::template get_exp_scale<M2>());
-                fix.rescale();
-                return fix;
+                return fix.rescale();
             }
 
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
@@ -579,11 +579,31 @@ namespace nil {
             }
 
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
-            void FixedPoint<BlueprintFieldType, M1, M2>::rescale() {
+            FixedPoint<BlueprintFieldType, M1, M2> FixedPoint<BlueprintFieldType, M1, M2>::rescale() const {
                 BLUEPRINT_RELEASE_ASSERT(scale == 2 * SCALE);
                 auto divmod = helper::round_div_mod(value, DELTA);
-                value = divmod.quotient;
-                scale = SCALE;
+                return FixedPoint(divmod.quotient, SCALE);
+            }
+
+            template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
+            FixedPoint<BlueprintFieldType, M1, M2> FixedPoint<BlueprintFieldType, M1, M2>::tanh() const {
+                BLUEPRINT_RELEASE_ASSERT(scale == SCALE);
+
+                // First, we set the output if the range is outside [-8, 8]
+                auto eight = FixedPoint((int64_t)8);
+                auto one = FixedPoint((int64_t)1);
+                auto abs = this->value;
+                auto sign = helper::abs(abs);
+                if (abs > eight.value) {
+                    return sign ? -one : one;
+                }
+
+                // Then, we compute tanh by computing tanh(x) = (exp(2x) +1) / (exp(2x) - 1)
+                auto exp = FixedPoint(2 * this->value, SCALE).exp();
+                auto exp_p = exp + one;
+                auto exp_m = exp - one;
+
+                return exp_m / exp_p;
             }
 
         }    // namespace components

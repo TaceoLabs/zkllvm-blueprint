@@ -331,7 +331,7 @@ namespace nil {
                 const std::size_t start_row_index) {
 
                 using var = typename plonk_fixedpoint_rem<BlueprintFieldType, ArithmetizationParams>::var;
-                auto m = component.get_m();
+
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
 
                 auto x = var(magic(var_pos.x));
