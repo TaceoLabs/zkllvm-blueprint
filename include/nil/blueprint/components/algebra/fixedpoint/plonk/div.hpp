@@ -219,8 +219,7 @@ namespace nil {
                 auto constraint_5 = (y_sign - 1) * (y_sign + 1);
 
                 // TACEO_TODO extend for lookup constraint
-                // return bp.add_gate({constraint_1, constraint_2, constraint_3, constraint_4, constraint_5});
-                return bp.add_gate({constraint_2, constraint_4, constraint_5});
+                return bp.add_gate({constraint_1, constraint_2, constraint_3, constraint_4, constraint_5});
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
