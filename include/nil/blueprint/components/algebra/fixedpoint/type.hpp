@@ -56,6 +56,8 @@ namespace nil {
                 static modular_backend field_to_backend(const value_type &);
                 static value_type backend_to_field(const modular_backend &);
 
+                static double field_to_double(const value_type &);
+
                 // Returns true if sign was changed
                 static bool abs(value_type &);
                 // Returns sign
@@ -97,6 +99,7 @@ namespace nil {
                 // Initiliaze from real values
                 FixedPoint(double x);
                 FixedPoint(int64_t x);
+                FixedPoint(const value_type &x);
                 // Initialize from Fixedpoint representation
                 FixedPoint(const value_type &value, uint16_t scale);
                 virtual ~FixedPoint() = default;
@@ -160,6 +163,28 @@ namespace nil {
             }
 
             template<typename BlueprintFieldType>
+            double FixedPointHelper<BlueprintFieldType>::field_to_double(const value_type &value) {
+                auto tmp = value;
+                bool sign = abs(tmp);
+
+                modular_backend out = field_to_backend(tmp);
+                BLUEPRINT_RELEASE_ASSERT(!out.sign());
+                auto limbs_ptr = out.limbs();
+                auto size = out.size();
+
+                double val = 0;
+                double pow64 = pow(2., 64);
+                for (auto i = 0; i < size; i++) {
+                    val *= pow64;
+                    val += (double)(limbs_ptr[size - 1 - i]);
+                }
+                if (sign) {
+                    val = -val;
+                }
+                return val;
+            }
+
+            template<typename BlueprintFieldType>
             bool FixedPointHelper<BlueprintFieldType>::abs(value_type &x) {
                 bool sign = false;
                 if (x > P_HALF) {
@@ -185,6 +210,11 @@ namespace nil {
                 } else {
                     value = x * DELTA;
                 }
+            }
+
+            template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
+            FixedPoint<BlueprintFieldType, M1, M2>::FixedPoint(const value_type &x) : scale(SCALE) {
+                value = x * DELTA;
             }
 
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
@@ -379,23 +409,7 @@ namespace nil {
 
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
             double FixedPoint<BlueprintFieldType, M1, M2>::to_double() const {
-                auto tmp = value;
-                bool sign = helper::abs(tmp);
-
-                modular_backend out = helper::field_to_backend(tmp);
-                BLUEPRINT_RELEASE_ASSERT(!out.sign());
-                auto limbs_ptr = out.limbs();
-                auto size = out.size();
-
-                double val = 0;
-                double pow64 = pow(2., 64);
-                for (auto i = 0; i < size; i++) {
-                    val *= pow64;
-                    val += (double)(limbs_ptr[size - 1 - i]);
-                }
-                if (sign) {
-                    val = -val;
-                }
+                auto val = helper::field_to_double(value);
                 return val / pow(2., scale);
             }
 
