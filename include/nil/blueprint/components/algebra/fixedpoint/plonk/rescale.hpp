@@ -110,22 +110,22 @@ namespace nil {
                 };
 
                 struct FixRescaleVarPositions {
-                    CellPosition x, y, q;
+                    CellPosition x, y, q0;
                 };
 
                 FixRescaleVarPositions get_var_pos(const int64_t start_row_index) const {
 
                     // trace layout (2 + m2 col(s), 1 row(s))
                     //
-                    //  r\c| 0 | 1 | 2  | .. | 2 + m2 - 1 |
-                    // +---+---+---+----+----+------------+
-                    // | 0 | x | y | q0 | .. | qm2-1      |
+                    //  r\c| 0 | 1 | 2  | .. | 2 + m2-1 |
+                    // +---+---+---+----+----+----------+
+                    // | 0 | x | y | q0 | .. | qm2-1    |
 
                     auto m2 = this->get_m2();
                     FixRescaleVarPositions pos;
                     pos.x = CellPosition(this->W(0), start_row_index);
                     pos.y = CellPosition(this->W(1), start_row_index);
-                    pos.q = CellPosition(this->W(2 + 0 * m2), start_row_index);    // occupies m2 cells
+                    pos.q0 = CellPosition(this->W(2 + 0 * m2), start_row_index);    // occupies m2 cells
                     return pos;
                 }
                 
@@ -194,7 +194,7 @@ namespace nil {
                 assignment.witness(magic(var_pos.y)) = y_val;
 
                 if (component.get_m2() == 1) {
-                    assignment.witness(magic(var_pos.q)) = q_val;    // q0
+                    assignment.witness(magic(var_pos.q0)) = q_val;    // q0
                 } else {
                     std::vector<uint16_t> decomp;
                     bool sign = FixedPointHelper<BlueprintFieldType>::decompose(q_val, decomp);
@@ -202,7 +202,7 @@ namespace nil {
                     // is ok because decomp is at least of size 4 and the biggest we have is 32.32
                     BLUEPRINT_RELEASE_ASSERT(decomp.size() >= component.get_m2());
                     for (auto i = 0; i < component.get_m2(); i++) {
-                        assignment.witness(var_pos.q.column + i, var_pos.q.row) = decomp[i];    // qi for i in [0, m2)
+                        assignment.witness(var_pos.q0.column + i, var_pos.q0.row) = decomp[i];    // qi for i in [0, m2)
                     }
                 }
 
@@ -228,9 +228,9 @@ namespace nil {
                 using var = typename plonk_fixedpoint_rescale<BlueprintFieldType, ArithmetizationParams>::var;
                 auto delta = component.get_delta();
 
-                auto q = nil::crypto3::math::expression(var(magic(var_pos.q)));
+                auto q = nil::crypto3::math::expression(var(magic(var_pos.q0)));
                 for (auto i = 1; i < component.get_m2(); i++) {
-                    q += var(var_pos.q.column + i, var_pos.q.row) * (1ULL << (16 * i));    // qi for i in [0, m2)
+                    q += var(var_pos.q0.column + i, var_pos.q0.row) * (1ULL << (16 * i));    // qi for i in [0, m2)
                 }
 
                 auto x = var(magic(var_pos.x));

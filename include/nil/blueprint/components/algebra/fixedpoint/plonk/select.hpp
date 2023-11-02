@@ -17,10 +17,7 @@ namespace nil {
              * selector c must be either 0 or 1, values x and y are field elements. z = x if c == 1 and z
              * = y if c == 0.
              *
-             * TACEO_TODO: this is not really bound to fixedpoint representation, is it?
-             *
-             * If x and y are fixed point values the user needs to ensure that the deltas of x and y match (the scale
-             * must be the same).
+             * The user needs to ensure that the deltas of x and y match (the scale must be the same).
              *
              * Input:    x, y ... field elements
              *           c    ... boolean selector (field element): 0 or 1.
@@ -68,7 +65,7 @@ namespace nil {
 
                 constexpr static const std::size_t gates_amount = 1;
                 const std::size_t rows_amount = get_rows_amount(this->witness_amount(), 0);
-                
+
                 struct input_type {
                     var c = var(0, 0, false);
                     var x = var(0, 0, false);
@@ -98,7 +95,7 @@ namespace nil {
                     pos.z = CellPosition(this->W(3), start_row_index);
                     return pos;
                 }
-                
+
                 struct result_type {
                     var output = var(0, 0, false);
                     result_type(const fix_select &component, std::uint32_t start_row_index) {
