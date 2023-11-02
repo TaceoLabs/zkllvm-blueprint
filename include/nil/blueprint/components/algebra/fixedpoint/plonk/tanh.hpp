@@ -402,8 +402,6 @@ namespace nil {
                 const std::size_t start_row_index) {
 
                 using var = typename plonk_fixedpoint_tanh<BlueprintFieldType, ArithmetizationParams>::var;
-                using res_type = typename plonk_fixedpoint_tanh<BlueprintFieldType,
-                                                                ArithmetizationParams>::exp_component::result_type;
 
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
 
@@ -413,8 +411,15 @@ namespace nil {
                 std::uint32_t exp_row = var_pos.exp_row;
                 std::uint32_t div_row = var_pos.div_row;
 
-                auto exp_res = res_type(exp_comp, exp_row);
-                auto div_res = res_type(div_comp, div_row);
+                auto exp_res =
+                    typename plonk_fixedpoint_tanh<BlueprintFieldType,
+                                                   ArithmetizationParams>::exp_component::result_type(exp_comp,
+                                                                                                      exp_row);
+
+                auto div_res =
+                    typename plonk_fixedpoint_tanh<BlueprintFieldType,
+                                                   ArithmetizationParams>::div_component::result_type(div_comp,
+                                                                                                      div_row);
 
                 auto x = var(magic(var_pos.x));
                 auto exp_y = var(magic(var_pos.exp_y));
