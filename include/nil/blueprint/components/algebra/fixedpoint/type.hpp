@@ -64,6 +64,9 @@ namespace nil {
                 static bool split(const value_type &, uint16_t, uint64_t &, uint64_t &);
                 // Returns sign, and in = s*a*delta + b
                 static bool split_exp(const value_type &, uint16_t, uint64_t &, uint64_t &);
+
+                static value_type tanh_lower_range(uint8_t m2);
+                static value_type tanh_upper_range(uint8_t m2);
             };
 
             // FieldType is the representation of the proof system, whereas M1 is the number of pre-comma 16-bit limbs
@@ -585,17 +588,36 @@ namespace nil {
                 return FixedPoint(divmod.quotient, SCALE);
             }
 
+            template<typename BlueprintFieldType>
+            typename BlueprintFieldType::value_type FixedPointHelper<BlueprintFieldType>::tanh_upper_range(uint8_t m2) {
+                switch (m2) {
+                    case 1:
+                        // Chosen such that the exp(2x) + 1 operation in tanh does not overflow
+                        return value_type(363408);
+                    case 2:
+                        return value_type(8) * (1ULL << 32);
+                }
+                BLUEPRINT_RELEASE_ASSERT(false);
+                return value_type::zero();
+            }
+
+            template<typename BlueprintFieldType>
+            typename BlueprintFieldType::value_type FixedPointHelper<BlueprintFieldType>::tanh_lower_range(uint8_t m2) {
+                BLUEPRINT_RELEASE_ASSERT(m2 > 0 && m2 < 3);
+                return -(value_type(8) * (1ULL << (16 * m2)));
+            }
+
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
             FixedPoint<BlueprintFieldType, M1, M2> FixedPoint<BlueprintFieldType, M1, M2>::tanh() const {
                 BLUEPRINT_RELEASE_ASSERT(scale == SCALE);
 
-                // First, we set the output if the range is outside [-8, 8]
-                auto eight = FixedPoint((int64_t)8);
                 auto one = FixedPoint((int64_t)1);
-                auto abs = this->value;
-                auto sign = helper::abs(abs);
-                if (abs > eight.value) {
-                    return sign ? -one : one;
+                // First, we set the output if the range is outside [-min, max]
+                if (*this > FixedPoint(helper::tanh_upper_range(M2), SCALE)) {
+                    return one;
+                }
+                if (*this < FixedPoint(helper::tanh_lower_range(M2), SCALE)) {
+                    return -one;
                 }
 
                 // Then, we compute tanh by computing tanh(x) = (exp(2x) +1) / (exp(2x) - 1)

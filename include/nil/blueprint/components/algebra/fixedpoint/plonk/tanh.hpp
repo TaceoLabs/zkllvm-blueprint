@@ -54,15 +54,15 @@ namespace nil {
                 div_component div;
 
                 static value_type get_hi(uint8_t m2) {
-                    return value_type(8) * (1 << (16 * M(m2)));
+                    return FixedPointHelper<BlueprintFieldType>::tanh_upper_range(m2);
                 }
 
                 static value_type get_lo(uint8_t m2) {
-                    return -get_hi(m2);
+                    return FixedPointHelper<BlueprintFieldType>::tanh_lower_range(m2);
                 }
 
                 static value_type get_tanh_max(uint8_t m2) {
-                    return value_type::one() * (1 << (16 * M(m2)));
+                    return value_type::one() * (1ULL << (16 * M(m2)));
                 }
 
                 static value_type get_tanh_min(uint8_t m2) {
@@ -330,7 +330,7 @@ namespace nil {
 
                 // Assign div gadget
                 auto one = typename plonk_fixedpoint_tanh<BlueprintFieldType, ArithmetizationParams>::value_type(
-                    1 << (16 * range_comp.get_m2()));
+                    div_comp.get_delta());
                 auto div_x = exp_y - one;
                 auto div_y = exp_y + one;
                 assignment.witness(magic(var_pos.div_x)) = div_x;
@@ -383,8 +383,9 @@ namespace nil {
                 auto lt = range_res.lt;
                 auto gt = range_res.gt;
 
+                auto div_comp = component.get_div_component();
                 auto one = typename plonk_fixedpoint_tanh<BlueprintFieldType, ArithmetizationParams>::value_type(
-                    1 << (16 * range_comp.get_m2()));
+                    div_comp.get_delta());
 
                 auto constraint_1 = exp_x - x * 2 * in;
                 auto constraint_2 = div_x - exp_y + one;

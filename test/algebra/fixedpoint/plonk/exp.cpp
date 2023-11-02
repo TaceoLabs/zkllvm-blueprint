@@ -201,14 +201,14 @@ void test_fixedpoint_tanh(FixedType input) {
                                                                 typename component_type::result_type &real_res) {
         auto real_res_ = FixedType(var_value(assignment, real_res.output), FixedType::SCALE);
         double real_res_f = real_res_.to_double();
-        // #ifdef BLUEPRINT_PLONK_PROFILING_ENABLED
+#ifdef BLUEPRINT_PLONK_PROFILING_ENABLED
         std::cout << "fixed_point tanh test: "
                   << "\n";
         std::cout << "input_f : " << input.to_double() << "\n";
         std::cout << "input   : " << input.get_value().data << "\n";
         std::cout << "expected: " << expected_res_f << "\n";
         std::cout << "real    : " << real_res_f << "\n\n";
-        // #endif
+#endif
         if (!doubleEquals(expected_res_f, real_res_f, EPSILON) || expected_res != real_res_) {
             std::cout << "expected        : " << expected_res.get_value().data << "\n";
             std::cout << "real            : " << real_res_.get_value().data << "\n\n";
@@ -261,12 +261,14 @@ FieldType generate_random_for_fixedpoint(uint8_t m1, uint8_t m2, RngType &rng) {
     }
 }
 
+constexpr static const std::size_t UPPER_BOUND = 6;
+
 template<typename FieldType, typename RngType>
 typename FieldType::value_type generate_bounded_random_for_fixedpoint(uint8_t m2, RngType &rng) {
     using distribution = boost::random::uniform_int_distribution<uint64_t>;
     using value_type = typename FieldType::value_type;
 
-    distribution dist = distribution(0, nil::blueprint::components::FixedPointTables<FieldType>::ExpALen / 2);
+    distribution dist = distribution(0, UPPER_BOUND);
     uint64_t pre = dist(rng);
     distribution dist_ = distribution(0, (1ULL << (16 * m2)) - 1);
     uint64_t post = dist_(rng);
