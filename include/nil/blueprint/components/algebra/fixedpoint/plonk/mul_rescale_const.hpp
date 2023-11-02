@@ -226,7 +226,7 @@ namespace nil {
                 }
 
                 auto x = var(magic(var_pos.x));
-                auto y = var(magic(var_pos.y));
+                auto y = var(magic(var_pos.y), true, var::column_type::constant);
                 auto z = var(magic(var_pos.z));
 
                 auto constraint_1 = 2 * (x * y - z * delta - q) + delta;  // see the definition of rescale
