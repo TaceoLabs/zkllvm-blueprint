@@ -288,13 +288,13 @@ namespace nil {
                 // Exp input
                 typename plonk_fixedpoint_tanh<BlueprintFieldType, ArithmetizationParams>::exp_component::input_type
                     exp_input;
-                exp_input.x = var(magic(var_pos.exp_x));
+                exp_input.x = var(magic(var_pos.exp_x), false);
 
                 // Div input
                 typename plonk_fixedpoint_tanh<BlueprintFieldType, ArithmetizationParams>::div_component::input_type
                     div_input;
-                div_input.x = var(magic(var_pos.div_x));
-                div_input.y = var(magic(var_pos.div_y));
+                div_input.x = var(magic(var_pos.div_x), false);
+                div_input.y = var(magic(var_pos.div_y), false);
 
                 // Range input
                 typename plonk_fixedpoint_tanh<BlueprintFieldType, ArithmetizationParams>::range_component::input_type
@@ -456,13 +456,13 @@ namespace nil {
                 // Exp input
                 typename plonk_fixedpoint_tanh<BlueprintFieldType, ArithmetizationParams>::exp_component::input_type
                     exp_input;
-                exp_input.x = var(magic(var_pos.exp_x));
+                exp_input.x = var(magic(var_pos.exp_x), false);
 
                 // Div input
                 typename plonk_fixedpoint_tanh<BlueprintFieldType, ArithmetizationParams>::div_component::input_type
                     div_input;
-                div_input.x = var(magic(var_pos.div_x));
-                div_input.y = var(magic(var_pos.div_y));
+                div_input.x = var(magic(var_pos.div_x), false);
+                div_input.y = var(magic(var_pos.div_y), false);
 
                 // Range input
                 typename plonk_fixedpoint_tanh<BlueprintFieldType, ArithmetizationParams>::range_component::input_type

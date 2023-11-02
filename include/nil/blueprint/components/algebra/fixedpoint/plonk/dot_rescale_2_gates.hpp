@@ -1,5 +1,5 @@
-#ifndef CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_DOT_RESCALE_HPP
-#define CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_DOT_RESCALE_HPP
+#ifndef CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_DOT_RESCALE_2_GATES_HPP
+#define CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_DOT_RESCALE_2_GATES_HPP
 
 #include "nil/blueprint/components/algebra/fixedpoint/plonk/rescale.hpp"
 
@@ -11,12 +11,13 @@ namespace nil {
             // Output: z = Rescale(sum_i x_i * y_i) with \Delta_z = \Delta_x = \Delta_y
 
             // Works by proving a dot product in multiple rows, followed by a rescale gadget
+            // Thereby, we have two different gadgets for the first and other rows.
 
             template<typename ArithmetizationType, typename FieldType, typename NonNativePolicyType>
-            class fix_dot_rescale;
+            class fix_dot_rescale_2_gates;
 
             template<typename BlueprintFieldType, typename ArithmetizationParams, typename NonNativePolicyType>
-            class fix_dot_rescale<
+            class fix_dot_rescale_2_gates<
                 crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                 BlueprintFieldType, NonNativePolicyType>
                 : public plonk_component<BlueprintFieldType, ArithmetizationParams, 0, 0> {
@@ -138,7 +139,7 @@ namespace nil {
                 using result_type = typename rescale_component::result_type;
 
                 template<typename ContainerType>
-                explicit fix_dot_rescale(ContainerType witness, uint32_t dots, uint8_t m2) :
+                explicit fix_dot_rescale_2_gates(ContainerType witness, uint32_t dots, uint8_t m2) :
                     component_type(witness, {}, {}, get_manifest(dots, m2)), dots(dots),
                     rescale(instantiate_rescale(m2)) {
                     dots_per_row = (this->witness_amount() - 1) / 2;
@@ -146,14 +147,14 @@ namespace nil {
 
                 template<typename WitnessContainerType, typename ConstantContainerType,
                          typename PublicInputContainerType>
-                fix_dot_rescale(WitnessContainerType witness, ConstantContainerType constant,
-                                PublicInputContainerType public_input, uint32_t dots, uint8_t m2) :
+                fix_dot_rescale_2_gates(WitnessContainerType witness, ConstantContainerType constant,
+                                        PublicInputContainerType public_input, uint32_t dots, uint8_t m2) :
                     component_type(witness, constant, public_input, get_manifest(dots, m2)),
                     dots(dots), rescale(instantiate_rescale(m2)) {
                     dots_per_row = (this->witness_amount() - 1) / 2;
                 };
 
-                fix_dot_rescale(
+                fix_dot_rescale_2_gates(
                     std::initializer_list<typename component_type::witness_container_type::value_type> witnesses,
                     std::initializer_list<typename component_type::constant_container_type::value_type> constants,
                     std::initializer_list<typename component_type::public_input_container_type::value_type>
@@ -166,27 +167,28 @@ namespace nil {
             };
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
-            using plonk_fixedpoint_dot_rescale =
-                fix_dot_rescale<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
-                                BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
+            using plonk_fixedpoint_dot_rescale_2_gates = fix_dot_rescale_2_gates<
+                crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
-            typename plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams>::var
-                get_copy_var(const plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams> &component,
-                             std::size_t start_row_index, std::size_t dot_index, bool is_x) {
+            typename plonk_fixedpoint_dot_rescale_2_gates<BlueprintFieldType, ArithmetizationParams>::var get_copy_var(
+                const plonk_fixedpoint_dot_rescale_2_gates<BlueprintFieldType, ArithmetizationParams> &component,
+                std::size_t start_row_index, std::size_t dot_index, bool is_x) {
                 auto pos = component.dot_position(start_row_index, dot_index, is_x);
-                using var = typename plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams>::var;
+                using var =
+                    typename plonk_fixedpoint_dot_rescale_2_gates<BlueprintFieldType, ArithmetizationParams>::var;
                 return var(component.W(pos.second), static_cast<int>(pos.first), false);
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
-            typename plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams>::result_type
+            typename plonk_fixedpoint_dot_rescale_2_gates<BlueprintFieldType, ArithmetizationParams>::result_type
                 generate_assignments(
-                    const plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams> &component,
+                    const plonk_fixedpoint_dot_rescale_2_gates<BlueprintFieldType, ArithmetizationParams> &component,
                     assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                         &assignment,
-                    const typename plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams>::input_type
-                        instance_input,
+                    const typename plonk_fixedpoint_dot_rescale_2_gates<
+                        BlueprintFieldType, ArithmetizationParams>::input_type instance_input,
                     const std::uint32_t start_row_index) {
 
                 const std::size_t j = start_row_index;
@@ -204,7 +206,7 @@ namespace nil {
                 BLUEPRINT_RELEASE_ASSERT(instance_input.x.size() == dots);
                 BLUEPRINT_RELEASE_ASSERT(instance_input.y.size() == dots);
 
-                typename BlueprintFieldType::value_type sum = 0;
+                auto sum = BlueprintFieldType::value_type::zero();
 
                 for (auto row = 0; row < rows - 1; row++) {
                     for (auto i = 0; i < dots_per_row; i++) {
@@ -223,8 +225,9 @@ namespace nil {
                 }
 
                 // Use rescale component
-                using var = typename plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams>::var;
-                typename plonk_fixedpoint_dot_rescale<
+                using var =
+                    typename plonk_fixedpoint_dot_rescale_2_gates<BlueprintFieldType, ArithmetizationParams>::var;
+                typename plonk_fixedpoint_dot_rescale_2_gates<
                     BlueprintFieldType, ArithmetizationParams>::rescale_component::input_type rescale_input;
                 rescale_input.x = var(component.W(0), start_row_index + rows - 2, false, var::column_type::witness);
 
@@ -234,14 +237,15 @@ namespace nil {
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
             std::size_t generate_first_gate(
-                const plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams> &component,
+                const plonk_fixedpoint_dot_rescale_2_gates<BlueprintFieldType, ArithmetizationParams> &component,
                 circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
                 assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                     &assignment,
-                const typename plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams>::input_type
-                    &instance_input) {
+                const typename plonk_fixedpoint_dot_rescale_2_gates<
+                    BlueprintFieldType, ArithmetizationParams>::input_type &instance_input) {
 
-                using var = typename plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams>::var;
+                using var =
+                    typename plonk_fixedpoint_dot_rescale_2_gates<BlueprintFieldType, ArithmetizationParams>::var;
                 // sum = sum_i x_i * y_i
 
                 nil::crypto3::math::expression<var> dot;
@@ -256,14 +260,15 @@ namespace nil {
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
             std::size_t generate_second_gate(
-                const plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams> &component,
+                const plonk_fixedpoint_dot_rescale_2_gates<BlueprintFieldType, ArithmetizationParams> &component,
                 circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
                 assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                     &assignment,
-                const typename plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams>::input_type
-                    &instance_input) {
+                const typename plonk_fixedpoint_dot_rescale_2_gates<
+                    BlueprintFieldType, ArithmetizationParams>::input_type &instance_input) {
 
-                using var = typename plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams>::var;
+                using var =
+                    typename plonk_fixedpoint_dot_rescale_2_gates<BlueprintFieldType, ArithmetizationParams>::var;
                 // sum = prev_sum + sum_i x_i * y_i
 
                 nil::crypto3::math::expression<var> dot;
@@ -278,15 +283,16 @@ namespace nil {
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
             void generate_copy_constraints(
-                const plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams> &component,
+                const plonk_fixedpoint_dot_rescale_2_gates<BlueprintFieldType, ArithmetizationParams> &component,
                 circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
                 assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                     &assignment,
-                const typename plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams>::input_type
-                    &instance_input,
+                const typename plonk_fixedpoint_dot_rescale_2_gates<BlueprintFieldType,
+                                                                    ArithmetizationParams>::input_type &instance_input,
                 const std::size_t start_row_index) {
 
-                using var = typename plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams>::var;
+                using var =
+                    typename plonk_fixedpoint_dot_rescale_2_gates<BlueprintFieldType, ArithmetizationParams>::var;
 
                 const std::size_t j = start_row_index;
                 auto rows = component.rows_amount;
@@ -314,14 +320,14 @@ namespace nil {
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
-            typename plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams>::result_type
+            typename plonk_fixedpoint_dot_rescale_2_gates<BlueprintFieldType, ArithmetizationParams>::result_type
                 generate_circuit(
-                    const plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams> &component,
+                    const plonk_fixedpoint_dot_rescale_2_gates<BlueprintFieldType, ArithmetizationParams> &component,
                     circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
                     assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                         &assignment,
-                    const typename plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams>::input_type
-                        &instance_input,
+                    const typename plonk_fixedpoint_dot_rescale_2_gates<
+                        BlueprintFieldType, ArithmetizationParams>::input_type &instance_input,
                     const std::size_t start_row_index) {
 
                 std::size_t rows = component.rows_amount;
@@ -336,8 +342,9 @@ namespace nil {
                 generate_copy_constraints(component, bp, assignment, instance_input, start_row_index);
 
                 // Use rescale component
-                using var = typename plonk_fixedpoint_dot_rescale<BlueprintFieldType, ArithmetizationParams>::var;
-                typename plonk_fixedpoint_dot_rescale<
+                using var =
+                    typename plonk_fixedpoint_dot_rescale_2_gates<BlueprintFieldType, ArithmetizationParams>::var;
+                typename plonk_fixedpoint_dot_rescale_2_gates<
                     BlueprintFieldType, ArithmetizationParams>::rescale_component::input_type rescale_input;
                 rescale_input.x = var(component.W(0), start_row_index + rows - 2, false, var::column_type::witness);
 
@@ -349,4 +356,4 @@ namespace nil {
     }        // namespace blueprint
 }    // namespace nil
 
-#endif    // CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_DOT_RESCALE_HPP
+#endif    // CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_DOT_RESCALE_2_GATES_HPP
