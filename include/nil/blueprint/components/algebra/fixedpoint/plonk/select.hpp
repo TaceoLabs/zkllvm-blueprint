@@ -68,10 +68,7 @@ namespace nil {
 
                 constexpr static const std::size_t gates_amount = 1;
                 const std::size_t rows_amount = get_rows_amount(this->witness_amount(), 0);
-
-                /**
-                 * Describes the inputs x, y, and c of the fix_select component.
-                 */
+                
                 struct input_type {
                     var c = var(0, 0, false);
                     var x = var(0, 0, false);
@@ -101,10 +98,7 @@ namespace nil {
                     pos.z = CellPosition(this->W(3), start_row_index);
                     return pos;
                 }
-
-                /**
-                 * Describes the output z of the fix_select component.
-                 */
+                
                 struct result_type {
                     var output = var(0, 0, false);
                     result_type(const fix_select &component, std::uint32_t start_row_index) {

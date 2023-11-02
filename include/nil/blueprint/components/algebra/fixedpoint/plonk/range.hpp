@@ -15,13 +15,21 @@ namespace nil {
     namespace blueprint {
         namespace components {
 
-            // Input: x as fixedpoint numbers with \Delta_x
-            // Constant inputs: Two fixedpoint ranges(x_lo, x_hi) with \Delta_x
-            // Output: three flags with values \in {0,1} indicating whether x is in range. Concretely lt = x < x_lo, gt
-            // = x > x_hi, in = x_lo <= x <= x_hi
+            // Works by decomposing the difference of the input and the ranges.
 
-            // // Works by decomposing the difference of the input and the ranges.
-
+            /**
+             * Component representing a range check for the input x and the constants x_lo and x_hi. The outputs are
+             * flags that are 1 if their condition is true and 0 otherwise.
+             *
+             * The user needs to ensure that the deltas of x, x_lo, and x_hi match (the scale must be the same).
+             *
+             * Input:    x    ... field element
+             * Output:   lt   ... x < x_lo ? 1 : 0 (field element)
+             *           in   ... x_lo <= x <= x_hi ? 1 : 0 (field element)
+             *           gt   ... x_hi < x ? 1 : 0 (field element)
+             * Constant: x_lo ... field element
+             *           x_hi ... field element
+             */
             template<typename ArithmetizationType, typename FieldType, typename NonNativePolicyType>
             class fix_range;
 
@@ -142,9 +150,6 @@ namespace nil {
                             // trace layout witness (10 + 2*(m+1) col(s), 1 row(s))
                             // requiring an extra limb because of potential overflows during decomposition of
                             // differences
-                            //
-                            // as m >= 2 this construction requires at least 16 cols (and this is not possible with the
-                            // current max 15 rows)
                             //
                             //     |                                    witness                     10+     10+     |
                             //  r\c| 0 | 1 | 2 | 3 | 4  | 5  | 6    | 7    | 8  | 9  | 10 |..|10+m| m+1|..| 2(m+1)-1|
@@ -315,14 +320,17 @@ namespace nil {
                 assignment.witness(magic(var_pos.s_b)) = sign_b ? -one : one;
 
                 // Additional limb due to potential overflow of diff
+                // FixedPointHelper::decompose creates a vector whose size is a multiple of 4.
+                // Furthermore, the size of the vector might be larger than required (e.g. if 4 limbs would suffice the
+                // vectour could be of size 8)
                 if (a0_val.size() > m) {
-                    BLUEPRINT_RELEASE_ASSERT(a0_val[m] == 0 || a0_val[m] == 1);    // TODO RomanH what is going on here?
+                    BLUEPRINT_RELEASE_ASSERT(a0_val[m] == 0 || a0_val[m] == 1);
                     assignment.witness(var_pos.a0.column + m, var_pos.a0.row) = a0_val[m];
                 } else {
                     assignment.witness(var_pos.a0.column + m, var_pos.a0.row) = 0;
                 }
                 if (b0_val.size() > m) {
-                    BLUEPRINT_RELEASE_ASSERT(b0_val[m] == 0 || b0_val[m] == 1);    // TODO RomanH what is going on here?
+                    BLUEPRINT_RELEASE_ASSERT(b0_val[m] == 0 || b0_val[m] == 1);
                     assignment.witness(var_pos.b0.column + m, var_pos.b0.row) = b0_val[m];
                 } else {
                     assignment.witness(var_pos.b0.column + m, var_pos.b0.row) = 0;

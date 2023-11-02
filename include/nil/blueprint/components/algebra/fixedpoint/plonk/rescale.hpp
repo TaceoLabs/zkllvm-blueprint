@@ -100,10 +100,7 @@ namespace nil {
 
                 constexpr static const std::size_t gates_amount = 1;
                 const std::size_t rows_amount = get_rows_amount(this->witness_amount(), 0);
-
-                /**
-                 * Describes the input x of the fix_rescale component.
-                 */
+                
                 struct input_type {
                     var x = var(0, 0, false);
 
@@ -131,10 +128,7 @@ namespace nil {
                     pos.q = CellPosition(this->W(2 + 0 * m2), start_row_index);    // occupies m2 cells
                     return pos;
                 }
-
-                /**
-                 * Describes the output y of the fix_rescale component.
-                 */
+                
                 struct result_type {
                     var output = var(0, 0, false);
                     result_type(const fix_rescale &component, std::uint32_t start_row_index) {

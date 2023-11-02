@@ -97,10 +97,7 @@ namespace nil {
 
                 constexpr static const std::size_t gates_amount = 1;
                 const std::size_t rows_amount = get_rows_amount(this->witness_amount(), 0, m1, m2);
-
-                /**
-                 * Describes the inputs x and y of the fix_rem component.
-                 */
+                
                 struct input_type {
                     var x = var(0, 0, false);
                     var y = var(0, 0, false);
@@ -161,10 +158,7 @@ namespace nil {
                     }
                     return pos;
                 }
-
-                /**
-                 * Describes the output z of the fix_rem component.
-                 */
+                
                 struct result_type {
                     var output = var(0, 0, false);
                     result_type(const fix_rem &component, std::uint32_t start_row_index) {

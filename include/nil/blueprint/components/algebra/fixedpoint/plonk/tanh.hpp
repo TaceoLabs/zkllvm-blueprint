@@ -174,9 +174,6 @@ namespace nil {
                 const std::size_t rows_amount =
                     get_rows_amount(this->witness_amount(), 0, range.get_m1(), range.get_m2());
 
-                /**
-                 * Describes the input x of the fix_tanh component.
-                 */
                 struct input_type {
                     var x = var(0, 0, false);
 
@@ -194,8 +191,10 @@ namespace nil {
 
                     FixTanhVarPositions pos;
 
-                    // trace layout (6+ witness columns, 2 constants columns, 1 row in addition to the rows for the
-                    // other gadgets) |   |          witness          |   constant    |
+                    // trace layout (6+ witness columns, 2 constant columns, 1 row in addition to the rows for the
+                    // other gadgets)
+                    //
+                    //     |   |          witness            |   constant    |
                     //  r\c|0|1|  2  |  3  |  4  |  5  |  6  |   0   |   1   |
                     // +---+-+-+-----+-----+-----+-----+-----+-------+-------+
                     // | 0 | <exp_gadget>                    |       |       |
@@ -224,9 +223,6 @@ namespace nil {
                     return pos;
                 }
 
-                /**
-                 * Describes the output y of the fix_tanh component.
-                 */
                 struct result_type {
                     var output = var(0, 0, false);
                     result_type(const fix_tanh &component, std::uint32_t start_row_index) {
@@ -315,34 +311,34 @@ namespace nil {
 
                 auto range_out = generate_assignments(range_comp, assignment, range_input, range_row);
 
-                auto in = var_value(assignment, range_out.in);
-                auto lt = var_value(assignment, range_out.lt);
-                auto gt = var_value(assignment, range_out.gt);
+                auto in_val = var_value(assignment, range_out.in);
+                auto lt_val = var_value(assignment, range_out.lt);
+                auto gt_val = var_value(assignment, range_out.gt);
 
                 // Assign exp gadget
-                auto x_2 = x_val * 2 * in;
-                assignment.witness(magic(var_pos.exp_x)) = x_2;
+                auto exp_x_val = x_val * 2 * in_val;
+                assignment.witness(magic(var_pos.exp_x)) = exp_x_val;
 
                 auto exp_out = generate_assignments(exp_comp, assignment, exp_input, exp_row);
 
-                auto exp_y = var_value(assignment, exp_out.output);
-                assignment.witness(magic(var_pos.exp_y)) = exp_y;
+                auto exp_y_val = var_value(assignment, exp_out.output);
+                assignment.witness(magic(var_pos.exp_y)) = exp_y_val;
 
                 // Assign div gadget
                 auto one = typename plonk_fixedpoint_tanh<BlueprintFieldType, ArithmetizationParams>::value_type(
                     div_comp.get_delta());
-                auto div_x = exp_y - one;
-                auto div_y = exp_y + one;
-                assignment.witness(magic(var_pos.div_x)) = div_x;
-                assignment.witness(magic(var_pos.div_y)) = div_y;
+                auto div_x_val = exp_y_val - one;
+                auto div_y_val = exp_y_val + one;
+                assignment.witness(magic(var_pos.div_x)) = div_x_val;
+                assignment.witness(magic(var_pos.div_y)) = div_y_val;
 
                 auto div_out = generate_assignments(div_comp, assignment, div_input, div_row);
 
-                auto div_z = var_value(assignment, div_out.output);
-                assignment.witness(magic(var_pos.div_z)) = div_z;
+                auto div_z_val = var_value(assignment, div_out.output);
+                assignment.witness(magic(var_pos.div_z)) = div_z_val;
 
-                auto y = div_z * in + component.get_tanh_min() * lt + component.get_tanh_max() * gt;
-                assignment.witness(magic(var_pos.y)) = y;
+                auto y_val = div_z_val * in_val + component.get_tanh_min() * lt_val + component.get_tanh_max() * gt_val;
+                assignment.witness(magic(var_pos.y)) = y_val;
 
                 return typename plonk_fixedpoint_tanh<BlueprintFieldType, ArithmetizationParams>::result_type(
                     component, start_row_index);
@@ -358,7 +354,7 @@ namespace nil {
                     &instance_input) {
                 using var = typename plonk_fixedpoint_tanh<BlueprintFieldType, ArithmetizationParams>::var;
 
-                const int64_t start_row_index = (int64_t)1 - component.rows_amount;
+                const int64_t start_row_index = static_cast<int64_t>(1) - component.rows_amount;
                 const auto var_pos = component.get_var_pos(start_row_index);
 
                 // range output
@@ -406,6 +402,8 @@ namespace nil {
                 const std::size_t start_row_index) {
 
                 using var = typename plonk_fixedpoint_tanh<BlueprintFieldType, ArithmetizationParams>::var;
+                using res_type = typename plonk_fixedpoint_tanh<BlueprintFieldType,
+                                                                ArithmetizationParams>::exp_component::result_type;
 
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
 
@@ -415,15 +413,8 @@ namespace nil {
                 std::uint32_t exp_row = var_pos.exp_row;
                 std::uint32_t div_row = var_pos.div_row;
 
-                auto exp_res =
-                    typename plonk_fixedpoint_tanh<BlueprintFieldType,
-                                                   ArithmetizationParams>::exp_component::result_type(exp_comp,
-                                                                                                      exp_row);
-
-                auto div_res =
-                    typename plonk_fixedpoint_tanh<BlueprintFieldType,
-                                                   ArithmetizationParams>::div_component::result_type(div_comp,
-                                                                                                      div_row);
+                auto exp_res = res_type(exp_comp, exp_row);
+                auto div_res = res_type(div_comp, div_row);
 
                 auto x = var(magic(var_pos.x));
                 auto exp_y = var(magic(var_pos.exp_y));
