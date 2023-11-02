@@ -99,20 +99,20 @@ namespace nil {
                     }
                 };
 
-                struct FixMulVarPositions {
+                struct FixMulRescaleVarPositions {
                     CellPosition x, y, z, q0;
                 };
 
-                FixMulVarPositions get_var_pos(const int64_t start_row_index) const {
+                FixMulRescaleVarPositions get_var_pos(const int64_t start_row_index) const {
 
-                    // trace layout (2 col(s), 1 row(s))
+                    // trace layout (3 + m2 col(s), 1 row(s))
                     //
                     //  r\c| 0 | 1 | 2 | 3  | .. | 3 + m2-1 |
                     // +---+---+---+---+----+----+----------+
                     // | 0 | x | y | z | q0 | .. | qm2-1    |
 
                     auto m2 = this->get_m2();
-                    FixMulVarPositions pos;
+                    FixMulRescaleVarPositions pos;
                     pos.x = CellPosition(this->W(0), start_row_index);
                     pos.y = CellPosition(this->W(1), start_row_index);
                     pos.z = CellPosition(this->W(2), start_row_index);
