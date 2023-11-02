@@ -124,10 +124,8 @@ void test_fixedpoint_exp_ranged(FixedType input) {
     if (expected_res_f > max_exp_f) {
         expected_res_f = max_exp_f;
     }
-    auto expected_res = input.exp();
-    if (expected_res > max_exp) {
-        expected_res = max_exp;
-    }
+    auto expected_res = input.exp(true);
+    BLUEPRINT_RELEASE_ASSERT(expected_res <= max_exp);
 
     auto result_check = [&expected_res, &expected_res_f, input](AssignmentType &assignment,
                                                                 typename component_type::result_type &real_res) {

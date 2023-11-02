@@ -53,8 +53,8 @@ namespace nil {
                 range_component range;
                 div_component div;
 
-                static value_type get_hi(uint8_t m2) {
-                    return FixedPointHelper<BlueprintFieldType>::tanh_upper_range(m2);
+                static value_type get_hi(uint8_t m1, uint8_t m2) {
+                    return FixedPointHelper<BlueprintFieldType>::tanh_upper_range(m1, m2);
                 }
 
                 static value_type get_lo(uint8_t m2) {
@@ -245,7 +245,7 @@ namespace nil {
                 fix_tanh(WitnessContainerType witness, ConstantContainerType constant,
                          PublicInputContainerType public_input, uint8_t m1, uint8_t m2) :
                     component_type(witness, constant, public_input, get_manifest(m1, m2)),
-                    lo(get_lo(m2)), hi(get_hi(m2)), tanh_min(get_tanh_min(m2)), tanh_max(get_tanh_max(m2)),
+                    lo(get_lo(m2)), hi(get_hi(m1, m2)), tanh_min(get_tanh_min(m2)), tanh_max(get_tanh_max(m2)),
                     exp(instantiate_exp(m2)), range(instantiate_range(m1, m2, lo, hi)), div(instantiate_div(m1, m2)) {};
 
                 fix_tanh(std::initializer_list<typename component_type::witness_container_type::value_type> witnesses,
@@ -254,7 +254,7 @@ namespace nil {
                              public_inputs,
                          uint8_t m1, uint8_t m2) :
                     component_type(witnesses, constants, public_inputs, get_manifest(m1, m2)),
-                    lo(get_lo(m2)), hi(get_hi(m2)), tanh_min(get_tanh_min(m2)), tanh_max(get_tanh_max(m2)),
+                    lo(get_lo(m2)), hi(get_hi(m1, m2)), tanh_min(get_tanh_min(m2)), tanh_max(get_tanh_max(m2)),
                     exp(instantiate_exp(m2)), range(instantiate_range(m1, m2, lo, hi)), div(instantiate_div(m1, m2)) {};
             };
 

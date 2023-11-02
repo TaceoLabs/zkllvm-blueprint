@@ -66,7 +66,7 @@ namespace nil {
                 static bool split_exp(const value_type &, uint16_t, uint64_t &, uint64_t &);
 
                 static value_type tanh_lower_range(uint8_t m2);
-                static value_type tanh_upper_range(uint8_t m2);
+                static value_type tanh_upper_range(uint8_t m1, uint8_t m2);
             };
 
             // FieldType is the representation of the proof system, whereas M1 is the number of pre-comma 16-bit limbs
@@ -120,7 +120,7 @@ namespace nil {
                 FixedPoint operator%(const FixedPoint &other) const;
                 FixedPoint operator-() const;
 
-                FixedPoint exp() const;
+                FixedPoint exp(bool ranged = false) const;
                 FixedPoint rescale() const;
                 static FixedPoint dot(const std::vector<FixedPoint> &, const std::vector<FixedPoint> &);
 
@@ -512,8 +512,19 @@ namespace nil {
             }
 
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
-            FixedPoint<BlueprintFieldType, M1, M2> FixedPoint<BlueprintFieldType, M1, M2>::exp() const {
+            FixedPoint<BlueprintFieldType, M1, M2> FixedPoint<BlueprintFieldType, M1, M2>::exp(bool ranged) const {
                 BLUEPRINT_RELEASE_ASSERT(scale == SCALE);
+
+                if (ranged) {
+                    if (*this >
+                        FixedPoint(FixedPointTables<BlueprintFieldType>::get_highest_valid_exp_input(M1, M2), SCALE)) {
+                        return FixedPoint::max();
+                    }
+                    if (*this < FixedPoint(FixedPointTables<BlueprintFieldType>::get_lowest_exp_input(M2), SCALE)) {
+                        return FixedPoint(BlueprintFieldType::value_type::zero(), SCALE);
+                    }
+                }
+
                 auto exp_a = M2 == 1 ? FixedPointTables<BlueprintFieldType>::get_exp_a_16() :
                                        FixedPointTables<BlueprintFieldType>::get_exp_a_32();
                 auto exp_b = M2 == 1 ? FixedPointTables<BlueprintFieldType>::get_exp_b_16() :
@@ -589,22 +600,24 @@ namespace nil {
             }
 
             template<typename BlueprintFieldType>
-            typename BlueprintFieldType::value_type FixedPointHelper<BlueprintFieldType>::tanh_upper_range(uint8_t m2) {
-                switch (m2) {
-                    case 1:
-                        // Chosen such that the exp(2x) + 1 operation in tanh does not overflow
-                        return value_type(363408);
-                    case 2:
-                        return value_type(8) * (1ULL << 32);
+            typename BlueprintFieldType::value_type FixedPointHelper<BlueprintFieldType>::tanh_upper_range(uint8_t m1,
+                                                                                                           uint8_t m2) {
+                BLUEPRINT_RELEASE_ASSERT(m2 > 0 && m2 < 3);
+                // Chosen to be in [-8, 8] and such that the exp(2x) + 1 operation in tanh does not overflow
+                if (m1 == 1 && m2 == 1) {
+                    return 363408;
+                } else if (m1 == 1 && m2 == 2) {
+                    return 23816339455;
+                } else {
+                    return 8ULL << (16 * m2);
                 }
-                BLUEPRINT_RELEASE_ASSERT(false);
-                return value_type::zero();
             }
 
             template<typename BlueprintFieldType>
             typename BlueprintFieldType::value_type FixedPointHelper<BlueprintFieldType>::tanh_lower_range(uint8_t m2) {
+                // Chosen to be in [-8, 8] and such that the exp(2x) + 1 operation in tanh does not overflow
                 BLUEPRINT_RELEASE_ASSERT(m2 > 0 && m2 < 3);
-                return -(value_type(8) * (1ULL << (16 * m2)));
+                return -(value_type(8ULL << (16 * m2)));
             }
 
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
@@ -613,7 +626,7 @@ namespace nil {
 
                 auto one = FixedPoint((int64_t)1);
                 // First, we set the output if the range is outside [-min, max]
-                if (*this > FixedPoint(helper::tanh_upper_range(M2), SCALE)) {
+                if (*this > FixedPoint(helper::tanh_upper_range(M1, M2), SCALE)) {
                     return one;
                 }
                 if (*this < FixedPoint(helper::tanh_lower_range(M2), SCALE)) {
