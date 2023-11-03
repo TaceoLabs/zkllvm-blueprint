@@ -9,7 +9,7 @@
 #include <nil/blueprint/components/algebra/fixedpoint/tables.hpp>
 
 // macro for getting a variable list from a cell position for fixedpoint components
-#define magic(x) x.column, x.row
+#define magic(x) x.column(), x.row()
 
 namespace nil {
     namespace blueprint {
@@ -27,13 +27,23 @@ namespace nil {
              *
              * Using uint64_t to be on the safe side for any computations as of today.
              */
-            struct CellPosition {
-                int64_t column;
-                int64_t row;
+            class CellPosition {
+                int64_t column_;
+                int64_t row_;
+                bool valid_;
 
-                CellPosition() : column(0), row(0) {
+            public:
+                CellPosition() : column_(0), row_(0), valid_(false) {
                 }
-                CellPosition(int64_t column, int64_t row) : column(column), row(row) {
+                CellPosition(int64_t column, int64_t row) : column_(column), row_(row), valid_(true) {
+                }
+                int64_t column() const {
+                    BLUEPRINT_RELEASE_ASSERT(valid_ && "CellPosition is not defined");
+                    return column_;
+                }
+                int64_t row() const {
+                    BLUEPRINT_RELEASE_ASSERT(valid_ && "CellPosition is not defined");
+                    return row_;
                 }
             };
 

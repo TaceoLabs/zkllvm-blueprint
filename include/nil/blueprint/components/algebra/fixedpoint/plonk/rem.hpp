@@ -261,10 +261,10 @@ namespace nil {
                 BLUEPRINT_RELEASE_ASSERT(d0_val.size() >= m);
 
                 for (auto i = 0; i < m; i++) {
-                    assignment.witness(var_pos.y0.column + i, var_pos.y0.row) = y0_val[i];
-                    assignment.witness(var_pos.z0.column + i, var_pos.z0.row) = z0_val[i];
-                    assignment.witness(var_pos.a0.column + i, var_pos.a0.row) = a0_val[i];
-                    assignment.witness(var_pos.d0.column + i, var_pos.d0.row) = d0_val[i];
+                    assignment.witness(var_pos.y0.column() + i, var_pos.y0.row()) = y0_val[i];
+                    assignment.witness(var_pos.z0.column() + i, var_pos.z0.row()) = z0_val[i];
+                    assignment.witness(var_pos.a0.column() + i, var_pos.a0.row()) = a0_val[i];
+                    assignment.witness(var_pos.d0.column() + i, var_pos.d0.row()) = d0_val[i];
                 }
 
                 return typename plonk_fixedpoint_rem<BlueprintFieldType, ArithmetizationParams>::result_type(
@@ -290,10 +290,10 @@ namespace nil {
                 auto a0 = nil::crypto3::math::expression(var(magic(var_pos.a0)));
                 auto d0 = nil::crypto3::math::expression(var(magic(var_pos.d0)));
                 for (auto i = 1; i < m; i++) {
-                    y0 += var(var_pos.y0.column + i, var_pos.y0.row) * (1ULL << (16 * i));
-                    z0 += var(var_pos.z0.column + i, var_pos.z0.row) * (1ULL << (16 * i));
-                    a0 += var(var_pos.a0.column + i, var_pos.a0.row) * (1ULL << (16 * i));
-                    d0 += var(var_pos.d0.column + i, var_pos.d0.row) * (1ULL << (16 * i));
+                    y0 += var(var_pos.y0.column() + i, var_pos.y0.row()) * (1ULL << (16 * i));
+                    z0 += var(var_pos.z0.column() + i, var_pos.z0.row()) * (1ULL << (16 * i));
+                    a0 += var(var_pos.a0.column() + i, var_pos.a0.row()) * (1ULL << (16 * i));
+                    d0 += var(var_pos.d0.column() + i, var_pos.d0.row()) * (1ULL << (16 * i));
                 }
 
                 auto x = var(magic(var_pos.x));

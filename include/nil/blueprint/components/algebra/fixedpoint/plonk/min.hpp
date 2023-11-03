@@ -208,13 +208,13 @@ namespace nil {
                 // Additional limb due to potential overflow of d_val
                 if (d0_val.size() > m) {
                     BLUEPRINT_RELEASE_ASSERT(d0_val[m] == 0 || d0_val[m] == 1);
-                    assignment.witness(var_pos.d0.column + m, var_pos.d0.row) = d0_val[m];
+                    assignment.witness(var_pos.d0.column() + m, var_pos.d0.row()) = d0_val[m];
                 } else {
-                    assignment.witness(var_pos.d0.column + m, var_pos.d0.row) = 0;
+                    assignment.witness(var_pos.d0.column() + m, var_pos.d0.row()) = 0;
                 }
 
                 for (auto i = 0; i < m; i++) {
-                    assignment.witness(var_pos.d0.column + i, var_pos.d0.row) = d0_val[i];
+                    assignment.witness(var_pos.d0.column() + i, var_pos.d0.row()) = d0_val[i];
                 }
 
                 return typename plonk_fixedpoint_min<BlueprintFieldType, ArithmetizationParams>::result_type(
@@ -240,12 +240,12 @@ namespace nil {
 
                 auto d = nil::crypto3::math::expression(var(magic(var_pos.d0)));
                 for (auto i = 1; i < m; i++) {
-                    d += var(var_pos.d0.column + i, var_pos.d0.row) * (1ULL << (16 * i));
+                    d += var(var_pos.d0.column() + i, var_pos.d0.row()) * (1ULL << (16 * i));
                 }
                 // 1ULL << 16m could overflow 64-bit int
                 typename BlueprintFieldType::value_type tmp = 1ULL << (16 * (m - 1));
                 tmp *= 1ULL << 16;
-                d += var(var_pos.d0.column + m, var_pos.d0.row) * tmp;
+                d += var(var_pos.d0.column() + m, var_pos.d0.row()) * tmp;
 
                 auto x = var(magic(var_pos.x));
                 auto y = var(magic(var_pos.y));

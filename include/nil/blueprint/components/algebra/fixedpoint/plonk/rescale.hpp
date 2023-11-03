@@ -202,7 +202,7 @@ namespace nil {
                     // is ok because decomp is at least of size 4 and the biggest we have is 32.32
                     BLUEPRINT_RELEASE_ASSERT(decomp.size() >= component.get_m2());
                     for (auto i = 0; i < component.get_m2(); i++) {
-                        assignment.witness(var_pos.q0.column + i, var_pos.q0.row) = decomp[i];    // qi for i in [0, m2)
+                        assignment.witness(var_pos.q0.column() + i, var_pos.q0.row()) = decomp[i];    // qi for i in [0, m2)
                     }
                 }
 
@@ -230,7 +230,7 @@ namespace nil {
 
                 auto q = nil::crypto3::math::expression(var(magic(var_pos.q0)));
                 for (auto i = 1; i < component.get_m2(); i++) {
-                    q += var(var_pos.q0.column + i, var_pos.q0.row) * (1ULL << (16 * i));    // qi for i in [0, m2)
+                    q += var(var_pos.q0.column() + i, var_pos.q0.row()) * (1ULL << (16 * i));    // qi for i in [0, m2)
                 }
 
                 auto x = var(magic(var_pos.x));

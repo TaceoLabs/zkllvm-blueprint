@@ -325,20 +325,20 @@ namespace nil {
                 // vectour could be of size 8)
                 if (a0_val.size() > m) {
                     BLUEPRINT_RELEASE_ASSERT(a0_val[m] == 0 || a0_val[m] == 1);
-                    assignment.witness(var_pos.a0.column + m, var_pos.a0.row) = a0_val[m];
+                    assignment.witness(var_pos.a0.column() + m, var_pos.a0.row()) = a0_val[m];
                 } else {
-                    assignment.witness(var_pos.a0.column + m, var_pos.a0.row) = 0;
+                    assignment.witness(var_pos.a0.column() + m, var_pos.a0.row()) = 0;
                 }
                 if (b0_val.size() > m) {
                     BLUEPRINT_RELEASE_ASSERT(b0_val[m] == 0 || b0_val[m] == 1);
-                    assignment.witness(var_pos.b0.column + m, var_pos.b0.row) = b0_val[m];
+                    assignment.witness(var_pos.b0.column() + m, var_pos.b0.row()) = b0_val[m];
                 } else {
-                    assignment.witness(var_pos.b0.column + m, var_pos.b0.row) = 0;
+                    assignment.witness(var_pos.b0.column() + m, var_pos.b0.row()) = 0;
                 }
 
                 for (auto i = 0; i < m; i++) {
-                    assignment.witness(var_pos.a0.column + i, var_pos.a0.row) = a0_val[i];
-                    assignment.witness(var_pos.b0.column + i, var_pos.b0.row) = b0_val[i];
+                    assignment.witness(var_pos.a0.column() + i, var_pos.a0.row()) = a0_val[i];
+                    assignment.witness(var_pos.b0.column() + i, var_pos.b0.row()) = b0_val[i];
                 }
 
                 return typename plonk_fixedpoint_range<BlueprintFieldType, ArithmetizationParams>::result_type(
@@ -366,14 +366,14 @@ namespace nil {
                 auto a0 = nil::crypto3::math::expression(var(magic(var_pos.a0)));
                 auto b0 = nil::crypto3::math::expression(var(magic(var_pos.b0)));
                 for (auto i = 1; i < m; i++) {
-                    a0 += var(var_pos.a0.column + i, var_pos.a0.row) * (1ULL << (16 * i));
-                    b0 += var(var_pos.b0.column + i, var_pos.b0.row) * (1ULL << (16 * i));
+                    a0 += var(var_pos.a0.column() + i, var_pos.a0.row()) * (1ULL << (16 * i));
+                    b0 += var(var_pos.b0.column() + i, var_pos.b0.row()) * (1ULL << (16 * i));
                 }
                 typename BlueprintFieldType::value_type tmp =
                     1ULL << (16 * (m - 1));    // 1ULL << 16m could overflow 64-bit int
                 tmp *= 1ULL << 16;
-                a0 += var(var_pos.a0.column + m, var_pos.a0.row) * tmp;
-                b0 += var(var_pos.b0.column + m, var_pos.b0.row) * tmp;
+                a0 += var(var_pos.a0.column() + m, var_pos.a0.row()) * tmp;
+                b0 += var(var_pos.b0.column() + m, var_pos.b0.row()) * tmp;
 
                 auto x = var(magic(var_pos.x));
                 auto in = var(magic(var_pos.in));
