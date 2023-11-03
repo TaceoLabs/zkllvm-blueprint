@@ -20,6 +20,7 @@ namespace nil {
             // decides what should happen during a tie. We set this attribute during initialization of the gadget, and
             // do *not* prove it.
             // This gadget also assumes, that index_x < index_y!
+            // Index_y is a constant, while index_x is a witness.
 
             /**
              * Component representing a min and an argmin operation.
@@ -31,7 +32,7 @@ namespace nil {
              * Input:  x       ... field element
              *         y       ... field element
              *         index_x ... field_element
-             *         index_y ... field_element
+             *         index_y ... field_element (constant)
              * Output: min     ... min(x, y) (field element)
              *         index   ... index_x if x <= / < y, index_y otherwise (field element)
              *                     <= or < is decided by a public bool value during initialization of the gadget (not
@@ -43,7 +44,7 @@ namespace nil {
             template<typename BlueprintFieldType, typename ArithmetizationParams, typename NonNativePolicyType>
             class fix_argmin<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                              BlueprintFieldType, NonNativePolicyType>
-                : public plonk_component<BlueprintFieldType, ArithmetizationParams, 0, 0> {
+                : public plonk_component<BlueprintFieldType, ArithmetizationParams, 1, 0> {
             public:
                 using value_type = typename BlueprintFieldType::value_type;
 
@@ -71,17 +72,17 @@ namespace nil {
                     return m2;
                 }
 
-                bool select_last_index;
-
                 static std::size_t get_witness_columns(std::size_t witness_amount, uint8_t m1, uint8_t m2) {
-                    return get_rows_amount(witness_amount, 0, m1, m2) == 1 ? 11 + (m1 + m2) :
-                                                                             std::max(7, 4 + (m1 + m2));
+                    return get_rows_amount(witness_amount, 0, m1, m2) == 1 ? 10 + (m1 + m2) : 4 + (m1 + m2);
                 }
 
-                using component_type = plonk_component<BlueprintFieldType, ArithmetizationParams, 0, 0>;
+                using component_type = plonk_component<BlueprintFieldType, ArithmetizationParams, 1, 0>;
 
                 using var = typename component_type::var;
                 using manifest_type = plonk_component_manifest;
+
+                value_type index_y;
+                bool select_last_index;
 
                 class gate_manifest_type : public component_gate_manifest {
                 public:
@@ -98,15 +99,14 @@ namespace nil {
                 // TACEO_TODO Update to lookup tables
                 static manifest_type get_manifest(uint8_t m1, uint8_t m2) {
                     static manifest_type manifest = manifest_type(
-                        std::shared_ptr<manifest_param>(new manifest_range_param(
-                            std::max(7, 4 + (m1 + m2)), 11 + (m2 + m1), 11 + (m2 + m1) - std::max(7, 4 + (m1 + m2)))),
+                        std::shared_ptr<manifest_param>(new manifest_range_param(4 + (m1 + m2), 10 + (m2 + m1), 6)),
                         false);
                     return manifest;
                 }
 
                 constexpr static std::size_t get_rows_amount(std::size_t witness_amount,
                                                              std::size_t lookup_column_amount, uint8_t m1, uint8_t m2) {
-                    if (11 + (M(m2) + M(m1)) <= witness_amount) {
+                    if (10 + (M(m2) + M(m1)) <= witness_amount) {
                         return 1;
                     } else {
                         return 2;
@@ -120,10 +120,9 @@ namespace nil {
                     var x = var(0, 0, false);
                     var y = var(0, 0, false);
                     var index_x = var(0, 0, false);
-                    var index_y = var(0, 0, false);
 
                     std::vector<var> all_vars() const {
-                        return {x, y, index_x, index_y};
+                        return {x, y, index_x};
                     }
                 };
 
@@ -138,31 +137,32 @@ namespace nil {
                     switch (this->rows_amount) {
                         case 1:
 
-                            // trace layout witness (11 + (m+1) col(s), 1 row(s))
+                            // trace layout witness (10 + (m+1) col(s), 1 constant col(s), 1 row(s))
                             // requiring an extra limb because of potential overflows during decomposition of
                             // differences
                             //
-                            //     |                                    witness                |
-                            //  r\c| 0 | 1 | 2 | 3 | 4  | 5 | 6    | 7  | 8   | 9 | 10 |..|10+m|
-                            // +---+---+---+---+---+----+---+------+----+-----+---+----+--+----+
-                            // | 0 | x | y | ix| iy| min| i | flag | eq | inv | s | d0 |..| dm |
+                            //     |                                    witness            | constant |
+                            //  r\c| 0 | 1 | 2 | 3  | 4 | 5    | 6  | 7   | 8 | 9  |..| 9+m|     0    |
+                            // +---+---+---+---+---+----+------+----+-----+---+----+--+----+----------+
+                            // | 0 | x | y | ix| min| i | flag | eq | inv | s | d0 |..| dm |    iy    |
 
                             pos.x = CellPosition(this->W(0), start_row_index);
                             pos.y = CellPosition(this->W(1), start_row_index);
                             pos.index_x = CellPosition(this->W(2), start_row_index);
-                            pos.index_y = CellPosition(this->W(3), start_row_index);
-                            pos.min = CellPosition(this->W(4), start_row_index);
-                            pos.index = CellPosition(this->W(5), start_row_index);
-                            pos.flag = CellPosition(this->W(6), start_row_index);
-                            pos.eq = CellPosition(this->W(7), start_row_index);
-                            pos.inv = CellPosition(this->W(8), start_row_index);
-                            pos.s = CellPosition(this->W(9), start_row_index);
-                            pos.d0 = CellPosition(this->W(10 + 0 * (m + 1)), start_row_index);
+                            pos.min = CellPosition(this->W(3), start_row_index);
+                            pos.index = CellPosition(this->W(4), start_row_index);
+                            pos.flag = CellPosition(this->W(5), start_row_index);
+                            pos.eq = CellPosition(this->W(6), start_row_index);
+                            pos.inv = CellPosition(this->W(7), start_row_index);
+                            pos.s = CellPosition(this->W(8), start_row_index);
+                            pos.d0 = CellPosition(this->W(9 + 0 * (m + 1)), start_row_index);
+
+                            pos.index_y = CellPosition(this->C(0), start_row_index);
 
                             break;
                         case 2:
 
-                            // trace layout witness (max(7, 4 + (m1 + m2)) col(s), 2 row(s))
+                            // trace layout witness (4 + (m1 + m2) col(s), 1 constant col(s), 2 row(s))
                             // (recall that 2 <= m <= 4)
                             // requiring an extra limb because of potential overflows during decomposition of
                             // differences
@@ -177,17 +177,18 @@ namespace nil {
                             pos.s = CellPosition(this->W(2), start_row_index);
                             pos.d0 = CellPosition(this->W(3 + 0 * (m + 1)), start_row_index);
 
-                            //     |           witness             |
-                            //  r\c| 0 | 1 | 2 | 3 | 4  | 5 | 6    |
-                            // +---+---+---+---+---+----+---+------+
-                            // | 1 | x | y | ix| iy| min| i | flag |
+                            //     |           witness         | constant |
+                            //  r\c| 0 | 1 | 2 | 3  | 4 |   5  |     0    |
+                            // +---+---+---+---+----+---+------+----------+
+                            // | 1 | x | y | ix| min| i | flag |    iy    |
                             pos.x = CellPosition(this->W(0), start_row_index + 1);
                             pos.y = CellPosition(this->W(1), start_row_index + 1);
                             pos.index_x = CellPosition(this->W(2), start_row_index + 1);
-                            pos.index_y = CellPosition(this->W(3), start_row_index + 1);
-                            pos.min = CellPosition(this->W(4), start_row_index + 1);
-                            pos.index = CellPosition(this->W(5), start_row_index + 1);
-                            pos.flag = CellPosition(this->W(6), start_row_index + 1);
+                            pos.min = CellPosition(this->W(3), start_row_index + 1);
+                            pos.index = CellPosition(this->W(4), start_row_index + 1);
+                            pos.flag = CellPosition(this->W(5), start_row_index + 1);
+
+                            pos.index_y = CellPosition(this->C(0), start_row_index + 1);
 
                             break;
                         default:
@@ -216,26 +217,22 @@ namespace nil {
                     }
                 };
 
-                template<typename ContainerType>
-                explicit fix_argmin(ContainerType witness, uint8_t m1, uint8_t m2, bool select_last_index) :
-                    component_type(witness, {}, {}, get_manifest(m1, m2)), m1(M(m1)), m2(M(m2)),
-                    select_last_index(select_last_index) {};
-
                 template<typename WitnessContainerType, typename ConstantContainerType,
                          typename PublicInputContainerType>
                 fix_argmin(WitnessContainerType witness, ConstantContainerType constant,
-                           PublicInputContainerType public_input, uint8_t m1, uint8_t m2, bool select_last_index) :
+                           PublicInputContainerType public_input, uint8_t m1, uint8_t m2, value_type index_y_,
+                           bool select_last_index) :
                     component_type(witness, constant, public_input, get_manifest(m1, m2)),
-                    m1(M(m1)), m2(M(m2)), select_last_index(select_last_index) {};
+                    m1(M(m1)), m2(M(m2)), index_y(index_y_), select_last_index(select_last_index) {};
 
                 fix_argmin(
                     std::initializer_list<typename component_type::witness_container_type::value_type> witnesses,
                     std::initializer_list<typename component_type::constant_container_type::value_type> constants,
                     std::initializer_list<typename component_type::public_input_container_type::value_type>
                         public_inputs,
-                    uint8_t m1, uint8_t m2, bool select_last_index) :
+                    uint8_t m1, uint8_t m2, value_type index_y_, bool select_last_index) :
                     component_type(witnesses, constants, public_inputs, get_manifest(m1, m2)),
-                    m1(M(m1)), m2(M(m2)), select_last_index(select_last_index) {};
+                    m1(M(m1)), m2(M(m2)), index_y(index_y_), select_last_index(select_last_index) {};
             };
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
@@ -260,14 +257,13 @@ namespace nil {
                 auto x_val = var_value(assignment, instance_input.x);
                 auto y_val = var_value(assignment, instance_input.y);
                 auto index_x_val = var_value(assignment, instance_input.index_x);
-                auto index_y_val = var_value(assignment, instance_input.index_y);
+                auto index_y_val = component.index_y;
 
                 BLUEPRINT_RELEASE_ASSERT(index_x_val < index_y_val);
 
                 assignment.witness(magic(var_pos.x)) = x_val;
                 assignment.witness(magic(var_pos.y)) = y_val;
                 assignment.witness(magic(var_pos.index_x)) = index_x_val;
-                assignment.witness(magic(var_pos.index_y)) = index_y_val;
 
                 // decomposition of difference
                 auto d_val = x_val - y_val;
@@ -348,7 +344,7 @@ namespace nil {
                 auto x = var(magic(var_pos.x));
                 auto y = var(magic(var_pos.y));
                 auto index_x = var(magic(var_pos.index_x));
-                auto index_y = var(magic(var_pos.index_y));
+                auto index_y = var(magic(var_pos.index_y), true, var::column_type::constant);
                 auto min = var(magic(var_pos.min));
                 auto index = var(magic(var_pos.index));
                 auto flag = var(magic(var_pos.flag));
@@ -398,11 +394,9 @@ namespace nil {
                 var x = var(magic(var_pos.x), false);
                 var y = var(magic(var_pos.y), false);
                 var index_x = var(magic(var_pos.index_x), false);
-                var index_y = var(magic(var_pos.index_y), false);
                 bp.add_copy_constraint({instance_input.x, x});
                 bp.add_copy_constraint({instance_input.y, y});
                 bp.add_copy_constraint({instance_input.index_x, index_x});
-                bp.add_copy_constraint({instance_input.index_y, index_y});
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
@@ -422,9 +416,24 @@ namespace nil {
                 assignment.enable_selector(selector_index, start_row_index + component.rows_amount - 1);
 
                 generate_copy_constraints(component, bp, assignment, instance_input, start_row_index);
+                generate_assignments_constant(component, assignment, instance_input, start_row_index);
 
                 return typename plonk_fixedpoint_argmin<BlueprintFieldType, ArithmetizationParams>::result_type(
                     component, start_row_index);
+            }
+
+            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            void generate_assignments_constant(
+                const plonk_fixedpoint_argmin<BlueprintFieldType, ArithmetizationParams> &component,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                    &assignment,
+                const typename plonk_fixedpoint_argmin<BlueprintFieldType, ArithmetizationParams>::input_type
+                    &instance_input,
+                const std::size_t start_row_index) {
+
+                const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
+
+                assignment.constant(magic(var_pos.index_y)) = component.index_y;
             }
 
         }    // namespace components

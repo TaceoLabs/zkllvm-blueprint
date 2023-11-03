@@ -95,7 +95,7 @@ namespace nil {
 
                     // trace layout (6 witness col(s), 1 constant col(s), 1 row(s))
                     //
-                    //     |          witness                      |    constant   |
+                    //     |          witness                           | constant |
                     //  r\c|  0  |     1    |   2  |  3 |  4  |    5    |    0     |
                     // +---+-----+----------+------+-----+---------+----+----------+
                     // | 0 | acc | prev_acc | data | eq | inv | index_a | index_b  |

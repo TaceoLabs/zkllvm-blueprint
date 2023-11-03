@@ -109,7 +109,7 @@ void test_fixedpoint_argmax_inner(FixedType x, FixedType y, typename FixedType::
     using BlueprintFieldType = typename FixedType::field_type;
     constexpr std::size_t WitnessColumns = 10;
     constexpr std::size_t PublicInputColumns = 1;
-    constexpr std::size_t ConstantColumns = 0;
+    constexpr std::size_t ConstantColumns = 1;
     constexpr std::size_t SelectorColumns = 1;
     using ArithmetizationParams = crypto3::zk::snark::plonk_arithmetization_params<WitnessColumns, PublicInputColumns,
                                                                                    ConstantColumns, SelectorColumns>;
@@ -124,9 +124,9 @@ void test_fixedpoint_argmax_inner(FixedType x, FixedType y, typename FixedType::
         blueprint::components::fix_argmax<ArithmetizationType, BlueprintFieldType,
                                           nil::blueprint::basic_non_native_policy<BlueprintFieldType>>;
 
-    typename component_type::input_type instance_input = {
-        var(0, 0, false, var::column_type::public_input), var(0, 1, false, var::column_type::public_input),
-        var(0, 2, false, var::column_type::public_input), var(0, 3, false, var::column_type::public_input)};
+    typename component_type::input_type instance_input = {var(0, 0, false, var::column_type::public_input),
+                                                          var(0, 1, false, var::column_type::public_input),
+                                                          var(0, 2, false, var::column_type::public_input)};
 
     BLUEPRINT_RELEASE_ASSERT(index_x < index_y);
 
@@ -189,12 +189,11 @@ void test_fixedpoint_argmax_inner(FixedType x, FixedType y, typename FixedType::
         witness_list.push_back(i);
     }
     // Is done by the manifest in a real circuit
-    component_type component_instance(witness_list, std::array<std::uint32_t, 0>(), std::array<std::uint32_t, 0>(),
+    component_type component_instance(witness_list, std::array<std::uint32_t, 1>({0}), std::array<std::uint32_t, 0>(),
 
-                                      FixedType::M_1, FixedType::M_2, select_last_index);
+                                      FixedType::M_1, FixedType::M_2, index_y, select_last_index);
 
-    std::vector<typename BlueprintFieldType::value_type> public_input = {x.get_value(), y.get_value(), index_x,
-                                                                         index_y};
+    std::vector<typename BlueprintFieldType::value_type> public_input = {x.get_value(), y.get_value(), index_x};
     nil::crypto3::test_component<component_type, BlueprintFieldType, ArithmetizationParams, hash_type, Lambda>(
         component_instance, public_input, result_check, instance_input);
 }
@@ -205,7 +204,7 @@ void test_fixedpoint_argmin_inner(FixedType x, FixedType y, typename FixedType::
     using BlueprintFieldType = typename FixedType::field_type;
     constexpr std::size_t WitnessColumns = 10;
     constexpr std::size_t PublicInputColumns = 1;
-    constexpr std::size_t ConstantColumns = 0;
+    constexpr std::size_t ConstantColumns = 1;
     constexpr std::size_t SelectorColumns = 1;
     using ArithmetizationParams = crypto3::zk::snark::plonk_arithmetization_params<WitnessColumns, PublicInputColumns,
                                                                                    ConstantColumns, SelectorColumns>;
@@ -220,9 +219,9 @@ void test_fixedpoint_argmin_inner(FixedType x, FixedType y, typename FixedType::
         blueprint::components::fix_argmin<ArithmetizationType, BlueprintFieldType,
                                           nil::blueprint::basic_non_native_policy<BlueprintFieldType>>;
 
-    typename component_type::input_type instance_input = {
-        var(0, 0, false, var::column_type::public_input), var(0, 1, false, var::column_type::public_input),
-        var(0, 2, false, var::column_type::public_input), var(0, 3, false, var::column_type::public_input)};
+    typename component_type::input_type instance_input = {var(0, 0, false, var::column_type::public_input),
+                                                          var(0, 1, false, var::column_type::public_input),
+                                                          var(0, 2, false, var::column_type::public_input)};
 
     BLUEPRINT_RELEASE_ASSERT(index_x < index_y);
 
@@ -285,12 +284,11 @@ void test_fixedpoint_argmin_inner(FixedType x, FixedType y, typename FixedType::
         witness_list.push_back(i);
     }
     // Is done by the manifest in a real circuit
-    component_type component_instance(witness_list, std::array<std::uint32_t, 0>(), std::array<std::uint32_t, 0>(),
+    component_type component_instance(witness_list, std::array<std::uint32_t, 1>({0}), std::array<std::uint32_t, 0>(),
 
-                                      FixedType::M_1, FixedType::M_2, select_last_index);
+                                      FixedType::M_1, FixedType::M_2, index_y, select_last_index);
 
-    std::vector<typename BlueprintFieldType::value_type> public_input = {x.get_value(), y.get_value(), index_x,
-                                                                         index_y};
+    std::vector<typename BlueprintFieldType::value_type> public_input = {x.get_value(), y.get_value(), index_x};
     nil::crypto3::test_component<component_type, BlueprintFieldType, ArithmetizationParams, hash_type, Lambda>(
         component_instance, public_input, result_check, instance_input);
 }
