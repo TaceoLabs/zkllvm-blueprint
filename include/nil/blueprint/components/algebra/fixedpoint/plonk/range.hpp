@@ -360,8 +360,6 @@ namespace nil {
                 using var = typename plonk_fixedpoint_range<BlueprintFieldType, ArithmetizationParams>::var;
 
                 auto m = component.get_m();
-                auto decomp_a_start = component.rows_amount == 1 ? 10 : 0;
-                auto decomp_b_start = decomp_a_start + m + 1;
 
                 auto a0 = nil::crypto3::math::expression(var(magic(var_pos.a0)));
                 auto b0 = nil::crypto3::math::expression(var(magic(var_pos.b0)));
