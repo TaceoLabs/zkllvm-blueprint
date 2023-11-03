@@ -187,6 +187,7 @@ SET(FIXEDPOINT_TESTS_FILES
     "algebra/fixedpoint/plonk/exp"
     "algebra/fixedpoint/plonk/dot_rescale"
     "algebra/fixedpoint/plonk/cmp"
+    "algebra/fixedpoint/plonk/ml"
 )
 
 SET(ALGEBRA_TESTS_FILES

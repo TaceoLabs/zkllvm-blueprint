@@ -38,6 +38,7 @@ namespace nil {
                                  BlueprintFieldType, NonNativePolicyType>
                 : public plonk_component<BlueprintFieldType, ArithmetizationParams, 1, 0> {
 
+            public:
                 static std::size_t get_witness_columns() {
                     return 6;
                 }
@@ -79,11 +80,10 @@ namespace nil {
                 struct input_type {
                     var prev_acc = var(0, 0, false);
                     var data = var(0, 0, false);
-                    var inv = var(0, 0, false);
                     var index_a = var(0, 0, false);
 
                     std::vector<var> all_vars() const {
-                        return {prev_acc, data, inv, index_a};
+                        return {prev_acc, data, index_a};
                     }
                 };
 
@@ -128,22 +128,22 @@ namespace nil {
                     }
                 };
 
-                template<typename ContainerType>
-                explicit fix_gather_acc(ContainerType witness) : component_type(witness, {}, {}, get_manifest()) {};
-
                 template<typename WitnessContainerType, typename ConstantContainerType,
                          typename PublicInputContainerType>
                 fix_gather_acc(WitnessContainerType witness, ConstantContainerType constant,
-                               PublicInputContainerType public_input) :
-                    component_type(witness, constant, public_input, get_manifest()) {};
+                               PublicInputContainerType public_input, value_type index_b_) :
+                    component_type(witness, constant, public_input, get_manifest()),
+                    index_b(index_b_) {};
 
                 fix_gather_acc(std::initializer_list<typename component_type::witness_container_type::value_type>
                                    witnesses,
                                std::initializer_list<typename component_type::constant_container_type::value_type>
                                    constants,
                                std::initializer_list<typename component_type::public_input_container_type::value_type>
-                                   public_inputs) :
-                    component_type(witnesses, constants, public_inputs, get_manifest()) {};
+                                   public_inputs,
+                               value_type index_b_) :
+                    component_type(witnesses, constants, public_inputs, get_manifest()),
+                    index_b(index_b_) {};
             };
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
@@ -163,9 +163,9 @@ namespace nil {
 
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
 
-                auto prev_acc_val = var_value(magic(var_pos.prev_acc));
-                auto data_val = var_value(magic(var_pos.data));
-                auto index_a_val = var_value(magic(var_pos.index_a));
+                auto prev_acc_val = var_value(assignment, instance_input.prev_acc);
+                auto data_val = var_value(assignment, instance_input.data);
+                auto index_a_val = var_value(assignment, instance_input.index_a);
                 auto index_b_val = component.index_b;
 
                 assignment.witness(magic(var_pos.prev_acc)) = prev_acc_val;
@@ -204,7 +204,7 @@ namespace nil {
                 uint64_t start_row_index = 0;
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
 
-                using var = typename plonk_fixedpoint_mul_rescale_const<BlueprintFieldType, ArithmetizationParams>::var;
+                using var = typename plonk_fixedpoint_gather_acc<BlueprintFieldType, ArithmetizationParams>::var;
 
                 auto acc = var(magic(var_pos.acc));
                 auto prev_acc = var(magic(var_pos.prev_acc));
@@ -212,7 +212,7 @@ namespace nil {
                 auto eq = var(magic(var_pos.eq));
                 auto inv = var(magic(var_pos.inv));
                 auto index_a = var(magic(var_pos.index_a));
-                auto index_b = var(magic(var_pos.index_a), true, var::column_type::constant);
+                auto index_b = var(magic(var_pos.index_b), true, var::column_type::constant);
 
                 auto diff = index_a - index_b;
                 auto constraint_1 = diff * eq;
