@@ -7,13 +7,20 @@ namespace nil {
     namespace blueprint {
         namespace components {
 
-            // Input: x as fixedpoint numbers with \Delta_x
-            // Output: y as fixedpoint number with \Delta_y = \Delta_y
-
-            // Works by decomposing to the pre-comma part and, depending on \Delta_x, one or two 16-bit post-comma parts
+            // Works by decomposing to the pre-comma part and, depending on delta_x, one or two 16-bit post-comma parts
             // and fusing lookup tables: y = exp(x) = exp(x_pre) * exp(x_post1) * exp(x_post2)
             // followed by a rescale
 
+            /**
+             * Component representing an exp operation.
+             *
+             * The delta of y is the same as the delta of x.
+             * 
+             * TACEO_TODO: Describe the limitations (a < x < b, where a and b are ~ +- 100 ?)
+             *
+             * Input:  x ... field element
+             * Output: y ... e^x (field element)
+             */
             template<typename ArithmetizationType, typename FieldType, typename NonNativePolicyType>
             class fix_exp;
 
