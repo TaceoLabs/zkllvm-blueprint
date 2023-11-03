@@ -136,14 +136,14 @@ namespace nil {
                     }
                 };
 
-                struct FixRangeVarPositions {
+                struct var_positions {
                     CellPosition x, in, lt, gt, z_a, z_b, inv_a, inv_b, s_a, s_b, a0, b0, x_l, x_h;
                 };
 
-                FixRangeVarPositions get_var_pos(const int64_t start_row_index) const {
+                var_positions get_var_pos(const int64_t start_row_index) const {
 
                     auto m = this->get_m();
-                    FixRangeVarPositions pos;
+                    var_positions pos;
                     switch (this->rows_amount) {
                         case 1:
 

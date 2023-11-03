@@ -68,11 +68,11 @@ namespace nil {
                     }
                 };
 
-                struct FixNegVarPositions {
+                struct var_positions {
                     CellPosition x, y;
                 };
 
-                FixNegVarPositions get_var_pos(const int64_t start_row_index) const {
+                var_positions get_var_pos(const int64_t start_row_index) const {
 
                     // trace layout (2 col(s), 1 row(s))
                     //
@@ -80,7 +80,7 @@ namespace nil {
                     // +---+---+---+
                     // | 0 | x | y |
 
-                    FixNegVarPositions pos;
+                    var_positions pos;
                     pos.x = CellPosition(this->W(0), start_row_index);
                     pos.y = CellPosition(this->W(1), start_row_index);
                     return pos;

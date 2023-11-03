@@ -100,11 +100,11 @@ namespace nil {
                     }
                 };
 
-                struct FixMulRescaleConstVarPositions {
+                struct var_positions {
                     CellPosition x, y, z, q0;
                 };
 
-                FixMulRescaleConstVarPositions get_var_pos(const int64_t start_row_index) const {
+                var_positions get_var_pos(const int64_t start_row_index) const {
 
                     // trace layout witness (2 + m2 col(s), 1 row(s)), constant (1 col(s), 1 row(s))
                     //
@@ -114,7 +114,7 @@ namespace nil {
                     // | 0 | x | z | q0 | .. | qm2-1    | y        |
 
                     auto m2 = this->get_m2();
-                    FixMulRescaleConstVarPositions pos;
+                    var_positions pos;
                     pos.x = CellPosition(this->W(0), start_row_index);
                     pos.y = CellPosition(this->C(0), start_row_index);
                     pos.z = CellPosition(this->W(1), start_row_index);

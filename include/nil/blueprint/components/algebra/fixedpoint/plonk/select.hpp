@@ -76,11 +76,11 @@ namespace nil {
                     }
                 };
 
-                struct FixSelectVarPositions {
+                struct var_positions {
                     CellPosition c, x, y, z;
                 };
 
-                FixSelectVarPositions get_var_pos(const int64_t start_row_index) const {
+                var_positions get_var_pos(const int64_t start_row_index) const {
 
                     // trace layout (4 col(s), 1 row(s))
                     //
@@ -88,7 +88,7 @@ namespace nil {
                     // +---+---+---+---+---+
                     // | 0 | c | x | y | z |
 
-                    FixSelectVarPositions pos;
+                    var_positions pos;
                     pos.c = CellPosition(this->W(0), start_row_index);
                     pos.x = CellPosition(this->W(1), start_row_index);
                     pos.y = CellPosition(this->W(2), start_row_index);

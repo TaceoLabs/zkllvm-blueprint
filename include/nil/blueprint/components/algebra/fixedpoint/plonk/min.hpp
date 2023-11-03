@@ -100,11 +100,11 @@ namespace nil {
                     }
                 };
 
-                struct FixMinVarPositions {
+                struct var_positions {
                     CellPosition x, y, z, s, d0;
                 };
 
-                FixMinVarPositions get_var_pos(const int64_t start_row_index) const {
+                var_positions get_var_pos(const int64_t start_row_index) const {
 
                     // trace layout (4 + m+1 col(s), 1 row(s))
                     // requiring an extra limb because of potential overflows during decomposition of
@@ -116,7 +116,7 @@ namespace nil {
                     // | 0 | x | y | z | s | d0 | .. | dm    |
 
                     auto m = this->get_m();
-                    FixMinVarPositions pos;
+                    var_positions pos;
                     pos.x = CellPosition(this->W(0), start_row_index);
                     pos.y = CellPosition(this->W(1), start_row_index);
                     pos.z = CellPosition(this->W(2), start_row_index);

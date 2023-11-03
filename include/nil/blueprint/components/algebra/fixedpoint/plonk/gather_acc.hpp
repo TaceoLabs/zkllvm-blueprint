@@ -87,11 +87,11 @@ namespace nil {
                     }
                 };
 
-                struct FixRescaleVarPositions {
+                struct var_positions {
                     CellPosition acc, prev_acc, data, eq, inv, index_a, index_b;
                 };
 
-                FixRescaleVarPositions get_var_pos(const int64_t start_row_index) const {
+                var_positions get_var_pos(const int64_t start_row_index) const {
 
                     // trace layout (6 witness col(s), 1 constant col(s), 1 row(s))
                     //
@@ -100,7 +100,7 @@ namespace nil {
                     // +---+-----+----------+------+-----+---------+----+----------+
                     // | 0 | acc | prev_acc | data | eq | inv | index_a | index_b  |
 
-                    FixRescaleVarPositions pos;
+                    var_positions pos;
                     pos.acc = CellPosition(this->W(0), start_row_index);
                     pos.prev_acc = CellPosition(this->W(1), start_row_index);
                     pos.data = CellPosition(this->W(2), start_row_index);

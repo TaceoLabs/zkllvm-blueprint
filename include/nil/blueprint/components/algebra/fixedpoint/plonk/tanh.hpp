@@ -182,14 +182,14 @@ namespace nil {
                     }
                 };
 
-                struct FixTanhVarPositions {
+                struct var_positions {
                     CellPosition x, y, exp_x, exp_y, div_x, div_y, div_z, const_min, const_max;
                     int64_t exp_row, div_row, range_row, tanh_row;
                 };
 
-                FixTanhVarPositions get_var_pos(const int64_t start_row_index) const {
+                var_positions get_var_pos(const int64_t start_row_index) const {
 
-                    FixTanhVarPositions pos;
+                    var_positions pos;
 
                     // trace layout (6+ witness columns, 2 constant columns, 1 row in addition to the rows for the
                     // other gadgets)
