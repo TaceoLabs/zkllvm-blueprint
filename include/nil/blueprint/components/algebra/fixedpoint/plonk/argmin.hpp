@@ -1,5 +1,5 @@
-#ifndef CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_ARGMAX_HPP
-#define CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_ARGMAX_HPP
+#ifndef CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_ARGMIN_HPP
+#define CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_ARGMIN_HPP
 
 #include <nil/crypto3/zk/snark/arithmetization/plonk/constraint_system.hpp>
 
@@ -16,13 +16,13 @@ namespace nil {
         namespace components {
 
             // Works by decomposing the difference of the inputs. According to ONNX
-            // (https://github.com/onnx/onnx/blob/main/docs/Operators.md#ArgMax), the select_last_index attribute
+            // (https://github.com/onnx/onnx/blob/main/docs/Operators.md#ArgMin), the select_last_index attribute
             // decides what should happen during a tie. We set this attribute during initialization of the gadget, and
             // do *not* proof it.
             // This gadget also assumes, that index_x < index_y!
 
             /**
-             * Component representing a max and an argmax operation.
+             * Component representing a min and an argmin operation.
              *
              * The user needs to ensure that the deltas of x and y match (the scale must be the same).
              *
@@ -32,16 +32,16 @@ namespace nil {
              *         y       ... field element
              *         index_x ... field_element
              *         index_y ... field_element
-             * Output: max     ... max(x, y) (field element)
-             *         index   ... index_x if x >= / > y, index_y otherwise (field element)
-             *                     >= or > is decided by a public bool value during initialization of the gadget (not
+             * Output: min     ... min(x, y) (field element)
+             *         index   ... index_x if x <= / < y, index_y otherwise (field element)
+             *                     <= or < is decided by a public bool value during initialization of the gadget (not
              *                     part of trace)
              */
             template<typename ArithmetizationType, typename FieldType, typename NonNativePolicyType>
-            class fix_argmax;
+            class fix_argmin;
 
             template<typename BlueprintFieldType, typename ArithmetizationParams, typename NonNativePolicyType>
-            class fix_argmax<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+            class fix_argmin<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                              BlueprintFieldType, NonNativePolicyType>
                 : public plonk_component<BlueprintFieldType, ArithmetizationParams, 0, 0> {
             public:
@@ -86,7 +86,7 @@ namespace nil {
                 class gate_manifest_type : public component_gate_manifest {
                 public:
                     std::uint32_t gates_amount() const override {
-                        return fix_argmax::gates_amount;
+                        return fix_argmin::gates_amount;
                     }
                 };
 
@@ -128,7 +128,7 @@ namespace nil {
                 };
 
                 struct var_positions {
-                    CellPosition x, y, index_x, index_y, max, index, flag, eq, inv, s, d0;
+                    CellPosition x, y, index_x, index_y, min, index, flag, eq, inv, s, d0;
                 };
 
                 var_positions get_var_pos(const int64_t start_row_index) const {
@@ -145,13 +145,13 @@ namespace nil {
                             //     |                                    witness                |
                             //  r\c| 0 | 1 | 2 | 3 | 4  | 5 | 6    | 7  | 8   | 9 | 10 |..|10+m|
                             // +---+---+---+---+---+----+---+------+----+-----+---+----+--+----+
-                            // | 0 | x | y | ix| iy| max| i | flag | eq | inv | s | d0 |..| dm |
+                            // | 0 | x | y | ix| iy| min| i | flag | eq | inv | s | d0 |..| dm |
 
                             pos.x = CellPosition(this->W(0), start_row_index);
                             pos.y = CellPosition(this->W(1), start_row_index);
                             pos.index_x = CellPosition(this->W(2), start_row_index);
                             pos.index_y = CellPosition(this->W(3), start_row_index);
-                            pos.max = CellPosition(this->W(4), start_row_index);
+                            pos.min = CellPosition(this->W(4), start_row_index);
                             pos.index = CellPosition(this->W(5), start_row_index);
                             pos.flag = CellPosition(this->W(6), start_row_index);
                             pos.eq = CellPosition(this->W(7), start_row_index);
@@ -180,12 +180,12 @@ namespace nil {
                             //     |           witness             |
                             //  r\c| 0 | 1 | 2 | 3 | 4  | 5 | 6    |
                             // +---+---+---+---+---+----+---+------+
-                            // | 1 | x | y | ix| iy| max| i | flag |
+                            // | 1 | x | y | ix| iy| min| i | flag |
                             pos.x = CellPosition(this->W(0), start_row_index + 1);
                             pos.y = CellPosition(this->W(1), start_row_index + 1);
                             pos.index_x = CellPosition(this->W(2), start_row_index + 1);
                             pos.index_y = CellPosition(this->W(3), start_row_index + 1);
-                            pos.max = CellPosition(this->W(4), start_row_index + 1);
+                            pos.min = CellPosition(this->W(4), start_row_index + 1);
                             pos.index = CellPosition(this->W(5), start_row_index + 1);
                             pos.flag = CellPosition(this->W(6), start_row_index + 1);
 
@@ -196,39 +196,39 @@ namespace nil {
                     return pos;
                 }
                 struct result_type {
-                    var max = var(0, 0, false);
+                    var min = var(0, 0, false);
                     var index = var(0, 0, false);
 
-                    result_type(const fix_argmax &component, std::uint32_t start_row_index) {
+                    result_type(const fix_argmin &component, std::uint32_t start_row_index) {
                         const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-                        max = var(magic(var_pos.max), false);
+                        min = var(magic(var_pos.min), false);
                         index = var(magic(var_pos.index), false);
                     }
 
-                    result_type(const fix_argmax &component, std::size_t start_row_index) {
+                    result_type(const fix_argmin &component, std::size_t start_row_index) {
                         const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-                        max = var(magic(var_pos.max), false);
+                        min = var(magic(var_pos.min), false);
                         index = var(magic(var_pos.index), false);
                     }
 
                     std::vector<var> all_vars() const {
-                        return {max, index};
+                        return {min, index};
                     }
                 };
 
                 template<typename ContainerType>
-                explicit fix_argmax(ContainerType witness, uint8_t m1, uint8_t m2, bool select_last_index) :
+                explicit fix_argmin(ContainerType witness, uint8_t m1, uint8_t m2, bool select_last_index) :
                     component_type(witness, {}, {}, get_manifest(m1, m2)), m1(M(m1)), m2(M(m2)),
                     select_last_index(select_last_index) {};
 
                 template<typename WitnessContainerType, typename ConstantContainerType,
                          typename PublicInputContainerType>
-                fix_argmax(WitnessContainerType witness, ConstantContainerType constant,
+                fix_argmin(WitnessContainerType witness, ConstantContainerType constant,
                            PublicInputContainerType public_input, uint8_t m1, uint8_t m2, bool select_last_index) :
                     component_type(witness, constant, public_input, get_manifest(m1, m2)),
                     m1(M(m1)), m2(M(m2)), select_last_index(select_last_index) {};
 
-                fix_argmax(
+                fix_argmin(
                     std::initializer_list<typename component_type::witness_container_type::value_type> witnesses,
                     std::initializer_list<typename component_type::constant_container_type::value_type> constants,
                     std::initializer_list<typename component_type::public_input_container_type::value_type>
@@ -239,17 +239,17 @@ namespace nil {
             };
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
-            using plonk_fixedpoint_argmax =
-                fix_argmax<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+            using plonk_fixedpoint_argmin =
+                fix_argmin<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                            BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
-            typename plonk_fixedpoint_argmax<BlueprintFieldType, ArithmetizationParams>::result_type
+            typename plonk_fixedpoint_argmin<BlueprintFieldType, ArithmetizationParams>::result_type
                 generate_assignments(
-                    const plonk_fixedpoint_argmax<BlueprintFieldType, ArithmetizationParams> &component,
+                    const plonk_fixedpoint_argmin<BlueprintFieldType, ArithmetizationParams> &component,
                     assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                         &assignment,
-                    const typename plonk_fixedpoint_argmax<BlueprintFieldType, ArithmetizationParams>::input_type
+                    const typename plonk_fixedpoint_argmin<BlueprintFieldType, ArithmetizationParams>::input_type
                         instance_input,
                     const std::uint32_t start_row_index) {
 
@@ -292,7 +292,7 @@ namespace nil {
                     assignment.witness(var_pos.d0.column() + i, var_pos.d0.row()) = d0_val[i];
                 }
 
-                // equal, flag and max
+                // equal, flag and min
                 bool eq = d_val == 0;
 
                 assignment.witness(magic(var_pos.eq)) = typename BlueprintFieldType::value_type((uint64_t)eq);
@@ -302,37 +302,37 @@ namespace nil {
 
                 // Which component to we have
                 if (component.select_last_index) {
-                    // We have to evaluate x > y
-                    bool gt = !eq && !sign;
-                    assignment.witness(magic(var_pos.flag)) = typename BlueprintFieldType::value_type((uint64_t)gt);
-                    assignment.witness(magic(var_pos.max)) = gt ? x_val : y_val;
-                    assignment.witness(magic(var_pos.index)) = gt ? index_x_val : index_y_val;
+                    // We have to evaluate x < y
+                    bool lt = !eq && sign;
+                    assignment.witness(magic(var_pos.flag)) = typename BlueprintFieldType::value_type((uint64_t)lt);
+                    assignment.witness(magic(var_pos.min)) = lt ? x_val : y_val;
+                    assignment.witness(magic(var_pos.index)) = lt ? index_x_val : index_y_val;
 
                 } else {
-                    // We have to evaluate x >= y
-                    bool geq = !sign || eq;
-                    assignment.witness(magic(var_pos.flag)) = typename BlueprintFieldType::value_type((uint64_t)geq);
-                    assignment.witness(magic(var_pos.max)) = geq ? x_val : y_val;
-                    assignment.witness(magic(var_pos.index)) = geq ? index_x_val : index_y_val;
+                    // We have to evaluate x <= y
+                    bool leq = sign || eq;
+                    assignment.witness(magic(var_pos.flag)) = typename BlueprintFieldType::value_type((uint64_t)leq);
+                    assignment.witness(magic(var_pos.min)) = leq ? x_val : y_val;
+                    assignment.witness(magic(var_pos.index)) = leq ? index_x_val : index_y_val;
                 }
 
-                return typename plonk_fixedpoint_argmax<BlueprintFieldType, ArithmetizationParams>::result_type(
+                return typename plonk_fixedpoint_argmin<BlueprintFieldType, ArithmetizationParams>::result_type(
                     component, start_row_index);
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
             std::size_t generate_gates(
-                const plonk_fixedpoint_argmax<BlueprintFieldType, ArithmetizationParams> &component,
+                const plonk_fixedpoint_argmin<BlueprintFieldType, ArithmetizationParams> &component,
                 circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
                 assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                     &assignment,
-                const typename plonk_fixedpoint_argmax<BlueprintFieldType, ArithmetizationParams>::input_type
+                const typename plonk_fixedpoint_argmin<BlueprintFieldType, ArithmetizationParams>::input_type
                     &instance_input) {
 
                 int first_row = 1 - static_cast<int>(component.rows_amount);
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(first_row));
 
-                using var = typename plonk_fixedpoint_argmax<BlueprintFieldType, ArithmetizationParams>::var;
+                using var = typename plonk_fixedpoint_argmin<BlueprintFieldType, ArithmetizationParams>::var;
 
                 auto m = component.get_m();
 
@@ -349,7 +349,7 @@ namespace nil {
                 auto y = var(magic(var_pos.y));
                 auto index_x = var(magic(var_pos.index_x));
                 auto index_y = var(magic(var_pos.index_y));
-                auto max = var(magic(var_pos.max));
+                auto min = var(magic(var_pos.min));
                 auto index = var(magic(var_pos.index));
                 auto flag = var(magic(var_pos.flag));
                 auto eq = var(magic(var_pos.eq));
@@ -366,14 +366,14 @@ namespace nil {
                 auto constraint_5 = nil::crypto3::math::expression(flag);
                 // Which component to we have
                 if (component.select_last_index) {
-                    // We have to evaluate x > y
-                    constraint_5 = inv2 * (1 + s) * (1 - eq) - constraint_5;
+                    // We have to evaluate x < y
+                    constraint_5 = inv2 * (1 - s) * (1 - eq) - constraint_5;
                 } else {
-                    // We have to evaluate (x >= y) <==> !(x < y)
-                    constraint_5 = 1 - inv2 * (1 - s) * (1 - eq) - constraint_5;
+                    // We have to evaluate (x <= y) <==> !(x > y)
+                    constraint_5 = 1 - inv2 * (1 + s) * (1 - eq) - constraint_5;
                 }
 
-                auto constraint_6 = flag * (x - y) + y - max;
+                auto constraint_6 = flag * (x - y) + y - min;
                 auto constraint_7 = flag * (index_x - index_y) + index_y - index;
 
                 // TACEO_TODO extend for lookup constraint
@@ -383,17 +383,17 @@ namespace nil {
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
             void generate_copy_constraints(
-                const plonk_fixedpoint_argmax<BlueprintFieldType, ArithmetizationParams> &component,
+                const plonk_fixedpoint_argmin<BlueprintFieldType, ArithmetizationParams> &component,
                 circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
                 assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                     &assignment,
-                const typename plonk_fixedpoint_argmax<BlueprintFieldType, ArithmetizationParams>::input_type
+                const typename plonk_fixedpoint_argmin<BlueprintFieldType, ArithmetizationParams>::input_type
                     &instance_input,
                 const std::size_t start_row_index) {
 
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
 
-                using var = typename plonk_fixedpoint_argmax<BlueprintFieldType, ArithmetizationParams>::var;
+                using var = typename plonk_fixedpoint_argmin<BlueprintFieldType, ArithmetizationParams>::var;
 
                 var x = var(magic(var_pos.x), false);
                 var y = var(magic(var_pos.y), false);
@@ -406,12 +406,12 @@ namespace nil {
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
-            typename plonk_fixedpoint_argmax<BlueprintFieldType, ArithmetizationParams>::result_type generate_circuit(
-                const plonk_fixedpoint_argmax<BlueprintFieldType, ArithmetizationParams> &component,
+            typename plonk_fixedpoint_argmin<BlueprintFieldType, ArithmetizationParams>::result_type generate_circuit(
+                const plonk_fixedpoint_argmin<BlueprintFieldType, ArithmetizationParams> &component,
                 circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
                 assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                     &assignment,
-                const typename plonk_fixedpoint_argmax<BlueprintFieldType, ArithmetizationParams>::input_type
+                const typename plonk_fixedpoint_argmin<BlueprintFieldType, ArithmetizationParams>::input_type
                     &instance_input,
                 const std::size_t start_row_index) {
 
@@ -423,7 +423,7 @@ namespace nil {
 
                 generate_copy_constraints(component, bp, assignment, instance_input, start_row_index);
 
-                return typename plonk_fixedpoint_argmax<BlueprintFieldType, ArithmetizationParams>::result_type(
+                return typename plonk_fixedpoint_argmin<BlueprintFieldType, ArithmetizationParams>::result_type(
                     component, start_row_index);
             }
 
@@ -431,4 +431,4 @@ namespace nil {
     }        // namespace blueprint
 }    // namespace nil
 
-#endif    // CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_ARGMAX_HPP
+#endif    // CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_ARGMIN_HPP
