@@ -18,7 +18,7 @@ namespace nil {
             // Works by decomposing the difference of the inputs. According to ONNX
             // (https://github.com/onnx/onnx/blob/main/docs/Operators.md#ArgMax), the select_last_index attribute
             // decides what should happen during a tie. We set this attribute during initialization of the gadget, and
-            // do *not* proof it.
+            // do *not* prove it.
             // This gadget also assumes, that index_x < index_y!
 
             /**
