@@ -109,7 +109,7 @@ namespace nil {
                 }
 
                 static std::size_t get_witness_columns(uint8_t m2) {
-                    return 5 + M(m2) + rescale_component::get_witness_columns(m2);
+                    return 4 + M(m2) + rescale_component::get_witness_columns(m2);
                 }
 
                 using component_type = plonk_component<BlueprintFieldType, ArithmetizationParams, 0, 0>;

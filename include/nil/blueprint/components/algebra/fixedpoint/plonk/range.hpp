@@ -87,7 +87,7 @@ namespace nil {
                 }
 
                 static std::size_t get_witness_columns(std::size_t witness_amount, uint8_t m1, uint8_t m2) {
-                    return get_rows_amount(witness_amount, 0, M(m1), M(m2)) == 1 ? 12 + 2 * (m1 + m2) : 10;
+                    return get_rows_amount(witness_amount, 0, M(m1), M(m2)) == 1 ? 10 + 2 * (m1 + m2 + 1) : 10;
                 }
 
                 using component_type = plonk_component<BlueprintFieldType, ArithmetizationParams, 2, 0>;
@@ -111,14 +111,14 @@ namespace nil {
                 static manifest_type get_manifest(uint8_t m1, uint8_t m2) {
                     static manifest_type manifest =
                         manifest_type(std::shared_ptr<manifest_param>(
-                                          new manifest_range_param(10, 12 + 2 * (m2 + m1), 2 + 2 * (m2 + m1))),
+                                          new manifest_range_param(10, 10 + 2 * (m2 + m1 + 1), 2 + 2 * (m2 + m1))),
                                       false);
                     return manifest;
                 }
 
                 constexpr static std::size_t get_rows_amount(std::size_t witness_amount,
                                                              std::size_t lookup_column_amount, uint8_t m1, uint8_t m2) {
-                    if (12 + 2 * (M(m2) + M(m1)) <= witness_amount) {
+                    if (10 + 2 * (M(m2) + M(m1) + 1) <= witness_amount) {
                         return 1;
                     } else {
                         return 2;
