@@ -7,6 +7,8 @@
 #include <nil/blueprint/assert.hpp>
 #include <nil/crypto3/multiprecision/cpp_int/divide.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/tables.hpp>
+#include <nil/crypto3/multiprecision/cpp_bin_float.hpp>
+#include <nil/crypto3/multiprecision/detail/default_ops.hpp>
 
 // macro for getting a variable list from a cell position for fixedpoint components
 #define magic(x) x.column(), x.row()
@@ -53,6 +55,7 @@ namespace nil {
                 using field_type = BlueprintFieldType;
                 using value_type = typename BlueprintFieldType::value_type;
                 using modular_backend = typename BlueprintFieldType::modular_backend;
+                using big_float = nil::crypto3::multiprecision::cpp_bin_float_double;
 
                 // modulus is cpp_int_backend, so /2 is integer division and not field divison
                 static constexpr value_type P_HALF = BlueprintFieldType::modulus / 2;
@@ -94,6 +97,7 @@ namespace nil {
                 using field_type = BlueprintFieldType;
                 using value_type = typename BlueprintFieldType::value_type;
                 using modular_backend = typename BlueprintFieldType::modular_backend;
+                using big_float = nil::crypto3::multiprecision::cpp_bin_float_double;
 
             private:
                 // I need a field element to deal with larger scales, such as the one as output from exp
@@ -134,6 +138,7 @@ namespace nil {
                 FixedPoint operator-() const;
 
                 FixedPoint exp(bool ranged = false) const;
+                FixedPoint sqrt(bool floor = false) const;    // rounds per default
                 FixedPoint rescale() const;
                 static FixedPoint dot(const std::vector<FixedPoint> &, const std::vector<FixedPoint> &);
 
@@ -179,19 +184,13 @@ namespace nil {
 
                 modular_backend out = field_to_backend(tmp);
                 BLUEPRINT_RELEASE_ASSERT(!out.sign());
-                auto limbs_ptr = out.limbs();
-                auto size = out.size();
-
-                double val = 0;
-                double pow64 = pow(2., 64);
-                for (auto i = 0; i < size; i++) {
-                    val *= pow64;
-                    val += (double)(limbs_ptr[size - 1 - i]);
-                }
+                typename BlueprintFieldType::integral_type val_int(out);
+                big_float val_float(val_int);
+                auto out_ = val_float.convert_to<double>();
                 if (sign) {
-                    val = -val;
+                    out_ = -out_;
                 }
-                return val;
+                return out_;
             }
 
             template<typename BlueprintFieldType>
@@ -588,6 +587,32 @@ namespace nil {
 
                 auto fix = FixedPoint(res, FixedPointTables<BlueprintFieldType>::template get_exp_scale<M2>());
                 return fix.rescale();
+            }
+
+            template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
+            FixedPoint<BlueprintFieldType, M1, M2> FixedPoint<BlueprintFieldType, M1, M2>::sqrt(bool floor) const {
+
+                auto val = this->value;
+                if (scale == SCALE) {
+                    val *= DELTA;
+                } else {
+                    BLUEPRINT_RELEASE_ASSERT(scale == 2 * SCALE);
+                }
+
+                // sqrt
+                modular_backend val_ = helper::field_to_backend(val);
+                typename BlueprintFieldType::integral_type val_int(val_);
+                big_float val_float(val_int);
+                big_float out;
+                eval_sqrt(out.backend(), val_float.backend());
+
+                if (!floor) {
+                    out += 0.5;
+                }
+
+                auto int_val = out.convert_to<nil::crypto3::multiprecision::cpp_int>();
+                auto field_val = value_type(int_val);
+                return FixedPoint(field_val, SCALE);
             }
 
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
