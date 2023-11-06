@@ -16,7 +16,7 @@
 #include <nil/blueprint/blueprint/plonk/assignment.hpp>
 #include <nil/blueprint/blueprint/plonk/circuit.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/type.hpp>
-// #include <nil/blueprint/components/algebra/fixedpoint/plonk/sqrt.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/plonk/sqrt.hpp>
 
 #include "../../../test_plonk_component.hpp"
 
@@ -33,7 +33,7 @@ bool doubleEquals(double a, double b, double epsilon) {
 }
 
 template<typename FixedType>
-void test_fixedpoint_sqrt(FixedType input, bool floor) {
+void test_fixedpoint_sqrt(FixedType input) {
     using BlueprintFieldType = typename FixedType::field_type;
     constexpr std::size_t WitnessColumns = 15;
     constexpr std::size_t PublicInputColumns = 1;
@@ -48,49 +48,46 @@ void test_fixedpoint_sqrt(FixedType input, bool floor) {
 
     using var = crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>;
 
-    // using component_type = blueprint::components::
-    // fix_sqrt<ArithmetizationType, BlueprintFieldType, nil::blueprint::basic_non_native_policy<BlueprintFieldType>>;
+    using component_type = blueprint::components::
+        fix_sqrt<ArithmetizationType, BlueprintFieldType, nil::blueprint::basic_non_native_policy<BlueprintFieldType>>;
 
-    // typename component_type::input_type instance_input = {var(0, 0, false, var::column_type::public_input)};
+    typename component_type::input_type instance_input = {var(0, 0, false, var::column_type::public_input)};
 
     double expected_res_f = sqrt(input.to_double());
-    auto expected_res = input.sqrt(floor);
+    auto expected_res = input.sqrt();
 
-    std::cout << "floor: " << floor << "\n";
-    std::cout << "input_f    : " << input.to_double() << "\n";
-    std::cout << "input      : " << input.get_value().data << "\n";
-    std::cout << "expected   : " << expected_res_f << "\n";
-    std::cout << "got        : " << expected_res.to_double() << "\n";
-    std::cout << "got (field): " << expected_res.get_value().data << "\n";
-    std::cout << "sq (field) : " << (expected_res * expected_res).get_value().data << "\n";
-    std::cout << "inp        : " << (input.get_value() * FixedType::DELTA).data << "\n\n";
+    auto result_check = [&expected_res, &expected_res_f, input](AssignmentType &assignment,
+                                                                typename component_type::result_type &real_res) {
+        auto real_res_ = FixedType(var_value(assignment, real_res.output), FixedType::SCALE);
+        double real_res_f = real_res_.to_double();
+#ifdef BLUEPRINT_PLONK_PROFILING_ENABLED
+        std::cout << "fixed_point sqrt test: "
+                  << "\n";
+        std::cout << "input_f : " << input.to_double() << "\n";
+        std::cout << "input   : " << input.get_value().data << "\n";
+        std::cout << "expected: " << expected_res_f << "\n";
+        std::cout << "real    : " << real_res_f << "\n\n";
+#endif
+        if (!doubleEquals(expected_res_f, real_res_f, EPSILON) || expected_res != real_res_) {
+            std::cout << "expected        : " << expected_res.get_value().data << "\n";
+            std::cout << "real            : " << real_res_.get_value().data << "\n\n";
+            std::cout << "expected (float): " << expected_res_f << "\n";
+            std::cout << "real (float)    : " << real_res_f << "\n\n";
+            abort();
+        }
+    };
+    std::vector<std::uint32_t> witness_list;
+    witness_list.reserve(WitnessColumns);
+    for (auto i = 0; i < WitnessColumns; i++) {
+        witness_list.push_back(i);
+    }
+    // Is done by the manifest in a real circuit
+    component_type component_instance(
+        witness_list, std::array<std::uint32_t, 0>(), std::array<std::uint32_t, 0>(), FixedType::M_1, FixedType::M_2);
 
-    // auto result_check = [&expected_res, &expected_res_f, input](AssignmentType &assignment,
-    //                                                             typename component_type::result_type &real_res) {
-    //     auto real_res_ = FixedType(var_value(assignment, real_res.output), FixedType::SCALE);
-    //     double real_res_f = real_res_.to_double();
-    //     // #ifdef BLUEPRINT_PLONK_PROFILING_ENABLED
-    //     std::cout << "fixed_point sqrt test: "
-    //               << "\n";
-    //     std::cout << "input_f : " << input.to_double() << "\n";
-    //     std::cout << "input   : " << input.get_value().data << "\n";
-    //     std::cout << "expected: " << expected_res_f << "\n";
-    //     std::cout << "real    : " << real_res_f << "\n\n";
-    //     // #endif
-    //     if (!doubleEquals(expected_res_f, real_res_f, EPSILON) || expected_res != real_res_) {
-    //         std::cout << "expected        : " << expected_res.get_value().data << "\n";
-    //         std::cout << "real            : " << real_res_.get_value().data << "\n\n";
-    //         std::cout << "expected (float): " << expected_res_f << "\n";
-    //         std::cout << "real (float)    : " << real_res_f << "\n\n";
-    //         abort();
-    //     }
-    // };
-
-    // component_type component_instance({0, 1}, {}, {});
-
-    // std::vector<typename BlueprintFieldType::value_type> public_input = {input.get_value()};
-    // nil::crypto3::test_component<component_type, BlueprintFieldType, ArithmetizationParams, hash_type, Lambda>(
-    //     component_instance, public_input, result_check, instance_input);
+    std::vector<typename BlueprintFieldType::value_type> public_input = {input.get_value()};
+    nil::crypto3::test_component<component_type, BlueprintFieldType, ArithmetizationParams, hash_type, Lambda>(
+        component_instance, public_input, result_check, instance_input);
 }
 
 template<typename FieldType, typename RngType>
@@ -118,16 +115,14 @@ void test_components_on_random_data(RngType &rng) {
     FixedType x(generate_random_for_fixedpoint<typename FixedType::value_type>(FixedType::M_1, FixedType::M_2, rng),
                 FixedType::SCALE);
 
-    test_fixedpoint_sqrt<FixedType>(x, true);
-    test_fixedpoint_sqrt<FixedType>(x, false);
+    test_fixedpoint_sqrt<FixedType>(x);
 }
 
 template<typename FixedType>
 void test_components(int i) {
     FixedType x((int64_t)i);
 
-    test_fixedpoint_sqrt<FixedType>(x, true);
-    test_fixedpoint_sqrt<FixedType>(x, false);
+    test_fixedpoint_sqrt<FixedType>(x);
 }
 
 template<typename FixedType, std::size_t RandomTestsAmount>

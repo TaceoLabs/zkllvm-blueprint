@@ -38,7 +38,7 @@ bool doubleEquals(double a, double b, double epsilon) {
 template<typename FixedType>
 void test_fixedpoint_exp(FixedType input) {
     using BlueprintFieldType = typename FixedType::field_type;
-    constexpr std::size_t WitnessColumns = 7 + 2 * FixedType::M_2;
+    constexpr std::size_t WitnessColumns = 6 + 2 * FixedType::M_2;
     constexpr std::size_t PublicInputColumns = 1;
     constexpr std::size_t ConstantColumns = 0;
     constexpr std::size_t SelectorColumns = 1;

@@ -80,6 +80,8 @@ namespace nil {
                 // Returns sign, and in = s*a*delta + b
                 static bool split_exp(const value_type &, uint16_t, uint64_t &, uint64_t &);
 
+                static value_type sqrt(const value_type &, bool floor = false);
+
                 static value_type tanh_lower_range(uint8_t m2);
                 static value_type tanh_upper_range(uint8_t m1, uint8_t m2);
             };
@@ -97,7 +99,6 @@ namespace nil {
                 using field_type = BlueprintFieldType;
                 using value_type = typename BlueprintFieldType::value_type;
                 using modular_backend = typename BlueprintFieldType::modular_backend;
-                using big_float = nil::crypto3::multiprecision::cpp_bin_float_double;
 
             private:
                 // I need a field element to deal with larger scales, such as the one as output from exp
@@ -293,6 +294,23 @@ namespace nil {
                     BLUEPRINT_RELEASE_ASSERT(pre != 0);
                 }
                 return sign;
+            }
+
+            template<typename BlueprintFieldType>
+            typename FixedPointHelper<BlueprintFieldType>::value_type
+                FixedPointHelper<BlueprintFieldType>::sqrt(const value_type &inp, bool floor) {
+                modular_backend val = field_to_backend(inp);
+                typename BlueprintFieldType::integral_type val_int(val);
+                big_float val_float(val_int);
+                big_float out;
+                eval_sqrt(out.backend(), val_float.backend());
+
+                if (!floor) {
+                    out += 0.5;
+                }
+
+                auto int_val = out.convert_to<nil::crypto3::multiprecision::cpp_int>();
+                return value_type(int_val);
             }
 
             // res.quotient = Round(val / div)
@@ -599,19 +617,7 @@ namespace nil {
                     BLUEPRINT_RELEASE_ASSERT(scale == 2 * SCALE);
                 }
 
-                // sqrt
-                modular_backend val_ = helper::field_to_backend(val);
-                typename BlueprintFieldType::integral_type val_int(val_);
-                big_float val_float(val_int);
-                big_float out;
-                eval_sqrt(out.backend(), val_float.backend());
-
-                if (!floor) {
-                    out += 0.5;
-                }
-
-                auto int_val = out.convert_to<nil::crypto3::multiprecision::cpp_int>();
-                auto field_val = value_type(int_val);
+                auto field_val = helper::sqrt(val, floor);
                 return FixedPoint(field_val, SCALE);
             }
 
