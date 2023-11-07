@@ -15,14 +15,20 @@ namespace nil {
     namespace blueprint {
         namespace components {
 
-            // Input: x, y as fixedpoint numbers with \Delta_x = \Delta_y
-            // Output: z = round(\Delta_z * x / y) with \Delta_z = \Delta_x = \Delta_y
-
-            // Works by proving z = round(\Delta_z * x / y) via 2x\Delta_z + y - c = 2zy + 2q and proving 0 <= q < y
+            // Works by proving z = round(delta_z * x / y) via 2*x*delta_z + y - c = 2zy + 2q and proving 0 <= q < y
             // via multiple decompositions and lookup tables for checking the range of the limbs
 
-            // This gadget is similar to the div gadget, but only works if y is positive
-
+            /**
+             * Component representing a division operation with inputs x and y and output z, where
+             * z = x / y. The sign of z and is equal to the sign of x. This gadget only works if y is positive.
+             *
+             * The user needs to ensure that the deltas of x and y match (the scale must be the same). The delta of z is
+             * equal to the deltas of y and z.
+             *
+             * Input:    x  ... field element
+             *           y  ... field element
+             * Output:   z  ... x / y (field element)
+             */
             template<typename ArithmetizationType, typename FieldType, typename NonNativePolicyType>
             class fix_div_by_pos;
 
@@ -110,16 +116,64 @@ namespace nil {
                     }
                 };
 
+                struct var_positions {
+                    CellPosition x, y, z, c, q0, a0;
+                };
+
+                var_positions get_var_pos(const int64_t start_row_index) const {
+
+                    auto m = this->get_m();
+                    var_positions pos;
+                    switch (this->rows_amount) {
+                        case 1:
+
+                            // trace layout (4 + 2*m col(s), 1 row(s))
+                            //
+                            //  r\c| 0 | 1 | 2 | 3 | 4  | .. | 4 + m-1 | 4 + m | .. | 4 + 2m-1 |
+                            // +---+---+---+---+---+----+----+---------+-------+----+----------+
+                            // | 0 | x | y | z | c | q0 | .. |  qm-1   |  a0   | .. |   am-1   |
+                            pos.x = CellPosition(this->W(0), start_row_index);
+                            pos.y = CellPosition(this->W(1), start_row_index);
+                            pos.z = CellPosition(this->W(2), start_row_index);
+                            pos.c = CellPosition(this->W(3), start_row_index);
+                            pos.q0 = CellPosition(this->W(4 + 0 * m), start_row_index);    // occupies m cells
+                            pos.a0 = CellPosition(this->W(4 + 1 * m), start_row_index);    // occupies m cells
+                            break;
+                        case 2:
+
+                            // trace layout (2*m col(s), 2 row(s))
+                            // recall that m is at least 2.
+                            //
+                            //  r\c| 0  | .. | m-1  | m  | .. | 2m-1 |
+                            // +---+----+----+------+----+----+------+
+                            // | 0 | q0 | .. | qm-1 | a0 | .. | am-1 |
+                            pos.q0 = CellPosition(this->W(0 + 0 * m), start_row_index);    // occupies m cells
+                            pos.a0 = CellPosition(this->W(0 + 1 * m), start_row_index);    // occupies m cells
+
+                            //  r\c| 0 | 1 | 2 | 3 |
+                            // +---+---+---+---+---+
+                            // | 1 | x | y | z | c |
+                            pos.x = CellPosition(this->W(0), start_row_index + 1);
+                            pos.y = CellPosition(this->W(1), start_row_index + 1);
+                            pos.z = CellPosition(this->W(2), start_row_index + 1);
+                            pos.c = CellPosition(this->W(3), start_row_index + 1);
+                            break;
+                        default:
+                            BLUEPRINT_RELEASE_ASSERT(false && "rows_amount must be 1 or 2");
+                    }
+                    return pos;
+                }
+
                 struct result_type {
                     var output = var(0, 0, false);
                     result_type(const fix_div_by_pos &component, std::uint32_t start_row_index) {
-                        auto row = start_row_index + component.rows_amount - 1;
-                        output = var(component.W(2), row, false, var::column_type::witness);
+                        const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
+                        output = var(magic(var_pos.z), false);
                     }
 
                     result_type(const fix_div_by_pos &component, std::size_t start_row_index) {
-                        auto row = start_row_index + component.rows_amount - 1;
-                        output = var(component.W(2), row, false, var::column_type::witness);
+                        const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
+                        output = var(magic(var_pos.z), false);
                     }
 
                     std::vector<var> all_vars() const {
@@ -163,48 +217,39 @@ namespace nil {
                         instance_input,
                     const std::uint32_t start_row_index) {
 
-                const std::size_t j = start_row_index;
-                auto second_row = j + component.rows_amount - 1;
+                const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
                 auto m = component.get_m();
 
-                typename BlueprintFieldType::value_type tmp =
-                    var_value(assignment, instance_input.x) * component.get_delta();
+                auto x_val = var_value(assignment, instance_input.x);
+                auto y_val = var_value(assignment, instance_input.y);
 
-                auto y = var_value(assignment, instance_input.y);
+                typename BlueprintFieldType::value_type tmp_mul = x_val * component.get_delta();
+                DivMod<BlueprintFieldType> tmp_div =
+                    FixedPointHelper<BlueprintFieldType>::round_div_mod(tmp_mul, y_val);
+                auto z_val = tmp_div.quotient;
 
-                DivMod<BlueprintFieldType> res = FixedPointHelper<BlueprintFieldType>::round_div_mod(tmp, y);
+                assignment.witness(magic(var_pos.x)) = x_val;
+                assignment.witness(magic(var_pos.y)) = y_val;
+                assignment.witness(magic(var_pos.z)) = z_val;
 
-                // if one row:
-                // | x | y | z | c | q0 | ... | yq_0 | ...
-                // else;
-                // first row: | q0 | ... | yq_0 | ...
-                // second row: | x | y | z | c |
-                assignment.witness(component.W(0), second_row) = var_value(assignment, instance_input.x);
-                assignment.witness(component.W(1), second_row) = y;
-                assignment.witness(component.W(2), second_row) = res.quotient;
+                std::vector<uint16_t> q0_val;
+                std::vector<uint16_t> a0_val;
 
-                std::vector<uint16_t> decomp_q;
-                std::vector<uint16_t> decomp_yq;
-
-                FixedPointHelper<BlueprintFieldType>::abs(y);    // For gadgets using this gadget
-                auto sign = FixedPointHelper<BlueprintFieldType>::decompose(res.remainder, decomp_q);
+                FixedPointHelper<BlueprintFieldType>::abs(y_val);    // For gadgets using this gadget
+                auto sign = FixedPointHelper<BlueprintFieldType>::decompose(tmp_div.remainder, q0_val);
                 BLUEPRINT_RELEASE_ASSERT(!sign);
-                sign = FixedPointHelper<BlueprintFieldType>::decompose(y - res.remainder - 1, decomp_yq);
+                sign = FixedPointHelper<BlueprintFieldType>::decompose(y_val - tmp_div.remainder - 1, a0_val);
                 BLUEPRINT_RELEASE_ASSERT(!sign);
                 // is ok because decomp is at least of size 4 and the biggest we have is 32.32
-                BLUEPRINT_RELEASE_ASSERT(decomp_q.size() >= m);
-                BLUEPRINT_RELEASE_ASSERT(decomp_yq.size() >= m);
+                BLUEPRINT_RELEASE_ASSERT(q0_val.size() >= m);
+                BLUEPRINT_RELEASE_ASSERT(a0_val.size() >= m);
 
-                auto y_ = FixedPointHelper<BlueprintFieldType>::field_to_backend(y);
-                assignment.witness(component.W(3), second_row) =
-                    typename BlueprintFieldType::value_type(y_.limbs()[0] & 1);
-
-                auto q_start = component.rows_amount == 1 ? 4 : 0;
-                auto yq_start = q_start + m;
+                auto y_ = FixedPointHelper<BlueprintFieldType>::field_to_backend(y_val);
+                assignment.witness(magic(var_pos.c)) = typename BlueprintFieldType::value_type(y_.limbs()[0] & 1);
 
                 for (auto i = 0; i < m; i++) {
-                    assignment.witness(component.W(q_start + i), j) = decomp_q[i];
-                    assignment.witness(component.W(yq_start + i), j) = decomp_yq[i];
+                    assignment.witness(var_pos.q0.column() + i, var_pos.q0.row()) = q0_val[i];
+                    assignment.witness(var_pos.a0.column() + i, var_pos.a0.row()) = a0_val[i];
                 }
 
                 return typename plonk_fixedpoint_div_by_pos<BlueprintFieldType, ArithmetizationParams>::result_type(
@@ -220,30 +265,29 @@ namespace nil {
                 const typename plonk_fixedpoint_div_by_pos<BlueprintFieldType, ArithmetizationParams>::input_type
                     &instance_input) {
 
+                int64_t start_row_index = 1 - component.rows_amount;
+                const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
+
                 using var = typename plonk_fixedpoint_div_by_pos<BlueprintFieldType, ArithmetizationParams>::var;
                 // 2x\Delta_z + y - c = 2zy + 2q and proving 0 <= q < y
                 auto m = component.get_m();
                 auto delta = component.get_delta();
 
-                int first_row = 1 - (int)component.rows_amount;
-                auto q_start = component.rows_amount == 1 ? 4 : 0;
-                auto yq_start = q_start + m;
-
-                auto q = nil::crypto3::math::expression(var(component.W(q_start), first_row));
-                auto yq = nil::crypto3::math::expression(var(component.W(yq_start), first_row));
+                auto q = nil::crypto3::math::expression(var(magic(var_pos.q0)));
+                auto a = nil::crypto3::math::expression(var(magic(var_pos.a0)));
                 for (auto i = 1; i < m; i++) {
-                    q += var(component.W(q_start + i), first_row) * (1ULL << (16 * i));
-                    yq += var(component.W(yq_start + i), first_row) * (1ULL << (16 * i));
+                    q += var(var_pos.q0.column() + i, var_pos.q0.row()) * (1ULL << (16 * i));
+                    a += var(var_pos.a0.column() + i, var_pos.a0.row()) * (1ULL << (16 * i));
                 }
 
-                auto x = var(component.W(0), 0);
-                auto y = var(component.W(1), 0);
-                auto z = var(component.W(2), 0);
-                auto c = var(component.W(3), 0);
+                auto x = var(magic(var_pos.x));
+                auto y = var(magic(var_pos.y));
+                auto z = var(magic(var_pos.z));
+                auto c = var(magic(var_pos.c));
 
                 auto constraint_1 = 2 * (x * delta - y * z - q) + y - c;
                 auto constraint_2 = (c - 1) * c;
-                auto constraint_3 = y - q - yq - 1;
+                auto constraint_3 = y - q - a - 1;
 
                 // TACEO_TODO extend for lookup constraint
                 return bp.add_gate({constraint_1, constraint_2, constraint_3});
@@ -259,13 +303,14 @@ namespace nil {
                     &instance_input,
                 const std::size_t start_row_index) {
 
+                const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
+
                 using var = typename plonk_fixedpoint_div_by_pos<BlueprintFieldType, ArithmetizationParams>::var;
 
-                const std::size_t j = start_row_index + component.rows_amount - 1;
-                var component_x = var(component.W(0), static_cast<int>(j), false);
-                var component_y = var(component.W(1), static_cast<int>(j), false);
-                bp.add_copy_constraint({instance_input.x, component_x});
-                bp.add_copy_constraint({component_y, instance_input.y});
+                var x = var(magic(var_pos.x), false);
+                var y = var(magic(var_pos.y), false);
+                bp.add_copy_constraint({instance_input.x, x});
+                bp.add_copy_constraint({instance_input.y, y});
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>

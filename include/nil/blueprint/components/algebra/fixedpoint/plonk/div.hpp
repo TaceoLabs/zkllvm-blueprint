@@ -7,12 +7,20 @@ namespace nil {
     namespace blueprint {
         namespace components {
 
-            // Input: x, y as fixedpoint numbers with \Delta_x = \Delta_y
-            // Output: z = round(\Delta_z * x / y) with \Delta_z = \Delta_x = \Delta_y
-
             // Works by proving z = round(\Delta_z * x / y) via 2x\Delta_z + |y| - c = 2zy + 2q and proving 0 <= q < |y|
             // via multiple decompositions and lookup tables for checking the range of the limbs
 
+            /**
+             * Component representing a division operation with inputs x and y and output z, where
+             * z = x / y. The sign of z and is equal to the sign of x.
+             *
+             * The user needs to ensure that the deltas of x and y match (the scale must be the same). The delta of z is
+             * equal to the deltas of y and z.
+             *
+             * Input:    x  ... field element
+             *           y  ... field element
+             * Output:   z  ... x / y (field element)
+             */
             template<typename ArithmetizationType, typename FieldType, typename NonNativePolicyType>
             class fix_div;
 
@@ -112,6 +120,58 @@ namespace nil {
                 using input_type = typename div_by_pos_component::input_type;
                 using result_type = typename div_by_pos_component::result_type;
 
+                struct var_positions {
+                    CellPosition x, y, z, c, q0, a0, s_y, y0;
+                };
+
+                var_positions get_var_pos(const int64_t start_row_index) const {
+
+                    auto m = this->get_m();
+                    var_positions pos;
+                    switch (this->rows_amount) {
+                        case 1:
+
+                            // trace layout (5 + 3*m col(s), 1 row(s))
+                            //
+                            //  r\c| 0 | 1 | 2 | 3 | 4  | .. | 4+m-1 | 4+m | .. | 4+2m-1 | 4+2m | 4+2m+1 | .. | 4+3m |
+                            // +---+---+---+---+---+----+----+-------+-----+----+--------+------+--------+----+------+
+                            // | 0 | x | y | z | c | q0 | .. | qm-1  | a0  | .. |  am-1  | s_y  |  y0    | .. | ym-1 |
+                            pos.x = CellPosition(this->W(0), start_row_index);
+                            pos.y = CellPosition(this->W(1), start_row_index);
+                            pos.z = CellPosition(this->W(2), start_row_index);
+                            pos.c = CellPosition(this->W(3), start_row_index);
+                            pos.q0 = CellPosition(this->W(4 + 0 * m), start_row_index);    // occupies m cells
+                            pos.a0 = CellPosition(this->W(4 + 1 * m), start_row_index);    // occupies m cells
+                            pos.s_y = CellPosition(this->W(4 + 2 * m), start_row_index);
+                            pos.y0 = CellPosition(this->W(5 + 2 * m), start_row_index);    // occupies m cells
+                            break;
+                        case 2:
+
+                            // trace layout (4+m col(s), 2 row(s))
+                            // recall that m is at most 4.
+                            //
+                            //  r\c| 0  | .. | m-1  | m  | .. | 2m-1 |
+                            // +---+----+----+------+----+----+------+
+                            // | 0 | q0 | .. | qm-1 | a0 | .. | am-1 |
+                            pos.q0 = CellPosition(this->W(0 + 0 * m), start_row_index);    // occupies m cells
+                            pos.a0 = CellPosition(this->W(0 + 1 * m), start_row_index);    // occupies m cells
+
+                            //  r\c| 0 | 1 | 2 | 3 |  4   |   5    | .. | 5+m-1|
+                            // +---+---+---+---+---+------+--------+----+------+
+                            // | 1 | x | y | z | c | s_y  |  y0    | .. | ym-1 |
+                            pos.x = CellPosition(this->W(0), start_row_index + 1);
+                            pos.y = CellPosition(this->W(1), start_row_index + 1);
+                            pos.z = CellPosition(this->W(2), start_row_index + 1);
+                            pos.c = CellPosition(this->W(3), start_row_index + 1);
+                            pos.s_y = CellPosition(this->W(4), start_row_index + 1);
+                            pos.y0 = CellPosition(this->W(5 + 0 * m), start_row_index + 1);    // occupies m cells
+                            break;
+                        default:
+                            BLUEPRINT_RELEASE_ASSERT(false && "rows_amount must be 1 or 2");
+                    }
+                    return pos;
+                }
+
                 template<typename ContainerType>
                 explicit fix_div(ContainerType witness, uint8_t m1, uint8_t m2) :
                     component_type(witness, {}, {}, get_manifest(m1, m2)),
@@ -147,33 +207,23 @@ namespace nil {
                     instance_input,
                 const std::uint32_t start_row_index) {
 
-                const std::size_t j = start_row_index;
+                const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
                 auto m = component.get_m();
-                auto y_row = j + component.rows_amount - 1;
-                auto y_col = component.rows_amount == 1 ? 5 + 2 * m : 5;
+                auto one = BlueprintFieldType::value_type::one();
 
-                // if one row:
-                // | x | y | z | c | q0 | ... | yq_0 | ... | s_y | y0 | ...
-                // else;
-                // first row: | q0 | ... | yq_0 | ...
-                // second row: | x | y | z | c | s_y | y0 | ...
-                // Do with div_by_pos component and add the decomposition of y
-
-                // Assign div_by_pos
                 auto div_by_pos_comp = component.get_div_by_pos_component();
                 auto result = generate_assignments(div_by_pos_comp, assignment, instance_input, start_row_index);
 
-                auto y = var_value(assignment, instance_input.y);
-                std::vector<uint16_t> decomp_y;
+                auto y_val = var_value(assignment, instance_input.y);
+                std::vector<uint16_t> y0_val;
 
-                bool sign = FixedPointHelper<BlueprintFieldType>::decompose(y, decomp_y);
-                assignment.witness(component.W(y_col - 1), y_row) =
-                    sign ? -BlueprintFieldType::value_type::one() : BlueprintFieldType::value_type::one();
+                bool sign = FixedPointHelper<BlueprintFieldType>::decompose(y_val, y0_val);
+                assignment.witness(magic(var_pos.s_y)) = sign ? -one : one;
                 // is ok because decomp is at least of size 4 and the biggest we have is 32.32
-                BLUEPRINT_RELEASE_ASSERT(decomp_y.size() >= m);
+                BLUEPRINT_RELEASE_ASSERT(y0_val.size() >= m);
 
                 for (auto i = 0; i < m; i++) {
-                    assignment.witness(component.W(y_col + i), y_row) = decomp_y[i];
+                    assignment.witness(var_pos.y0.column() + i, var_pos.y0.row()) = y0_val[i];
                 }
 
                 return result;
@@ -187,36 +237,34 @@ namespace nil {
                     &assignment,
                 const typename plonk_fixedpoint_div<BlueprintFieldType, ArithmetizationParams>::input_type
                     &instance_input) {
+                int64_t start_row_index = 1 - component.rows_amount;
+                const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
 
                 using var = typename plonk_fixedpoint_div<BlueprintFieldType, ArithmetizationParams>::var;
                 // 2x\Delta_z + |y| - c = 2zy + 2q and proving 0 <= q < |y|
                 auto m = component.get_m();
                 auto delta = component.get_delta();
 
-                int first_row = 1 - (int)component.rows_amount;
-                auto y_start = component.rows_amount == 1 ? 5 + 2 * m : 5;
-                auto q_start = component.rows_amount == 1 ? 4 : 0;
-                auto yq_start = q_start + m;
+                auto y_abs = nil::crypto3::math::expression(var(magic(var_pos.y0)));
+                auto q = nil::crypto3::math::expression(var(magic(var_pos.q0)));
+                auto a = nil::crypto3::math::expression(var(magic(var_pos.a0)));
 
-                auto y_abs = nil::crypto3::math::expression(var(component.W(y_start), 0));
-                auto q = nil::crypto3::math::expression(var(component.W(q_start), first_row));
-                auto yq = nil::crypto3::math::expression(var(component.W(yq_start), first_row));
                 for (auto i = 1; i < m; i++) {
-                    y_abs += var(component.W(y_start + i), 0) * (1ULL << (16 * i));
-                    q += var(component.W(q_start + i), first_row) * (1ULL << (16 * i));
-                    yq += var(component.W(yq_start + i), first_row) * (1ULL << (16 * i));
+                    y_abs += var(var_pos.y0.column() + i, var_pos.y0.row()) * (1ULL << (16 * i));
+                    q += var(var_pos.q0.column() + i, var_pos.q0.row()) * (1ULL << (16 * i));
+                    a += var(var_pos.a0.column() + i, var_pos.a0.row()) * (1ULL << (16 * i));
                 }
-                auto y_sign = var(component.W(y_start - 1), 0);
-                auto x = var(component.W(0), 0);
-                auto y = var(component.W(1), 0);
-                auto z = var(component.W(2), 0);
-                auto c = var(component.W(3), 0);
+                auto s_y = var(magic(var_pos.s_y));
+                auto x = var(magic(var_pos.x));
+                auto y = var(magic(var_pos.y));
+                auto z = var(magic(var_pos.z));
+                auto c = var(magic(var_pos.c));
 
                 auto constraint_1 = 2 * (x * delta - y * z - q) + y_abs - c;
                 auto constraint_2 = (c - 1) * c;
-                auto constraint_3 = y_abs - q - yq - 1;
-                auto constraint_4 = y - y_sign * y_abs;
-                auto constraint_5 = (y_sign - 1) * (y_sign + 1);
+                auto constraint_3 = y_abs - q - a - 1;
+                auto constraint_4 = y - s_y * y_abs;
+                auto constraint_5 = (s_y - 1) * (s_y + 1);
 
                 // TACEO_TODO extend for lookup constraint
                 return bp.add_gate({constraint_1, constraint_2, constraint_3, constraint_4, constraint_5});

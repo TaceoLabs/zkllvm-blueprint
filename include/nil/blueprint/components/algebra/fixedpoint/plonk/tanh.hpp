@@ -184,7 +184,10 @@ namespace nil {
 
                 struct var_positions {
                     CellPosition x, y, exp_x, exp_y, div_x, div_y, div_z, const_min, const_max;
-                    int64_t exp_row, div_row, range_row, tanh_row;
+                    typename exp_component::var_positions exp_pos;
+                    typename div_component::var_positions div_pos;
+                    typename range_component::var_positions range_pos;
+                    int64_t start_row, exp_row, div_row, range_row, tanh_row;
                 };
 
                 var_positions get_var_pos(const int64_t start_row_index) const {
@@ -197,12 +200,22 @@ namespace nil {
                     //     |   |          witness            |   constant    |
                     //  r\c|0|1|  2  |  3  |  4  |  5  |  6  |   0   |   1   |
                     // +---+-+-+-----+-----+-----+-----+-----+-------+-------+
-                    // | 0 | <exp_gadget>                    |       |       |
-                    // | r | <div_gadget>                    |       |       |
-                    // | s | <range_gadget>                  | <range_const> |
+                    // | 0 | <exp_witness>                   |       |       |
+                    // | r | <div_witness>                   |       |       |
+                    // | s | <range_witness>                 | <range_const> |
                     // | t |x|y|exp_x|exp_y|div_x|div_y|div_z|  min  |  max  |
 
                     int64_t row_index = start_row_index + this->rows_amount - 1;
+
+                    pos.start_row = start_row_index;
+                    pos.exp_row = start_row_index;
+                    pos.div_row = pos.exp_row + exp.rows_amount;
+                    pos.range_row = pos.div_row + div.rows_amount;
+                    pos.tanh_row = pos.range_row + range.rows_amount;
+
+                    pos.exp_pos = exp.get_var_pos(pos.exp_row);
+                    pos.div_pos = div.get_var_pos(pos.div_row);
+                    pos.range_pos = range.get_var_pos(pos.range_row);
 
                     pos.x = CellPosition(this->W(0), row_index);
                     pos.y = CellPosition(this->W(1), row_index);
@@ -214,11 +227,6 @@ namespace nil {
 
                     pos.const_min = CellPosition(this->C(0), row_index);
                     pos.const_max = CellPosition(this->C(1), row_index);
-
-                    pos.exp_row = start_row_index;
-                    pos.div_row = pos.exp_row + exp.rows_amount;
-                    pos.range_row = pos.div_row + div.rows_amount;
-                    pos.tanh_row = pos.range_row + range.rows_amount;
 
                     return pos;
                 }
@@ -280,11 +288,6 @@ namespace nil {
                 auto exp_comp = component.get_exp_component();
                 auto div_comp = component.get_div_component();
 
-                auto exp_row = var_pos.exp_row;
-                auto div_row = var_pos.div_row;
-                auto range_row = var_pos.range_row;
-                auto tanh_row = var_pos.tanh_row;
-
                 // Exp input
                 typename plonk_fixedpoint_tanh<BlueprintFieldType, ArithmetizationParams>::exp_component::input_type
                     exp_input;
@@ -309,7 +312,7 @@ namespace nil {
                 // Assign range gadget
                 assignment.witness(magic(var_pos.x)) = x_val;
 
-                auto range_out = generate_assignments(range_comp, assignment, range_input, range_row);
+                auto range_out = generate_assignments(range_comp, assignment, range_input, var_pos.range_row);
 
                 auto in_val = var_value(assignment, range_out.in);
                 auto lt_val = var_value(assignment, range_out.lt);
@@ -319,7 +322,7 @@ namespace nil {
                 auto exp_x_val = x_val * 2 * in_val;
                 assignment.witness(magic(var_pos.exp_x)) = exp_x_val;
 
-                auto exp_out = generate_assignments(exp_comp, assignment, exp_input, exp_row);
+                auto exp_out = generate_assignments(exp_comp, assignment, exp_input, var_pos.exp_row);
 
                 auto exp_y_val = var_value(assignment, exp_out.output);
                 assignment.witness(magic(var_pos.exp_y)) = exp_y_val;
@@ -332,7 +335,7 @@ namespace nil {
                 assignment.witness(magic(var_pos.div_x)) = div_x_val;
                 assignment.witness(magic(var_pos.div_y)) = div_y_val;
 
-                auto div_out = generate_assignments(div_comp, assignment, div_input, div_row);
+                auto div_out = generate_assignments(div_comp, assignment, div_input, var_pos.div_row);
 
                 auto div_z_val = var_value(assignment, div_out.output);
                 assignment.witness(magic(var_pos.div_z)) = div_z_val;
@@ -448,11 +451,6 @@ namespace nil {
                 auto exp_comp = component.get_exp_component();
                 auto div_comp = component.get_div_component();
 
-                auto exp_row = var_pos.exp_row;
-                auto div_row = var_pos.div_row;
-                auto range_row = var_pos.range_row;
-                auto tanh_row = var_pos.tanh_row;
-
                 // Exp input
                 typename plonk_fixedpoint_tanh<BlueprintFieldType, ArithmetizationParams>::exp_component::input_type
                     exp_input;
@@ -471,23 +469,23 @@ namespace nil {
 
                 // Enable the exp component
                 std::size_t exp_selector = generate_gates(exp_comp, bp, assignment, exp_input);
-                assignment.enable_selector(exp_selector, exp_row + exp_comp.rows_amount - 1);
-                generate_copy_constraints(exp_comp, bp, assignment, exp_input, exp_row);
+                assignment.enable_selector(exp_selector, var_pos.exp_row + exp_comp.rows_amount - 1);
+                generate_copy_constraints(exp_comp, bp, assignment, exp_input, var_pos.exp_row);
 
                 // Enable the div component
                 std::size_t div_selector = generate_gates(div_comp, bp, assignment, div_input);
-                assignment.enable_selector(div_selector, div_row + div_comp.rows_amount - 1);
-                generate_copy_constraints(div_comp, bp, assignment, div_input, div_row);
+                assignment.enable_selector(div_selector, var_pos.div_row + div_comp.rows_amount - 1);
+                generate_copy_constraints(div_comp, bp, assignment, div_input, var_pos.div_row);
 
                 // Enable the range component
                 std::size_t range_selector = generate_gates(range_comp, bp, assignment, range_input);
-                assignment.enable_selector(range_selector, range_row + range_comp.rows_amount - 1);
-                generate_copy_constraints(range_comp, bp, assignment, range_input, range_row);
-                generate_assignments_constant(range_comp, assignment, range_input, range_row);
+                assignment.enable_selector(range_selector, var_pos.range_row + range_comp.rows_amount - 1);
+                generate_copy_constraints(range_comp, bp, assignment, range_input, var_pos.range_row);
+                generate_assignments_constant(range_comp, assignment, range_input, var_pos.range_row);
 
                 // Enable the tanh component
                 std::size_t tanh_selector = generate_gates(component, bp, assignment, instance_input);
-                assignment.enable_selector(tanh_selector, tanh_row);
+                assignment.enable_selector(tanh_selector, var_pos.tanh_row);
                 generate_copy_constraints(component, bp, assignment, instance_input, start_row_index);
                 generate_assignments_constant(component, assignment, instance_input, start_row_index);
 
