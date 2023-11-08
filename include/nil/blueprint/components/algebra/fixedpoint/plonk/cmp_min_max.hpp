@@ -7,12 +7,24 @@ namespace nil {
     namespace blueprint {
         namespace components {
 
-            // Input: x, y as fixedpoint numbers with \Delta_x = \Delta_y
-            // Output: three flags with values \in {0,1} indicating equality, less than, or greater than, as well as the
-            // min and max values of the inputs
-
             // Works by decomposing the difference of the inputs using the cmp gadget
 
+            /**
+             * Component representing a compare operation.
+             *
+             * The user needs to ensure that the deltas of x and y match (the scale must be the same).
+             *
+             * The outputs are flags with values in {0, 1} that describe the relation between x and y, as well as the
+             * minimum and maximum value of x and y.
+             *
+             * Input:  x   ... field element
+             *         y   ... field element
+             * Output: eq  ... 1 if x = y, 0 otherwise (field element)
+             *         lt  ... 1 if x < y, 0 otherwise (field element)
+             *         gt  ... 1 if x > y, 0 otherwise (field element)
+             *         min ... min(x, y) (field element)
+             *         max ... max(x, y) (field element)
+             */
             template<typename ArithmetizationType, typename FieldType, typename NonNativePolicyType>
             class fix_cmp_min_max;
 
@@ -96,6 +108,38 @@ namespace nil {
 
                 using input_type = typename cmp_component::input_type;
 
+                struct var_positions {
+                    CellPosition x, y, eq, lt, gt, min, max, s, inv, d0;
+                };
+
+                var_positions get_var_pos(const int64_t start_row_index) const {
+
+                    // trace layout (9 + m+1 col(s), 1 row(s))
+                    // requiring an extra limb because of potential overflows during decomposition of
+                    // differences
+                    //
+                    // Changing the layout here requires changing the mapping in instantiate_cmp as well.
+                    //
+                    //     |                           witness                            |
+                    //  r\c| 0 | 1 | 2  | 3  | 4  |  5  |  6  | 7 |  8  | 9  | .. | 9 + m |
+                    // +---+---+---+----+----+----+-----+-----+---+-----+----+----+-------+
+                    // | 0 | x | y | eq | lt | gt | min | max | s | inv | d0 | .. | dm    |
+
+                    auto m = cmp.get_m();
+                    var_positions pos;
+                    pos.x = CellPosition(this->W(0), start_row_index);
+                    pos.y = CellPosition(this->W(1), start_row_index);
+                    pos.eq = CellPosition(this->W(2), start_row_index);
+                    pos.lt = CellPosition(this->W(3), start_row_index);
+                    pos.gt = CellPosition(this->W(4), start_row_index);
+                    pos.min = CellPosition(this->W(5), start_row_index);
+                    pos.max = CellPosition(this->W(6), start_row_index);
+                    pos.s = CellPosition(this->W(7), start_row_index);
+                    pos.inv = CellPosition(this->W(8), start_row_index);
+                    pos.d0 = CellPosition(this->W(9 + 0 * (m + 1)), start_row_index);    // occupies m + 1 cells
+                    return pos;
+                }
+
                 struct result_type {
                     var eq = var(0, 0, false);
                     var lt = var(0, 0, false);
@@ -103,19 +147,21 @@ namespace nil {
                     var min = var(0, 0, false);
                     var max = var(0, 0, false);
                     result_type(const fix_cmp_min_max &component, std::uint32_t start_row_index) {
-                        eq = var(component.W(2), start_row_index, false, var::column_type::witness);
-                        lt = var(component.W(3), start_row_index, false, var::column_type::witness);
-                        gt = var(component.W(4), start_row_index, false, var::column_type::witness);
-                        min = var(component.W(5), start_row_index, false, var::column_type::witness);
-                        max = var(component.W(6), start_row_index, false, var::column_type::witness);
+                        const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
+                        eq = var(magic(var_pos.eq), false);
+                        lt = var(magic(var_pos.lt), false);
+                        gt = var(magic(var_pos.gt), false);
+                        min = var(magic(var_pos.min), false);
+                        max = var(magic(var_pos.max), false);
                     }
 
                     result_type(const fix_cmp_min_max &component, std::size_t start_row_index) {
-                        eq = var(component.W(2), start_row_index, false, var::column_type::witness);
-                        lt = var(component.W(3), start_row_index, false, var::column_type::witness);
-                        gt = var(component.W(4), start_row_index, false, var::column_type::witness);
-                        min = var(component.W(5), start_row_index, false, var::column_type::witness);
-                        max = var(component.W(6), start_row_index, false, var::column_type::witness);
+                        const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
+                        eq = var(magic(var_pos.eq), false);
+                        lt = var(magic(var_pos.lt), false);
+                        gt = var(magic(var_pos.gt), false);
+                        min = var(magic(var_pos.min), false);
+                        max = var(magic(var_pos.max), false);
                     }
 
                     std::vector<var> all_vars() const {
@@ -158,27 +204,24 @@ namespace nil {
                     const typename plonk_fixedpoint_cmp_min_max<BlueprintFieldType, ArithmetizationParams>::input_type
                         instance_input,
                     const std::uint32_t start_row_index) {
-                const std::size_t j = start_row_index;
-
-                // Take m+1 limbs due to potential overflow
-                // We just take cmp and put min/max in there
-                // | x | y | eq | lt | gt | min | max | s | inv | y0 | ...
+                const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
 
                 auto cmp_comp = component.get_cmp_component();
                 auto result = generate_assignments(cmp_comp, assignment, instance_input, start_row_index);
+                auto one = BlueprintFieldType::value_type::one();
 
-                auto x = var_value(assignment, instance_input.x);
-                auto y = var_value(assignment, instance_input.y);
+                auto x_val = var_value(assignment, instance_input.x);
+                auto y_val = var_value(assignment, instance_input.y);
 
-                if (var_value(assignment, result.eq) == BlueprintFieldType::value_type::one()) {
-                    assignment.witness(component.W(5), j) = x;
-                    assignment.witness(component.W(6), j) = x;
-                } else if (var_value(assignment, result.lt) == BlueprintFieldType::value_type::one()) {
-                    assignment.witness(component.W(5), j) = x;
-                    assignment.witness(component.W(6), j) = y;
+                if (var_value(assignment, result.eq) == one) {
+                    assignment.witness(magic(var_pos.min)) = x_val;
+                    assignment.witness(magic(var_pos.max)) = x_val;
+                } else if (var_value(assignment, result.lt) == one) {
+                    assignment.witness(magic(var_pos.min)) = x_val;
+                    assignment.witness(magic(var_pos.max)) = y_val;
                 } else {
-                    assignment.witness(component.W(5), j) = y;
-                    assignment.witness(component.W(6), j) = x;
+                    assignment.witness(magic(var_pos.min)) = y_val;
+                    assignment.witness(magic(var_pos.max)) = x_val;
                 }
 
                 return typename plonk_fixedpoint_cmp_min_max<BlueprintFieldType, ArithmetizationParams>::result_type(
@@ -194,24 +237,27 @@ namespace nil {
                 const typename plonk_fixedpoint_cmp_min_max<BlueprintFieldType, ArithmetizationParams>::input_type
                     &instance_input) {
 
+                int64_t start_row_index = 1 - component.rows_amount;
+                const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
+
                 using var = typename plonk_fixedpoint_cmp_min_max<BlueprintFieldType, ArithmetizationParams>::var;
 
                 auto cmp_comp = component.get_cmp_component();
                 auto constraints = get_constraints(cmp_comp, bp, assignment, instance_input);
 
+                auto x = var(magic(var_pos.x));
+                auto y = var(magic(var_pos.y));
+                auto min = var(magic(var_pos.min));
+                auto max = var(magic(var_pos.max));
+                auto s = var(magic(var_pos.s));
                 auto inv2 = typename BlueprintFieldType::value_type(2).inversed();
-                auto min_constraint =
-                    var(component.W(5), 0) -
-                    inv2 * (var(component.W(7), 0) * (var(component.W(1), 0) - var(component.W(0), 0)) +
-                            var(component.W(0), 0) + var(component.W(1), 0));
-                auto max_constraint =
-                    var(component.W(6), 0) -
-                    inv2 * (var(component.W(7), 0) * (var(component.W(0), 0) - var(component.W(1), 0)) +
-                            var(component.W(0), 0) + var(component.W(1), 0));
+
+                auto constraint_1 = min - inv2 * (s * (y - x) + x + y);
+                auto constraint_2 = max - inv2 * (s * (x - y) + x + y);
 
                 constraints.reserve(constraints.size() + 2);
-                constraints.push_back(min_constraint);
-                constraints.push_back(max_constraint);
+                constraints.push_back(constraint_1);
+                constraints.push_back(constraint_2);
 
                 return bp.add_gate(constraints);
             }

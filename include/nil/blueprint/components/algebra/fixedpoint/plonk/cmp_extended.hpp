@@ -7,12 +7,24 @@ namespace nil {
     namespace blueprint {
         namespace components {
 
-            // Input: x, y as fixedpoint numbers with \Delta_x = \Delta_y
-            // Output: 6 flags with values \in {0,1} indicating equality, less than, greater than, not equal,
-            // greater_equal, and less_equal.
-
             // Works by decomposing the difference of the inputs using the cmp gadget
 
+            /**
+             * Component representing a compare operation.
+             *
+             * The user needs to ensure that the deltas of x and y match (the scale must be the same).
+             *
+             * The outputs are flags with values in {0, 1} that describe the relation between x and y.
+             *
+             * Input:  x   ... field element
+             *         y   ... field element
+             * Output: eq  ... 1 if x = y,  0 otherwise (field element)
+             *         lt  ... 1 if x < y,  0 otherwise (field element)
+             *         gt  ... 1 if x > y,  0 otherwise (field element)
+             *         neq ... 1 if x != y, 0 otherwise (field element)
+             *         leq ... 1 if x <= y, 0 otherwise (field element)
+             *         geq ... 1 if x => y, 0 otherwise (field element)
+             */
             template<typename ArithmetizationType, typename FieldType, typename NonNativePolicyType>
             class fix_cmp_extended;
 
@@ -96,6 +108,39 @@ namespace nil {
 
                 using input_type = typename cmp_component::input_type;
 
+                struct var_positions {
+                    CellPosition x, y, eq, lt, gt, neq, geq, leq, s, inv, d0;
+                };
+
+                var_positions get_var_pos(const int64_t start_row_index) const {
+
+                    // trace layout (10 + m+1 col(s), 1 row(s))
+                    // requiring an extra limb because of potential overflows during decomposition of
+                    // differences
+                    //
+                    // Changing the layout here requires changing the mapping in instantiate_cmp as well.
+                    //
+                    //     |                               witness                               |
+                    //  r\c| 0 | 1 | 2  | 3  | 4  |  5  |  6  |  7  | 8 |  9  | 10 | .. | 10 + m |
+                    // +---+---+---+----+----+----+-----+-----+-----+---+-----+----+----+--------+
+                    // | 0 | x | y | eq | lt | gt | neq | leq | qeq | s | inv | d0 | .. | dm     |
+
+                    auto m = cmp.get_m();
+                    var_positions pos;
+                    pos.x = CellPosition(this->W(0), start_row_index);
+                    pos.y = CellPosition(this->W(1), start_row_index);
+                    pos.eq = CellPosition(this->W(2), start_row_index);
+                    pos.lt = CellPosition(this->W(3), start_row_index);
+                    pos.gt = CellPosition(this->W(4), start_row_index);
+                    pos.neq = CellPosition(this->W(5), start_row_index);
+                    pos.leq = CellPosition(this->W(6), start_row_index);
+                    pos.geq = CellPosition(this->W(7), start_row_index);
+                    pos.s = CellPosition(this->W(8), start_row_index);
+                    pos.inv = CellPosition(this->W(9), start_row_index);
+                    pos.d0 = CellPosition(this->W(10 + 0 * (m + 1)), start_row_index);    // occupies m + 1 cells
+                    return pos;
+                }
+
                 struct result_type {
                     var eq = var(0, 0, false);
                     var lt = var(0, 0, false);
@@ -104,21 +149,23 @@ namespace nil {
                     var leq = var(0, 0, false);
                     var geq = var(0, 0, false);
                     result_type(const fix_cmp_extended &component, std::uint32_t start_row_index) {
-                        eq = var(component.W(2), start_row_index, false, var::column_type::witness);
-                        lt = var(component.W(3), start_row_index, false, var::column_type::witness);
-                        gt = var(component.W(4), start_row_index, false, var::column_type::witness);
-                        neq = var(component.W(5), start_row_index, false, var::column_type::witness);
-                        leq = var(component.W(6), start_row_index, false, var::column_type::witness);
-                        geq = var(component.W(7), start_row_index, false, var::column_type::witness);
+                        const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
+                        eq = var(magic(var_pos.eq), false);
+                        lt = var(magic(var_pos.lt), false);
+                        gt = var(magic(var_pos.gt), false);
+                        neq = var(magic(var_pos.neq), false);
+                        leq = var(magic(var_pos.leq), false);
+                        geq = var(magic(var_pos.geq), false);
                     }
 
                     result_type(const fix_cmp_extended &component, std::size_t start_row_index) {
-                        eq = var(component.W(2), start_row_index, false, var::column_type::witness);
-                        lt = var(component.W(3), start_row_index, false, var::column_type::witness);
-                        gt = var(component.W(4), start_row_index, false, var::column_type::witness);
-                        neq = var(component.W(5), start_row_index, false, var::column_type::witness);
-                        leq = var(component.W(6), start_row_index, false, var::column_type::witness);
-                        geq = var(component.W(7), start_row_index, false, var::column_type::witness);
+                        const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
+                        eq = var(magic(var_pos.eq), false);
+                        lt = var(magic(var_pos.lt), false);
+                        gt = var(magic(var_pos.gt), false);
+                        neq = var(magic(var_pos.neq), false);
+                        leq = var(magic(var_pos.leq), false);
+                        geq = var(magic(var_pos.geq), false);
                     }
 
                     std::vector<var> all_vars() const {
@@ -161,22 +208,15 @@ namespace nil {
                     const typename plonk_fixedpoint_cmp_extended<BlueprintFieldType, ArithmetizationParams>::input_type
                         instance_input,
                     const std::uint32_t start_row_index) {
-                const std::size_t j = start_row_index;
-
-                // Take m+1 limbs due to potential overflow
-                // We just take cmp and put the additional flags in there
-                // | x | y | eq | lt | gt | neq | leq | geq | s | inv | y0 | ...
+                const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
 
                 auto cmp_comp = component.get_cmp_component();
                 auto result = generate_assignments(cmp_comp, assignment, instance_input, start_row_index);
 
-                auto x = var_value(assignment, instance_input.x);
-                auto y = var_value(assignment, instance_input.y);
-
                 auto one = BlueprintFieldType::value_type::one();
-                assignment.witness(component.W(5), j) = one - var_value(assignment, result.eq);
-                assignment.witness(component.W(6), j) = one - var_value(assignment, result.gt);
-                assignment.witness(component.W(7), j) = one - var_value(assignment, result.lt);
+                assignment.witness(magic(var_pos.neq)) = one - var_value(assignment, result.eq);
+                assignment.witness(magic(var_pos.leq)) = one - var_value(assignment, result.gt);
+                assignment.witness(magic(var_pos.geq)) = one - var_value(assignment, result.lt);
 
                 return typename plonk_fixedpoint_cmp_extended<BlueprintFieldType, ArithmetizationParams>::result_type(
                     component, start_row_index);
@@ -191,17 +231,20 @@ namespace nil {
                 const typename plonk_fixedpoint_cmp_extended<BlueprintFieldType, ArithmetizationParams>::input_type
                     &instance_input) {
 
+                int64_t start_row_index = 1 - component.rows_amount;
+                const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
+
                 using var = typename plonk_fixedpoint_cmp_extended<BlueprintFieldType, ArithmetizationParams>::var;
 
                 auto cmp_comp = component.get_cmp_component();
                 auto constraints = get_constraints(cmp_comp, bp, assignment, instance_input);
 
-                auto eq = var(component.W(2), 0);
-                auto lt = var(component.W(3), 0);
-                auto gt = var(component.W(4), 0);
-                auto neq = var(component.W(5), 0);
-                auto leq = var(component.W(6), 0);
-                auto geq = var(component.W(7), 0);
+                auto eq = var(magic(var_pos.eq));
+                auto lt = var(magic(var_pos.lt));
+                auto gt = var(magic(var_pos.gt));
+                auto neq = var(magic(var_pos.neq));
+                auto leq = var(magic(var_pos.leq));
+                auto geq = var(magic(var_pos.geq));
 
                 auto one = BlueprintFieldType::value_type::one();
                 auto constraint_1 = eq + neq - one;
