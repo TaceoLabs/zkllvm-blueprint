@@ -113,7 +113,7 @@ namespace nil {
                 static manifest_type get_manifest(uint8_t m1, uint8_t m2) {
                     static manifest_type manifest =
                         manifest_type(std::shared_ptr<manifest_param>(new manifest_range_param(
-                                          std::max(4 + (M(m1) + M(m2)), 1 + 2 * (m1 + m2)), 5 + 3 * (m2 + m1))),
+                                          std::max(5, 2 * (M(m1) + M(m2))), 5 + 2 * (m2 + m1))),
                                       false)
                             .merge_with(exp_component::get_manifest(m1, m2));
                     return manifest;
@@ -122,7 +122,7 @@ namespace nil {
                 constexpr static std::size_t get_log_rows_amount(std::size_t witness_amount,
                                                                  std::size_t lookup_column_amount, uint8_t m1,
                                                                  uint8_t m2) {
-                    if (5 + 3 * (M(m2) + M(m1)) <= witness_amount) {
+                    if (5 + 2 * (M(m2) + M(m1)) <= witness_amount) {
                         return 1;
                     } else {
                         return 2;
@@ -148,7 +148,7 @@ namespace nil {
                 };
 
                 struct var_positions {
-                    CellPosition x, y, exp1_out, exp2_in, exp2_out, y0, a0, b0, c0;
+                    CellPosition x, y, exp1_out, exp2_in, exp2_out, a0, b0, c0;
                     int64_t exp1_row, exp2_row;
                 };
 
@@ -163,54 +163,52 @@ namespace nil {
                     switch (this->log_rows_amount) {
                         case 1:
 
-                            // trace layout (5 + 3*m col(s), 2 constant col(s), 1 row(s))
+                            // trace layout (5 + 2*m col(s), 2 constant col(s), 1 row(s))
                             //
                             //               |                witness
                             //     r\c       | 0 | 1 |     2    |    3    |     4    |
                             // +-------------+---+---+----------+---------+----------+ ...
-                            // | exp1_row(s) |             <exp_witnesses>           |
-                            // | exp2_row(s) |             <exp_witnesses>           |
+                            // | exp1_row(s) |              <exp_witnesses>
+                            // | exp2_row(s) |              <exp_witnesses>
                             // |      0      | x | y | exp1_out | exp2_in | exp2_out |
 
-                            //     |                     witness                |   constant  |
-                            //     | 5  |..| 5+m-1| 5+m|..|5+2m-1|5+2m|..|5+3m-1|   0  |   1  |
-                            // ... +----+--+------+----+--+------+----+--+------+------+------+
-                            //     |                     <exp_witnesses>        | <exp_const> |
-                            //     | y0 |..| ym-1 | a0 |..| am-1 | b0 |..| bm-1 |   -  |   -  |
+                            //            witness                |   constant  |
+                            //     | 5  |..|5+m-1 |5+m |..|5+2m-1|   0  |   1  |
+                            // ... +----+--+------+----+--+------+------+------+
+                            //            <exp_witnesses>        | <exp_const> |
+                            //     | a0 |..| am-1 | b0 |..| bm-1 |   -  |   -  |
 
                             pos.x = CellPosition(this->W(0), row_index);
                             pos.y = CellPosition(this->W(1), row_index);
                             pos.exp1_out = CellPosition(this->W(2), row_index);
                             pos.exp2_in = CellPosition(this->W(3), row_index);
                             pos.exp2_out = CellPosition(this->W(4), row_index);
-                            pos.y0 = CellPosition(this->W(5 + 0 * m), row_index);    // occupies m cells
-                            pos.a0 = CellPosition(this->W(5 + 1 * m), row_index);    // occupies m cells
-                            pos.b0 = CellPosition(this->W(5 + 2 * m), row_index);    // occupies m cells
+                            pos.a0 = CellPosition(this->W(5 + 0 * m), row_index);    // occupies m cells
+                            pos.b0 = CellPosition(this->W(5 + 1 * m), row_index);    // occupies m cells
                             break;
                         case 2:
 
-                            // trace layout (max(4 + m, 1 + 2*m) col(s), 2 constant col(s), 2 row(s))
+                            // trace layout (max(5, 2 * m), 2 constant col(s), 2 row(s))
                             //
-                            //               |                witness                    |   constant  |
-                            //      r\c      |    0     | 1  |..|  m-1  | m  | .. | 2m-1 |   0  |   1  |
-                            // +-------------+----------+----+--+-------+----+----+------+------+------+
-                            // | exp1_row(s) |                <exp_witnesses>            | <exp_const> |
-                            // | exp1_row(s) |                <exp_witnesses>            | <exp_const> |
-                            // |      0      | exp1_out | a0 |..| am-1  | b0 | .. | bm-1 |   -  |   -  |
+                            //               |           witness              |   constant  |
+                            //      r\c      |  0 |..|  m-1  | m  | .. | 2m-1 |   0  |   1  |
+                            // +-------------+----+--+-------+----+----+------+------+------+
+                            // | exp1_row(s) |       <exp_witnesses>          | <exp_const> |
+                            // | exp1_row(s) |       <exp_witnesses           | <exp_const> |
+                            // |      0      | a0 |..| am-1  | b0 | .. | bm-1 |   -  |   -  |
 
-                            //               |                  witness                     |   constant  |
-                            //      r\c      | 0 | 1 |    2    |     3    |  4 | .. | 4+m-1 |   0  |   1  |
-                            // +------------+---+---+----------+----------+----+----+-------+------+------+
-                            // |      1      | x | y | exp2_in | exp2_out | y0 | .. | ym-1  |   -  |   -  |
+                            //               |              witness                  |   constant  |
+                            //      r\c      | 0 | 1 |    2     |    3    |    4     |   0  |   1  |
+                            // +-------------+---+---+----------+---------+----------+-------------+
+                            // |      1      | x | y | exp1_out | exp2_in | exp2_out |   -  |   -  |
 
-                            pos.exp1_out = CellPosition(this->W(0), row_index);
-                            pos.a0 = CellPosition(this->W(1 + 0 * m), row_index);    // occupies m cells
-                            pos.b0 = CellPosition(this->W(1 + 1 * m), row_index);    // occupies m cells
+                            pos.a0 = CellPosition(this->W(0 + 0 * m), row_index);    // occupies m cells
+                            pos.b0 = CellPosition(this->W(0 + 1 * m), row_index);    // occupies m cells
                             pos.x = CellPosition(this->W(0), row_index + 1);
                             pos.y = CellPosition(this->W(1), row_index + 1);
-                            pos.exp2_in = CellPosition(this->W(2), row_index + 1);
-                            pos.exp2_out = CellPosition(this->W(3), row_index + 1);
-                            pos.y0 = CellPosition(this->W(4 + 0 * m), row_index + 1);    // occupies m cells
+                            pos.exp1_out = CellPosition(this->W(2), row_index + 1);
+                            pos.exp2_in = CellPosition(this->W(3), row_index + 1);
+                            pos.exp2_out = CellPosition(this->W(4), row_index + 1);
                             break;
                         default:
                             BLUEPRINT_RELEASE_ASSERT(false && "log rows_amount (i.e., without exp) must be 1 or 2");
@@ -307,25 +305,20 @@ namespace nil {
                 auto a_val = exp1_out_val - x_val;
                 auto b_val = x_val - exp2_out_val - 1;
 
-                std::vector<uint16_t> y0_val;
                 std::vector<uint16_t> a0_val;
                 std::vector<uint16_t> b0_val;
 
-                bool sign = FixedPointHelper<BlueprintFieldType>::decompose(y_val, y0_val);
-                BLUEPRINT_RELEASE_ASSERT(!sign);
-                sign = FixedPointHelper<BlueprintFieldType>::decompose(a_val, a0_val);
+                bool sign = FixedPointHelper<BlueprintFieldType>::decompose(a_val, a0_val);
                 BLUEPRINT_RELEASE_ASSERT(!sign);
                 sign = FixedPointHelper<BlueprintFieldType>::decompose(b_val, b0_val);
                 BLUEPRINT_RELEASE_ASSERT(!sign);
 
                 // is ok because decomp is at least of size 4 and the biggest we have is 32.32
                 auto m = component.get_m();
-                BLUEPRINT_RELEASE_ASSERT(y0_val.size() >= m);
                 BLUEPRINT_RELEASE_ASSERT(a0_val.size() >= m);
                 BLUEPRINT_RELEASE_ASSERT(b0_val.size() >= m);
 
                 for (auto i = 0; i < m; i++) {
-                    assignment.witness(var_pos.y0.column() + i, var_pos.y0.row()) = y0_val[i];
                     assignment.witness(var_pos.a0.column() + i, var_pos.a0.row()) = a0_val[i];
                     assignment.witness(var_pos.b0.column() + i, var_pos.b0.row()) = b0_val[i];
                 }
@@ -348,11 +341,9 @@ namespace nil {
                 const int64_t start_row_index = 1 - static_cast<int64_t>(component.rows_amount);
                 const auto var_pos = component.get_var_pos(start_row_index);
 
-                auto y0 = nil::crypto3::math::expression(var(magic(var_pos.y0)));
                 auto a0 = nil::crypto3::math::expression(var(magic(var_pos.a0)));
                 auto b0 = nil::crypto3::math::expression(var(magic(var_pos.b0)));
                 for (auto i = 1; i < m; i++) {
-                    y0 += var(var_pos.y0.column() + i, var_pos.y0.row()) * (1ULL << (16 * i));
                     a0 += var(var_pos.a0.column() + i, var_pos.a0.row()) * (1ULL << (16 * i));
                     b0 += var(var_pos.b0.column() + i, var_pos.b0.row()) * (1ULL << (16 * i));
                 }
@@ -364,12 +355,11 @@ namespace nil {
                 auto exp2_out = var(magic(var_pos.exp2_out));
 
                 // TACEO_TODO extend for lookup constraint
-                auto constraint_1 = y - y0;
-                auto constraint_2 = exp1_out - x - a0;
-                auto constraint_3 = x - exp2_out - 1 - b0;
-                auto constraint_4 = y - 1 - exp2_in;
+                auto constraint_1 = exp1_out - x - a0;
+                auto constraint_2 = x - exp2_out - 1 - b0;
+                auto constraint_3 = y - 1 - exp2_in;
 
-                return bp.add_gate({constraint_1, constraint_2, constraint_3, constraint_4});
+                return bp.add_gate({constraint_1, constraint_2, constraint_3});
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>

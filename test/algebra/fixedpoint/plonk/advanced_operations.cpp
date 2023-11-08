@@ -233,9 +233,25 @@ FieldType generate_random_for_fixedpoint(uint8_t m1, uint8_t m2, RngType &rng) {
     return FieldType(x);
 }
 
+template<typename FieldType, typename RngType>
+FieldType generate_random_post_comma_for_fixedpoint(uint8_t m2, RngType &rng) {
+    using distribution = boost::random::uniform_int_distribution<uint64_t>;
+
+    BLUEPRINT_RELEASE_ASSERT(m2 > 0 && m2 < 3);
+
+    uint64_t max = (1ull << (16 * m2)) - 1;
+
+    distribution dist = distribution(0, max);
+    uint64_t x = dist(rng);
+    return FieldType(x);
+}
+
 template<typename FixedType, typename RngType>
 void test_components_on_random_data(RngType &rng) {
     FixedType x(generate_random_for_fixedpoint<typename FixedType::value_type>(FixedType::M_1, FixedType::M_2, rng),
+                FixedType::SCALE);
+
+    FixedType y(generate_random_post_comma_for_fixedpoint<typename FixedType::value_type>(FixedType::M_2, rng),
                 FixedType::SCALE);
 
     if (x.get_value() >= 0) {
@@ -243,6 +259,14 @@ void test_components_on_random_data(RngType &rng) {
         test_fixedpoint_sqrt_floor<FixedType>(x);
         if (x.get_value() > 0) {
             test_fixedpoint_log<FixedType>(x);
+        }
+    }
+
+    if (y.get_value() >= 0) {
+        test_fixedpoint_sqrt<FixedType>(y);
+        test_fixedpoint_sqrt_floor<FixedType>(y);
+        if (y.get_value() > 0) {
+            test_fixedpoint_log<FixedType>(y);
         }
     }
 }
