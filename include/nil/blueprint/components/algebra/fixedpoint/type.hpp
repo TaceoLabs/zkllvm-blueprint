@@ -81,6 +81,7 @@ namespace nil {
                 static bool split_exp(const value_type &, uint16_t, uint64_t &, uint64_t &);
 
                 static value_type sqrt(const value_type &, bool floor = false);
+                static value_type log(const value_type &, uint64_t delta);
 
                 static value_type tanh_lower_range(uint8_t m2);
                 static value_type tanh_upper_range(uint8_t m1, uint8_t m2);
@@ -140,6 +141,7 @@ namespace nil {
 
                 FixedPoint exp(bool ranged = false) const;
                 FixedPoint sqrt(bool floor = false) const;    // rounds per default
+                FixedPoint log() const;
                 FixedPoint rescale() const;
                 static FixedPoint dot(const std::vector<FixedPoint> &, const std::vector<FixedPoint> &);
 
@@ -299,6 +301,7 @@ namespace nil {
             template<typename BlueprintFieldType>
             typename FixedPointHelper<BlueprintFieldType>::value_type
                 FixedPointHelper<BlueprintFieldType>::sqrt(const value_type &inp, bool floor) {
+                BLUEPRINT_RELEASE_ASSERT(inp >= 0 && inp <= P_HALF);
                 modular_backend val = field_to_backend(inp);
                 typename BlueprintFieldType::integral_type val_int(val);
                 big_float val_float(val_int);
@@ -308,6 +311,22 @@ namespace nil {
                 if (!floor) {
                     out += 0.5;
                 }
+
+                auto int_val = out.convert_to<nil::crypto3::multiprecision::cpp_int>();
+                return value_type(int_val);
+            }
+
+            template<typename BlueprintFieldType>
+            typename FixedPointHelper<BlueprintFieldType>::value_type
+                FixedPointHelper<BlueprintFieldType>::log(const value_type &inp, uint64_t delta) {
+                BLUEPRINT_RELEASE_ASSERT(inp > 0 && inp <= P_HALF);
+                modular_backend val = field_to_backend(inp);
+                typename BlueprintFieldType::integral_type val_int(val);
+                big_float val_float(val_int);
+                val_float /= delta;
+                big_float out;
+                nil::crypto3::multiprecision::default_ops::eval_log(out.backend(), val_float.backend());
+                out *= delta;
 
                 auto int_val = out.convert_to<nil::crypto3::multiprecision::cpp_int>();
                 return value_type(int_val);
@@ -609,7 +628,6 @@ namespace nil {
 
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
             FixedPoint<BlueprintFieldType, M1, M2> FixedPoint<BlueprintFieldType, M1, M2>::sqrt(bool floor) const {
-
                 auto val = this->value;
                 if (scale == SCALE) {
                     val *= DELTA;
@@ -619,6 +637,28 @@ namespace nil {
 
                 auto field_val = helper::sqrt(val, floor);
                 return FixedPoint(field_val, SCALE);
+            }
+
+            template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
+            FixedPoint<BlueprintFieldType, M1, M2> FixedPoint<BlueprintFieldType, M1, M2>::log() const {
+                BLUEPRINT_RELEASE_ASSERT(scale == SCALE);
+                auto field_val = helper::log(value, DELTA);
+                auto fix = FixedPoint(field_val, SCALE);
+
+                // Rounding correctly
+                auto exp = fix.exp();
+                while (exp.get_value() > value) {
+                    fix.value -= 1;
+                    exp = fix.exp();
+                }
+
+                auto exp2 = (fix + FixedPoint(1, SCALE)).exp();
+                while (exp2.get_value() <= value) {
+                    fix.value += 1;
+                    exp2 = (fix + FixedPoint(1, SCALE)).exp();
+                }
+
+                return fix;
             }
 
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
