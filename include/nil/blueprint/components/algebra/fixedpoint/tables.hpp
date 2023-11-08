@@ -17,6 +17,7 @@ namespace nil {
 
                 static std::vector<value_type> fill_exp_a_table(uint8_t m2);
                 static std::vector<value_type> fill_exp_b_table(uint8_t m2);
+
             public:
                 FixedPointTables() = delete;
                 FixedPointTables(const FixedPointTables &) = delete;
@@ -24,7 +25,7 @@ namespace nil {
 
                 static constexpr uint16_t ExpBScale = 16;
                 static constexpr uint32_t ExpALen = 201;
-                static constexpr uint32_t ExpBLen = (1 << ExpBScale);
+                static constexpr uint32_t ExpBLen = (1ULL << ExpBScale);
 
                 static const std::vector<value_type> &get_exp_a_16();
                 static const std::vector<value_type> &get_exp_a_32();

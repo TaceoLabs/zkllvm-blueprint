@@ -468,20 +468,13 @@ namespace nil {
                 range_input.x = instance_input.x;
 
                 // Enable the exp component
-                std::size_t exp_selector = generate_gates(exp_comp, bp, assignment, exp_input);
-                assignment.enable_selector(exp_selector, var_pos.exp_row + exp_comp.rows_amount - 1);
-                generate_copy_constraints(exp_comp, bp, assignment, exp_input, var_pos.exp_row);
+                generate_circuit(exp_comp, bp, assignment, exp_input, var_pos.exp_row);
 
                 // Enable the div component
-                std::size_t div_selector = generate_gates(div_comp, bp, assignment, div_input);
-                assignment.enable_selector(div_selector, var_pos.div_row + div_comp.rows_amount - 1);
-                generate_copy_constraints(div_comp, bp, assignment, div_input, var_pos.div_row);
+                generate_circuit(div_comp, bp, assignment, div_input, var_pos.div_row);
 
                 // Enable the range component
-                std::size_t range_selector = generate_gates(range_comp, bp, assignment, range_input);
-                assignment.enable_selector(range_selector, var_pos.range_row + range_comp.rows_amount - 1);
-                generate_copy_constraints(range_comp, bp, assignment, range_input, var_pos.range_row);
-                generate_assignments_constant(range_comp, assignment, range_input, var_pos.range_row);
+                generate_circuit(range_comp, bp, assignment, range_input, var_pos.range_row);
 
                 // Enable the tanh component
                 std::size_t tanh_selector = generate_gates(component, bp, assignment, instance_input);

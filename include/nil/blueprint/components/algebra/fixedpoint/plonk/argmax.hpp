@@ -99,7 +99,7 @@ namespace nil {
                 // TACEO_TODO Update to lookup tables
                 static manifest_type get_manifest(uint8_t m1, uint8_t m2) {
                     static manifest_type manifest = manifest_type(
-                        std::shared_ptr<manifest_param>(new manifest_range_param(4 + (m1 + m2), 10 + (m2 + m1), 6)),
+                        std::shared_ptr<manifest_param>(new manifest_range_param(4 + (m1 + m2), 10 + (m2 + m1))),
                         false);
                     return manifest;
                 }

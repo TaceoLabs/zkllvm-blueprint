@@ -90,7 +90,7 @@ namespace nil {
                 static manifest_type get_manifest(uint8_t m1, uint8_t m2) {
                     static manifest_type manifest =
                         manifest_type(std::shared_ptr<manifest_param>(
-                                          new manifest_range_param(2 * (M(m2) + M(m1)), 4 + 2 * (m2 + m1), 4)),
+                                          new manifest_range_param(2 * (M(m2) + M(m1)), 4 + 2 * (m2 + m1))),
                                       false);
                     return manifest;
                 }

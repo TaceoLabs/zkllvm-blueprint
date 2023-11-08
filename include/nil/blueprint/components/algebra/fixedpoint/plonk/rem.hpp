@@ -81,7 +81,7 @@ namespace nil {
                 static manifest_type get_manifest(uint8_t m1, uint8_t m2) {
                     static manifest_type manifest =
                         manifest_type(std::shared_ptr<manifest_param>(new manifest_range_param(
-                                          3 + 2 * (M(m2) + M(m1)), 5 + 4 * (m2 + m1), 2 + 2 * (m2 + m1))),
+                                          3 + 2 * (M(m2) + M(m1)), 5 + 4 * (m2 + m1))),
                                       false);
                     return manifest;
                 }
@@ -97,7 +97,7 @@ namespace nil {
 
                 constexpr static const std::size_t gates_amount = 1;
                 const std::size_t rows_amount = get_rows_amount(this->witness_amount(), 0, m1, m2);
-                
+
                 struct input_type {
                     var x = var(0, 0, false);
                     var y = var(0, 0, false);
@@ -158,7 +158,7 @@ namespace nil {
                     }
                     return pos;
                 }
-                
+
                 struct result_type {
                     var output = var(0, 0, false);
                     result_type(const fix_rem &component, std::uint32_t start_row_index) {

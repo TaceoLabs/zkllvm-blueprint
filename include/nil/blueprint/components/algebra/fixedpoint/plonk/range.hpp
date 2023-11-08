@@ -78,6 +78,10 @@ namespace nil {
                     return m2;
                 }
 
+                uint64_t get_delta() const {
+                    return 1ULL << (16 * m2);
+                }
+
                 value_type get_x_lo() const {
                     return x_lo;
                 }
@@ -109,10 +113,8 @@ namespace nil {
 
                 // TACEO_TODO Update to lookup tables
                 static manifest_type get_manifest(uint8_t m1, uint8_t m2) {
-                    static manifest_type manifest =
-                        manifest_type(std::shared_ptr<manifest_param>(
-                                          new manifest_range_param(10, 10 + 2 * (m2 + m1 + 1), 2 + 2 * (m2 + m1))),
-                                      false);
+                    static manifest_type manifest = manifest_type(
+                        std::shared_ptr<manifest_param>(new manifest_range_param(10, 10 + 2 * (m2 + m1 + 1))), false);
                     return manifest;
                 }
 

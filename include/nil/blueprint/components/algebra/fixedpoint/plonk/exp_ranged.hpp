@@ -9,11 +9,12 @@ namespace nil {
         namespace components {
 
             // Uses the range gadget for clipping, and modifies the constraints of the exp gadget accordingly
-            
+
             /**
              * Component representing an exp operation with clipping.
-             * 
-             * Clipping means that the output is set to the highest/lowest allowed value in case of being too large/small.
+             *
+             * Clipping means that the output is set to the highest/lowest allowed value in case of being too
+             * large/small.
              *
              * The delta of y is the same as the delta of x.
              *
@@ -100,6 +101,27 @@ namespace nil {
                 }
 
             public:
+                uint8_t get_m() const {
+                    return range.get_m();
+                }
+
+                uint8_t get_m1() const {
+                    return range.get_m1();
+                }
+
+                uint8_t get_m2() const {
+                    return range.get_m2();
+                }
+
+                uint64_t get_delta() const {
+                    return range.get_delta();
+                }
+
+                static std::size_t get_witness_columns(std::size_t witness_amount, uint8_t m1, uint8_t m2) {
+                    return std::max(exp_component::get_witness_columns(m2),
+                                    range_component::get_witness_columns(witness_amount, m1, m2));
+                }
+
                 struct var_positions {
                     CellPosition exp_min, exp_max;
                     typename range_component::var_positions range_pos;
@@ -183,6 +205,16 @@ namespace nil {
 
                 using input_type = typename exp_component::input_type;
                 using result_type = typename exp_component::result_type;
+
+                result_type get_result(std::uint32_t start_row_index) const {
+                    const auto var_pos = get_var_pos(static_cast<int64_t>(start_row_index));
+                    return result_type(exp, static_cast<size_t>(var_pos.exp_row));
+                }
+
+                result_type get_result(std::size_t start_row_index) const {
+                    const auto var_pos = get_var_pos(static_cast<int64_t>(start_row_index));
+                    return result_type(exp, static_cast<size_t>(var_pos.exp_row));
+                }
 
                 template<typename WitnessContainerType, typename ConstantContainerType,
                          typename PublicInputContainerType>
@@ -298,10 +330,7 @@ namespace nil {
 
                 // Enable the range component
                 auto range_comp = component.get_range_component();
-                std::size_t range_selector = generate_gates(range_comp, bp, assignment, range_input);
-                assignment.enable_selector(range_selector, var_pos.range_row + range_comp.rows_amount - 1);
-                generate_copy_constraints(range_comp, bp, assignment, range_input, var_pos.range_row);
-                generate_assignments_constant(range_comp, assignment, range_input, var_pos.range_row);
+                generate_circuit(range_comp, bp, assignment, range_input, var_pos.range_row);
 
                 // We slightly modify the exp component
                 std::size_t exp_selector = generate_exp_gates(component, bp, assignment, instance_input);
@@ -314,8 +343,7 @@ namespace nil {
                 // Finally, we have to put the min/max values into the constant columns
                 generate_assignments_constant(component, assignment, instance_input, var_pos.start_row);
 
-                return typename plonk_fixedpoint_exp_ranged<BlueprintFieldType, ArithmetizationParams>::result_type(
-                    exp_comp, static_cast<size_t>(var_pos.exp_row));
+                return component.get_result(start_row_index);
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
