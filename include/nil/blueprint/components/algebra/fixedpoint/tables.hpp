@@ -75,8 +75,10 @@ namespace nil {
                 std::vector<value_type> exp_a;
                 exp_a.reserve(ExpALen);
                 for (auto i = 0; i < ExpALen; ++i) {
-                    big_float val = std::exp(i - (int32_t)ExpALen / 2);
-                    val *= (double)(1ULL << (16 * m2));
+                    big_float val_in = i - (int32_t)ExpALen / 2;
+                    big_float val;
+                    nil::crypto3::multiprecision::default_ops::eval_exp(val.backend(), val_in.backend());
+                    val *= (1ULL << (16 * m2));
                     auto int_val = val.convert_to<nil::crypto3::multiprecision::cpp_int>();
                     auto field_val = value_type(int_val);
                     exp_a.push_back(field_val);
@@ -87,11 +89,12 @@ namespace nil {
             template<typename BlueprintFieldType>
             std::vector<typename FixedPointTables<BlueprintFieldType>::value_type>
                 FixedPointTables<BlueprintFieldType>::fill_exp_b_table(uint8_t m2) {
+                BLUEPRINT_RELEASE_ASSERT(m2 == 1 || m2 == 2);
                 std::vector<value_type> exp_b;
                 exp_b.reserve(ExpBLen);
                 for (auto i = 0; i < ExpBLen; ++i) {
                     double val = std::exp((double)i / ExpBLen);
-                    val *= (double)(1ULL << (16 * m2));
+                    val *= (1ULL << (16 * m2));
                     auto int_val = uint64_t(val);
                     auto field_val = value_type(int_val);
                     exp_b.push_back(field_val);
