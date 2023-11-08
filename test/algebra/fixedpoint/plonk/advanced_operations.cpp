@@ -180,14 +180,14 @@ void test_fixedpoint_log(FixedType input) {
                                                                 typename component_type::result_type &real_res) {
         auto real_res_ = FixedType(var_value(assignment, real_res.output), FixedType::SCALE);
         double real_res_f = real_res_.to_double();
-        // #ifdef BLUEPRINT_PLONK_PROFILING_ENABLED
+#ifdef BLUEPRINT_PLONK_PROFILING_ENABLED
         std::cout << "fixed_point log test: "
                   << "\n";
         std::cout << "input_f : " << input.to_double() << "\n";
         std::cout << "input   : " << input.get_value().data << "\n";
         std::cout << "expected: " << expected_res_f << "\n";
         std::cout << "real    : " << real_res_f << "\n\n";
-        // #endif
+#endif
         if (!doubleEquals(expected_res_f, real_res_f, EPSILON) || expected_res != real_res_) {
             std::cout << "expected        : " << expected_res.get_value().data << "\n";
             std::cout << "real            : " << real_res_.get_value().data << "\n\n";
@@ -279,19 +279,19 @@ BOOST_AUTO_TEST_SUITE(blueprint_plonk_test_suite)
 BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_advanced_operations_test_vesta) {
     using field_type = typename crypto3::algebra::curves::vesta::base_field_type;
     field_operations_test<FixedPoint16_16<field_type>, random_tests_amount>();
-    // field_operations_test<FixedPoint32_32<field_type>, random_tests_amount>();
+    field_operations_test<FixedPoint32_32<field_type>, random_tests_amount>();
 }
 
-// BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_advanced_operations_test_pallas) {
-//     using field_type = typename crypto3::algebra::curves::pallas::base_field_type;
-//     field_operations_test<FixedPoint16_16<field_type>, random_tests_amount>();
-//     field_operations_test<FixedPoint32_32<field_type>, random_tests_amount>();
-// }
+BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_advanced_operations_test_pallas) {
+    using field_type = typename crypto3::algebra::curves::pallas::base_field_type;
+    field_operations_test<FixedPoint16_16<field_type>, random_tests_amount>();
+    field_operations_test<FixedPoint32_32<field_type>, random_tests_amount>();
+}
 
-// BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_advanced_operations_test_bls12) {
-//     using field_type = typename crypto3::algebra::fields::bls12_fr<381>;
-//     field_operations_test<FixedPoint16_16<field_type>, random_tests_amount>();
-//     field_operations_test<FixedPoint32_32<field_type>, random_tests_amount>();
-// }
+BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_advanced_operations_test_bls12) {
+    using field_type = typename crypto3::algebra::fields::bls12_fr<381>;
+    field_operations_test<FixedPoint16_16<field_type>, random_tests_amount>();
+    field_operations_test<FixedPoint32_32<field_type>, random_tests_amount>();
+}
 
 BOOST_AUTO_TEST_SUITE_END()

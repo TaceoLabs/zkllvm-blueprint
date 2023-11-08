@@ -68,23 +68,19 @@ namespace nil {
                     return exp.get_m2();
                 }
 
-                uint64_t get_delta() const {
-                    return exp.get_delta();
-                }
-
-                value_type calc_exp(const value_type &x, uint8_t m1, uint8_t m2) const {
+                value_type calc_log(const value_type &x, uint8_t m1, uint8_t m2) const {
                     if (m1 == 1 && m2 == 1) {
                         auto el = FixedPoint<BlueprintFieldType, 1, 1>(x, 16);
-                        return el.exp().get_value();
+                        return el.log().get_value();
                     } else if (m1 == 2 && m2 == 1) {
                         auto el = FixedPoint<BlueprintFieldType, 2, 1>(x, 16);
-                        return el.exp().get_value();
+                        return el.log().get_value();
                     } else if (m1 == 1 && m2 == 2) {
                         auto el = FixedPoint<BlueprintFieldType, 1, 2>(x, 32);
-                        return el.exp().get_value();
+                        return el.log().get_value();
                     } else if (m1 == 2 && m2 == 2) {
                         auto el = FixedPoint<BlueprintFieldType, 2, 2>(x, 32);
-                        return el.exp().get_value();
+                        return el.log().get_value();
                     } else {
                         BLUEPRINT_RELEASE_ASSERT(false);
                         return 0;
@@ -287,24 +283,13 @@ namespace nil {
                 // Build the trace
                 ////////////////////////////////////////////////////////
 
-                auto delta = component.get_delta();
+                auto m1 = component.get_m1();
+                auto m2 = component.get_m2();
 
                 auto x_val = var_value(assignment, instance_input.x);
-                auto y_val = FixedPointHelper<BlueprintFieldType>::log(x_val, delta);
+                auto y_val = component.calc_log(x_val, m1, m2);
 
-                // Rounding correctly
-                auto exp = component.calc_exp(y_val, component.get_m1(), component.get_m2());
-                while (exp > x_val) {
-                    y_val -= 1;
-                    exp = component.calc_exp(y_val, component.get_m1(), component.get_m2());
-                }
-                auto exp2 = component.calc_exp(y_val + 1, component.get_m1(), component.get_m2());
-                while (exp2 <= x_val) {
-                    y_val += 1;
-                    exp2 = component.calc_exp(y_val + 1, component.get_m1(), component.get_m2());
-                }
-
-                auto exp2_in_val = y_val + 1;
+                auto exp2_in_val = y_val - 1;
 
                 assignment.witness(magic(var_pos.x)) = x_val;
                 assignment.witness(magic(var_pos.y)) = y_val;
@@ -320,8 +305,8 @@ namespace nil {
                 assignment.witness(magic(var_pos.exp2_out)) = exp2_out_val;
 
                 // Decompositions
-                auto a_val = x_val - exp1_out_val;
-                auto b_val = exp2_out_val - x_val - 1;
+                auto a_val = exp1_out_val - x_val;
+                auto b_val = x_val - exp2_out_val - 1;
 
                 std::vector<uint16_t> y0_val;
                 std::vector<uint16_t> a0_val;
@@ -381,9 +366,9 @@ namespace nil {
 
                 // TACEO_TODO extend for lookup constraint
                 auto constraint_1 = y - y0;
-                auto constraint_2 = x - exp1_out - a0;
-                auto constraint_3 = exp2_out - x - 1 - b0;
-                auto constraint_4 = y + 1 - exp2_in;
+                auto constraint_2 = exp1_out - x - a0;
+                auto constraint_3 = x - exp2_out - 1 - b0;
+                auto constraint_4 = y - 1 - exp2_in;
 
                 return bp.add_gate({constraint_1, constraint_2, constraint_3, constraint_4});
             }

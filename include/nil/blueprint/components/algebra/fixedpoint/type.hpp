@@ -81,7 +81,6 @@ namespace nil {
                 static bool split_exp(const value_type &, uint16_t, uint64_t &, uint64_t &);
 
                 static value_type sqrt(const value_type &, bool floor = false);
-                static value_type log(const value_type &, uint64_t delta);
 
                 static value_type tanh_lower_range(uint8_t m2);
                 static value_type tanh_upper_range(uint8_t m1, uint8_t m2);
@@ -100,6 +99,7 @@ namespace nil {
                 using field_type = BlueprintFieldType;
                 using value_type = typename BlueprintFieldType::value_type;
                 using modular_backend = typename BlueprintFieldType::modular_backend;
+                using big_float = nil::crypto3::multiprecision::cpp_bin_float_double;
 
             private:
                 // I need a field element to deal with larger scales, such as the one as output from exp
@@ -311,22 +311,6 @@ namespace nil {
                 if (!floor) {
                     out += 0.5;
                 }
-
-                auto int_val = out.convert_to<nil::crypto3::multiprecision::cpp_int>();
-                return value_type(int_val);
-            }
-
-            template<typename BlueprintFieldType>
-            typename FixedPointHelper<BlueprintFieldType>::value_type
-                FixedPointHelper<BlueprintFieldType>::log(const value_type &inp, uint64_t delta) {
-                BLUEPRINT_RELEASE_ASSERT(inp > 0 && inp <= P_HALF);
-                modular_backend val = field_to_backend(inp);
-                typename BlueprintFieldType::integral_type val_int(val);
-                big_float val_float(val_int);
-                val_float /= delta;
-                big_float out;
-                nil::crypto3::multiprecision::default_ops::eval_log(out.backend(), val_float.backend());
-                out *= delta;
 
                 auto int_val = out.convert_to<nil::crypto3::multiprecision::cpp_int>();
                 return value_type(int_val);
@@ -642,20 +626,38 @@ namespace nil {
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
             FixedPoint<BlueprintFieldType, M1, M2> FixedPoint<BlueprintFieldType, M1, M2>::log() const {
                 BLUEPRINT_RELEASE_ASSERT(scale == SCALE);
-                auto field_val = helper::log(value, DELTA);
+                BLUEPRINT_RELEASE_ASSERT(value > 0 && value <= helper::P_HALF);
+
+                modular_backend val = helper::field_to_backend(value);
+                typename BlueprintFieldType::integral_type val_int(val);
+                big_float val_float(val_int);
+                val_float /= DELTA;
+                big_float out;
+                nil::crypto3::multiprecision::default_ops::eval_log(out.backend(), val_float.backend());
+                out *= DELTA;
+
+                auto int_val = out.convert_to<nil::crypto3::multiprecision::cpp_int>();
+
+                if (M2 == 2) {
+                    // The smallest 16 bit limb does not influence the exp output in this case
+                    int_val.backend().limbs()[0] &= 0xFFFFFFFFFFFF0000;
+                }
+
+                auto field_val = value_type(int_val);
                 auto fix = FixedPoint(field_val, SCALE);
 
-                // Rounding correctly
+                // Rounding correctly to lowest value that produces the correct exp result
+                auto offset = M2 == 1 ? 1 : 1ULL << 16;
                 auto exp = fix.exp();
-                while (exp.get_value() > value) {
-                    fix.value -= 1;
+                while (exp.get_value() < value) {
+                    fix.value += offset;
                     exp = fix.exp();
                 }
 
-                auto exp2 = (fix + FixedPoint(1, SCALE)).exp();
-                while (exp2.get_value() <= value) {
-                    fix.value += 1;
-                    exp2 = (fix + FixedPoint(1, SCALE)).exp();
+                auto exp2 = (fix - FixedPoint(1, SCALE)).exp();
+                while (exp2.get_value() >= value) {
+                    fix.value -= 1;
+                    exp2 = (fix - FixedPoint(1, SCALE)).exp();
                 }
 
                 return fix;
