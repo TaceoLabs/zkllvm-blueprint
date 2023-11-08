@@ -7,8 +7,7 @@ namespace nil {
     namespace blueprint {
         namespace components {
 
-            // Works by proving that the output y = floor(log(x))  The error of the output is at most 1 LSB of the
-            // fixedpoint representation.
+            // Works by proving that the output y = floor(log(x))  The error of the output is at most 2^{-16}.
 
             /**
              * Component representing a sqrt operation with input x and output y, where y = floor(log(x)).
