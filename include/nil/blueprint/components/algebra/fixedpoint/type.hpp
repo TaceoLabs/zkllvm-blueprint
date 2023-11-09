@@ -208,10 +208,23 @@ namespace nil {
 
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
             FixedPoint<BlueprintFieldType, M1, M2>::FixedPoint(double x) : scale(SCALE) {
+                BLUEPRINT_RELEASE_ASSERT(!std::isnan(x));
                 if (x < 0) {
-                    value = -value_type(static_cast<int64_t>(-x * DELTA));
+                    if (std::isinf(x)) {
+                        // Replace this with min-legal-value helper
+                        x = std::pow(2., M1 * 16 + M2 * 16);
+                        value = -value_type(static_cast<int64_t>(x) - 1);
+                    } else {
+                        value = -value_type(static_cast<int64_t>(-x * DELTA));
+                    }
                 } else {
-                    value = static_cast<int64_t>(x * DELTA);
+                    if (std::isinf(x)) {
+                        // Replace this with max-legal-value helper
+                        x = std::pow(2., M1 * 16 + M2 * 16);
+                        value = value_type(static_cast<int64_t>(x) - 1);
+                    } else {
+                        value = static_cast<int64_t>(x * DELTA);
+                    }
                 }
             }
 
