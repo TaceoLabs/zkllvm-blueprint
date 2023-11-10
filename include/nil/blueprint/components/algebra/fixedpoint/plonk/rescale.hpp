@@ -159,7 +159,7 @@ namespace nil {
 
                 std::map<std::string, std::size_t> component_lookup_tables() {
                     std::map<std::string, std::size_t> lookup_tables;
-                    lookup_tables[range_table::SUBTABLE_NAME] = 0;    // REQUIRED_TABLE
+                    lookup_tables[range_table::FULL_TABLE_NAME] = 0;    // REQUIRED_TABLE
                     return lookup_tables;
                 }
 
@@ -294,7 +294,7 @@ namespace nil {
                 std::vector<constraint_type> constraints;
                 constraints.reserve(m2);
 
-                auto table_id = lookup_tables_indices.at(range_table::SUBTABLE_NAME);
+                auto table_id = lookup_tables_indices.at(range_table::FULL_TABLE_NAME);
 
                 for (auto i = 0; i < m2; i++) {
                     constraint_type constraint;
