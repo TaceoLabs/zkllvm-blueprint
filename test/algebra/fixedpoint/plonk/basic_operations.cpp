@@ -154,8 +154,8 @@ void test_fixedpoint_rescale(FixedType input) {
     using BlueprintFieldType = typename FixedType::field_type;
     constexpr std::size_t WitnessColumns = 2 + FixedType::M_2;
     constexpr std::size_t PublicInputColumns = 1;
-    constexpr std::size_t ConstantColumns = 0;
-    constexpr std::size_t SelectorColumns = 1;
+    constexpr std::size_t ConstantColumns = 2;
+    constexpr std::size_t SelectorColumns = 3;
     using ArithmetizationParams = crypto3::zk::snark::
         plonk_arithmetization_params<WitnessColumns, PublicInputColumns, ConstantColumns, SelectorColumns>;
     using ArithmetizationType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>;
@@ -180,7 +180,7 @@ void test_fixedpoint_rescale(FixedType input) {
         auto real_res_ = FixedType(var_value(assignment, real_res.output), FixedType::SCALE);
         double real_res_f = real_res_.to_double();
 #ifdef BLUEPRINT_PLONK_PROFILING_ENABLED
-        std::cout << "fixed_point mul test: "
+        std::cout << "fixed_point rescale test: "
                   << "\n";
         std::cout << "input_f : " << input.to_double() << "\n";
         std::cout << "input   : " << input.get_value().data << "\n";

@@ -15,6 +15,8 @@ namespace nil {
                 using value_type = typename BlueprintFieldType::value_type;
                 using big_float = nil::crypto3::multiprecision::cpp_bin_float_double;
 
+                static std::vector<value_type> fill_range_table();
+
                 static std::vector<value_type> fill_exp_a_table(uint8_t m2);
                 static std::vector<value_type> fill_exp_b_table(uint8_t m2);
 
@@ -23,9 +25,12 @@ namespace nil {
                 FixedPointTables(const FixedPointTables &) = delete;
                 FixedPointTables &operator=(const FixedPointTables &) = delete;
 
+                static constexpr uint32_t RangeLen = (1ULL << 16);
                 static constexpr uint16_t ExpBScale = 16;
                 static constexpr uint32_t ExpALen = 201;
                 static constexpr uint32_t ExpBLen = (1ULL << ExpBScale);
+
+                static const std::vector<value_type> &get_range_table();
 
                 static const std::vector<value_type> &get_exp_a_16();
                 static const std::vector<value_type> &get_exp_a_32();
@@ -39,6 +44,13 @@ namespace nil {
                 // Highest to still get m2 + m1 limbs
                 static value_type get_highest_valid_exp_input(uint8_t m1, uint8_t m2);
             };
+
+            template<typename BlueprintFieldType>
+            const std::vector<typename FixedPointTables<BlueprintFieldType>::value_type> &
+                FixedPointTables<BlueprintFieldType>::get_range_table() {
+                static std::vector<value_type> range = fill_range_table();
+                return range;
+            }
 
             template<typename BlueprintFieldType>
             const std::vector<typename FixedPointTables<BlueprintFieldType>::value_type> &
@@ -66,6 +78,17 @@ namespace nil {
                 FixedPointTables<BlueprintFieldType>::get_exp_b_32() {
                 static std::vector<value_type> exp_b = fill_exp_b_table(2);
                 return exp_b;
+            }
+
+            template<typename BlueprintFieldType>
+            std::vector<typename FixedPointTables<BlueprintFieldType>::value_type>
+                FixedPointTables<BlueprintFieldType>::fill_range_table() {
+                std::vector<value_type> range;
+                range.reserve(RangeLen);
+                for (auto i = 0; i < RangeLen; ++i) {
+                    range.push_back(value_type(i));
+                }
+                return range;
             }
 
             template<typename BlueprintFieldType>

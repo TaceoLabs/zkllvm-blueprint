@@ -208,10 +208,21 @@ namespace nil {
 
             template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
             FixedPoint<BlueprintFieldType, M1, M2>::FixedPoint(double x) : scale(SCALE) {
-                if (x < 0) {
-                    value = -value_type(static_cast<int64_t>(-x * DELTA));
+                BLUEPRINT_RELEASE_ASSERT(!std::isnan(x));
+                // Clamp
+                if (std::isinf(x)) {
+                    auto max = FixedPoint::max().get_value();
+                    if (x < 0) {
+                        value = -max;
+                    } else {
+                        value = max;
+                    }
                 } else {
-                    value = static_cast<int64_t>(x * DELTA);
+                    if (x < 0) {
+                        value = -value_type(static_cast<int64_t>(-x * DELTA));
+                    } else {
+                        value = static_cast<int64_t>(x * DELTA);
+                    }
                 }
             }
 
@@ -741,5 +752,21 @@ namespace nil {
         }    // namespace components
     }        // namespace blueprint
 }    // namespace nil
+
+namespace std {
+    template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
+    class numeric_limits<nil::blueprint::components::FixedPoint<BlueprintFieldType, M1, M2>> {
+
+        using FixedType = typename nil::blueprint::components::FixedPoint<BlueprintFieldType, M1, M2>;
+
+    public:
+        static FixedType max() {
+            return FixedType::max();
+        };
+        static FixedType min() {
+            return -max();
+        };
+    };
+}    // namespace std
 
 #endif    // CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_HPP

@@ -10,6 +10,7 @@
 #include <nil/blueprint/basic_non_native_policy.hpp>
 
 #include "nil/blueprint/components/algebra/fixedpoint/type.hpp"
+#include "nil/blueprint/components/algebra/fixedpoint/lookup_tables/range.hpp"
 
 namespace nil {
     namespace blueprint {
@@ -72,6 +73,9 @@ namespace nil {
 
                 using var = typename component_type::var;
                 using manifest_type = plonk_component_manifest;
+                using lookup_table_definition =
+                    typename nil::crypto3::zk::snark::detail::lookup_table_definition<BlueprintFieldType>;
+                using range_table = fixedpoint_range_table<BlueprintFieldType>;
 
                 class gate_manifest_type : public component_gate_manifest {
                 public:
@@ -85,7 +89,6 @@ namespace nil {
                     return manifest;
                 }
 
-                // TACEO_TODO Update to lookup tables
                 static manifest_type get_manifest(uint8_t m2) {
                     static manifest_type manifest = manifest_type(
                         std::shared_ptr<manifest_param>(new manifest_single_value_param(get_witness_columns(m2))),
@@ -98,9 +101,10 @@ namespace nil {
                     return 1;
                 }
 
-                constexpr static const std::size_t gates_amount = 1;
+                // Includes the constraints + lookup_gates
+                constexpr static const std::size_t gates_amount = 2;
                 const std::size_t rows_amount = get_rows_amount(this->witness_amount(), 0);
-                
+
                 struct input_type {
                     var x = var(0, 0, false);
 
@@ -128,7 +132,7 @@ namespace nil {
                     pos.q0 = CellPosition(this->W(2 + 0 * m2), start_row_index);    // occupies m2 cells
                     return pos;
                 }
-                
+
                 struct result_type {
                     var output = var(0, 0, false);
                     result_type(const fix_rescale &component, std::uint32_t start_row_index) {
@@ -145,6 +149,19 @@ namespace nil {
                         return {output};
                     }
                 };
+
+                std::vector<std::shared_ptr<lookup_table_definition>> component_custom_lookup_tables() {
+                    std::vector<std::shared_ptr<lookup_table_definition>> result = {};
+                    auto table = std::shared_ptr<lookup_table_definition>(new range_table());
+                    result.push_back(table);
+                    return result;
+                }
+
+                std::map<std::string, std::size_t> component_lookup_tables() {
+                    std::map<std::string, std::size_t> lookup_tables;
+                    lookup_tables[range_table::SUBTABLE_NAME] = 0;    // REQUIRED_TABLE
+                    return lookup_tables;
+                }
 
                 template<typename ContainerType>
                 explicit fix_rescale(ContainerType witness, uint8_t m2) :
@@ -202,7 +219,8 @@ namespace nil {
                     // is ok because decomp is at least of size 4 and the biggest we have is 32.32
                     BLUEPRINT_RELEASE_ASSERT(decomp.size() >= component.get_m2());
                     for (auto i = 0; i < component.get_m2(); i++) {
-                        assignment.witness(var_pos.q0.column() + i, var_pos.q0.row()) = decomp[i];    // qi for i in [0, m2)
+                        assignment.witness(var_pos.q0.column() + i, var_pos.q0.row()) =
+                            decomp[i];    // qi for i in [0, m2)
                     }
                 }
 
@@ -238,7 +256,6 @@ namespace nil {
 
                 auto constraint = 2 * (x - y * delta - q) + delta;
 
-                // TACEO_TODO extend for lookup constraint
                 return constraint;
             }
 
@@ -256,6 +273,42 @@ namespace nil {
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
+            std::size_t generate_lookup_gates(
+                const plonk_fixedpoint_rescale<BlueprintFieldType, ArithmetizationParams> &component,
+                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                    &assignment,
+                const typename plonk_fixedpoint_rescale<BlueprintFieldType, ArithmetizationParams>::input_type
+                    &instance_input) {
+                int64_t start_row_index = 0;
+                const auto var_pos = component.get_var_pos(start_row_index);
+                auto m2 = component.get_m2();
+
+                const std::map<std::string, std::size_t> &lookup_tables_indices = bp.get_reserved_indices();
+
+                using var = typename plonk_fixedpoint_rescale<BlueprintFieldType, ArithmetizationParams>::var;
+                using constraint_type = typename crypto3::zk::snark::plonk_lookup_constraint<BlueprintFieldType>;
+                using range_table =
+                    typename plonk_fixedpoint_rescale<BlueprintFieldType, ArithmetizationParams>::range_table;
+
+                std::vector<constraint_type> constraints;
+                constraints.reserve(m2);
+
+                auto table_id = lookup_tables_indices.at(range_table::SUBTABLE_NAME);
+
+                for (auto i = 0; i < m2; i++) {
+                    constraint_type constraint;
+                    constraint.table_id = table_id;
+
+                    auto qi = var(var_pos.q0.column() + i, var_pos.q0.row());
+                    constraint.lookup_input = {qi};
+                    constraints.push_back(constraint);
+                }
+
+                return bp.add_lookup_gate(constraints);
+            }
+
+            template<typename BlueprintFieldType, typename ArithmetizationParams>
             void generate_copy_constraints(
                 const plonk_fixedpoint_rescale<BlueprintFieldType, ArithmetizationParams> &component,
                 circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
@@ -268,7 +321,7 @@ namespace nil {
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
 
                 using var = typename plonk_fixedpoint_rescale<BlueprintFieldType, ArithmetizationParams>::var;
-                
+
                 auto x = var(magic(var_pos.x), false);
                 bp.add_copy_constraint({instance_input.x, x});
             }
@@ -283,10 +336,11 @@ namespace nil {
                     &instance_input,
                 const std::size_t start_row_index) {
 
-                // TACEO_TODO extend for lookup?
                 std::size_t selector_index = generate_gates(component, bp, assignment, instance_input);
-
                 assignment.enable_selector(selector_index, start_row_index);
+
+                std::size_t lookup_selector_index = generate_lookup_gates(component, bp, assignment, instance_input);
+                assignment.enable_selector(lookup_selector_index, start_row_index);
 
                 generate_copy_constraints(component, bp, assignment, instance_input, start_row_index);
 
