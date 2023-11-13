@@ -74,6 +74,8 @@ namespace nil {
 
                 using var = typename component_type::var;
                 using manifest_type = plonk_component_manifest;
+                using lookup_table_definition =
+                    typename nil::crypto3::zk::snark::detail::lookup_table_definition<BlueprintFieldType>;
 
                 class gate_manifest_type : public component_gate_manifest {
                 public:
@@ -103,7 +105,8 @@ namespace nil {
                     return 1;
                 }
 
-                constexpr static const std::size_t gates_amount = 1;
+                // Includes the constraints + lookup_gates
+                constexpr static const std::size_t gates_amount = 2;
                 const std::size_t rows_amount = get_rows_amount(this->witness_amount(), 0);
 
                 using input_type = typename cmp_component::input_type;
@@ -168,6 +171,17 @@ namespace nil {
                         return {eq, lt, gt, min, max};
                     }
                 };
+
+// Allows disabling the lookup tables for faster testing
+#ifndef TEST_WITHOUT_LOOKUP_TABLES
+                std::vector<std::shared_ptr<lookup_table_definition>> component_custom_lookup_tables() {
+                    return cmp.component_custom_lookup_tables();
+                }
+
+                std::map<std::string, std::size_t> component_lookup_tables() {
+                    return cmp.component_lookup_tables();
+                }
+#endif
 
                 template<typename ContainerType>
                 explicit fix_cmp_min_max(ContainerType witness, uint8_t m1, uint8_t m2) :
@@ -290,6 +304,13 @@ namespace nil {
                 std::size_t selector_index = generate_gates(component, bp, assignment, instance_input);
 
                 assignment.enable_selector(selector_index, start_row_index);
+
+// Allows disabling the lookup tables for faster testing
+#ifndef TEST_WITHOUT_LOOKUP_TABLES
+                auto cmp_comp = component.get_cmp_component();
+                std::size_t lookup_selector_index = generate_lookup_gates(cmp_comp, bp, assignment, instance_input);
+                assignment.enable_selector(lookup_selector_index, start_row_index);
+#endif
 
                 generate_copy_constraints(component, bp, assignment, instance_input, start_row_index);
 

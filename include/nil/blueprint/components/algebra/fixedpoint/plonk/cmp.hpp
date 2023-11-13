@@ -10,6 +10,7 @@
 #include <nil/blueprint/basic_non_native_policy.hpp>
 
 #include "nil/blueprint/components/algebra/fixedpoint/type.hpp"
+#include "nil/blueprint/components/algebra/fixedpoint/lookup_tables/range.hpp"
 
 namespace nil {
     namespace blueprint {
@@ -21,8 +22,8 @@ namespace nil {
              * Component representing a compare operation.
              *
              * The user needs to ensure that the deltas of x and y match (the scale must be the same).
-             * 
-             * The outputs are flags with values in {0, 1} that describe the relation between x and y. 
+             *
+             * The outputs are flags with values in {0, 1} that describe the relation between x and y.
              *
              * Input:  x ... field element
              *         y ... field element
@@ -70,6 +71,9 @@ namespace nil {
 
                 using var = typename component_type::var;
                 using manifest_type = plonk_component_manifest;
+                using lookup_table_definition =
+                    typename nil::crypto3::zk::snark::detail::lookup_table_definition<BlueprintFieldType>;
+                using range_table = fixedpoint_range_table<BlueprintFieldType>;
 
                 class gate_manifest_type : public component_gate_manifest {
                 public:
@@ -96,7 +100,8 @@ namespace nil {
                     return 1;
                 }
 
-                constexpr static const std::size_t gates_amount = 1;
+                // Includes the constraints + lookup_gates
+                constexpr static const std::size_t gates_amount = 2;
                 const std::size_t rows_amount = get_rows_amount(this->witness_amount(), 0);
 
                 struct input_type {
@@ -159,6 +164,22 @@ namespace nil {
                         return {eq, lt, gt};
                     }
                 };
+
+// Allows disabling the lookup tables for faster testing
+#ifndef TEST_WITHOUT_LOOKUP_TABLES
+                std::vector<std::shared_ptr<lookup_table_definition>> component_custom_lookup_tables() {
+                    std::vector<std::shared_ptr<lookup_table_definition>> result = {};
+                    auto table = std::shared_ptr<lookup_table_definition>(new range_table());
+                    result.push_back(table);
+                    return result;
+                }
+
+                std::map<std::string, std::size_t> component_lookup_tables() {
+                    std::map<std::string, std::size_t> lookup_tables;
+                    lookup_tables[range_table::FULL_TABLE_NAME] = 0;    // REQUIRED_TABLE
+                    return lookup_tables;
+                }
+#endif
 
                 template<typename ContainerType>
                 explicit fix_cmp(ContainerType witness, uint8_t m1, uint8_t m2) :
@@ -285,7 +306,6 @@ namespace nil {
                 auto constraint_5 = lt - inv2 * (1 - s) * (1 - eq);
                 auto constraint_6 = gt - inv2 * (1 + s) * (1 - eq);
 
-                // TACEO_TODO extend for lookup constraint
                 return {constraint_1, constraint_2, constraint_3, constraint_4, constraint_5, constraint_6};
             }
 
@@ -300,6 +320,43 @@ namespace nil {
 
                 auto constraints = get_constraints(component, bp, assignment, instance_input);
                 return bp.add_gate(constraints);
+            }
+
+            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            std::size_t generate_lookup_gates(
+                const plonk_fixedpoint_cmp<BlueprintFieldType, ArithmetizationParams> &component,
+                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                    &assignment,
+                const typename plonk_fixedpoint_cmp<BlueprintFieldType, ArithmetizationParams>::input_type
+                    &instance_input) {
+                int64_t start_row_index = 0;
+                const auto var_pos = component.get_var_pos(start_row_index);
+                auto m_ = component.get_m() + 1;
+
+                const std::map<std::string, std::size_t> &lookup_tables_indices = bp.get_reserved_indices();
+
+                using var = typename plonk_fixedpoint_cmp<BlueprintFieldType, ArithmetizationParams>::var;
+                using constraint_type = typename crypto3::zk::snark::plonk_lookup_constraint<BlueprintFieldType>;
+                using range_table =
+                    typename plonk_fixedpoint_cmp<BlueprintFieldType, ArithmetizationParams>::range_table;
+
+                std::vector<constraint_type> constraints;
+                constraints.reserve(m_);
+
+                auto table_id = lookup_tables_indices.at(range_table::FULL_TABLE_NAME);
+
+                for (auto i = 0; i < m_; i++) {
+                    constraint_type constraint;
+                    constraint.table_id = table_id;
+
+                    // We put row=0 here and enable the selector in the correct one
+                    auto di = var(var_pos.d0.column() + i, 0);
+                    constraint.lookup_input = {di};
+                    constraints.push_back(constraint);
+                }
+
+                return bp.add_lookup_gate(constraints);
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
@@ -330,10 +387,15 @@ namespace nil {
                     &instance_input,
                 const std::size_t start_row_index) {
 
-                // TACEO_TODO extend for lookup?
                 std::size_t selector_index = generate_gates(component, bp, assignment, instance_input);
 
                 assignment.enable_selector(selector_index, start_row_index);
+
+// Allows disabling the lookup tables for faster testing
+#ifndef TEST_WITHOUT_LOOKUP_TABLES
+                std::size_t lookup_selector_index = generate_lookup_gates(component, bp, assignment, instance_input);
+                assignment.enable_selector(lookup_selector_index, start_row_index);
+#endif
 
                 generate_copy_constraints(component, bp, assignment, instance_input, start_row_index);
 
