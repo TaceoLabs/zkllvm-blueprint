@@ -436,7 +436,7 @@ namespace nil {
                     &instance_input) {
                 const int64_t start_row_index = 1 - static_cast<int64_t>(component.rows_amount);
                 const auto var_pos = component.get_var_pos(start_row_index);
-                auto m = component.get_m();
+                auto m_ = component.get_m() + 1;
 
                 const std::map<std::string, std::size_t> &lookup_tables_indices = bp.get_reserved_indices();
 
@@ -446,12 +446,12 @@ namespace nil {
                     typename plonk_fixedpoint_range<BlueprintFieldType, ArithmetizationParams>::range_table;
 
                 std::vector<constraint_type> constraints;
-                constraints.reserve(2 * m);
+                constraints.reserve(2 * m_);
 
                 auto table_id = lookup_tables_indices.at(range_table::FULL_TABLE_NAME);
                 BLUEPRINT_RELEASE_ASSERT(var_pos.a0.row() == var_pos.b0.row());
 
-                for (auto i = 0; i < m; i++) {
+                for (auto i = 0; i < m_; i++) {
                     constraint_type constraint_a, constraint_b;
                     constraint_a.table_id = table_id;
                     constraint_b.table_id = table_id;
