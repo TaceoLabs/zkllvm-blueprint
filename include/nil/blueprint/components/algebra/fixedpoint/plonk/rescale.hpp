@@ -150,6 +150,8 @@ namespace nil {
                     }
                 };
 
+// Allows disabling the lookup tables for faster testing
+#ifndef TEST_WITHOUT_LOOKUP_TABLES
                 std::vector<std::shared_ptr<lookup_table_definition>> component_custom_lookup_tables() {
                     std::vector<std::shared_ptr<lookup_table_definition>> result = {};
                     auto table = std::shared_ptr<lookup_table_definition>(new range_table());
@@ -162,6 +164,7 @@ namespace nil {
                     lookup_tables[range_table::FULL_TABLE_NAME] = 0;    // REQUIRED_TABLE
                     return lookup_tables;
                 }
+#endif
 
                 template<typename ContainerType>
                 explicit fix_rescale(ContainerType witness, uint8_t m2) :
@@ -339,8 +342,11 @@ namespace nil {
                 std::size_t selector_index = generate_gates(component, bp, assignment, instance_input);
                 assignment.enable_selector(selector_index, start_row_index);
 
+// Allows disabling the lookup tables for faster testing
+#ifndef TEST_WITHOUT_LOOKUP_TABLES
                 std::size_t lookup_selector_index = generate_lookup_gates(component, bp, assignment, instance_input);
                 assignment.enable_selector(lookup_selector_index, start_row_index);
+#endif
 
                 generate_copy_constraints(component, bp, assignment, instance_input, start_row_index);
 

@@ -1,5 +1,8 @@
 #define BOOST_TEST_MODULE blueprint_plonk_fixedpoint_basic_test
 
+// Enable for faster tests
+// #define TEST_WITHOUT_LOOKUP_TABLES
+
 #include <boost/test/unit_test.hpp>
 
 #include <nil/crypto3/algebra/fields/bls12/scalar_field.hpp>
