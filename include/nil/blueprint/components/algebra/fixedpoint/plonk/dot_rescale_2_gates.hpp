@@ -195,6 +195,17 @@ namespace nil {
 
                 using result_type = typename rescale_component::result_type;
 
+// Allows disabling the lookup tables for faster testing
+#ifndef TEST_WITHOUT_LOOKUP_TABLES
+                std::vector<std::shared_ptr<lookup_table_definition>> component_custom_lookup_tables() {
+                    return rescale.component_custom_lookup_tables();
+                }
+
+                std::map<std::string, std::size_t> component_lookup_tables() {
+                    return rescale.component_lookup_tables();
+                }
+#endif
+
                 template<typename ContainerType>
                 explicit fix_dot_rescale_2_gates(ContainerType witness, uint32_t dots, uint8_t m2) :
                     component_type(witness, {}, {}, get_manifest(dots, m2)), dots(dots),
@@ -359,7 +370,7 @@ namespace nil {
 
                 using var =
                     typename plonk_fixedpoint_dot_rescale_2_gates<BlueprintFieldType, ArithmetizationParams>::var;
-                    
+
                 auto dots = component.get_dots();
                 auto dots_per_row = component.get_dots_per_row();
 

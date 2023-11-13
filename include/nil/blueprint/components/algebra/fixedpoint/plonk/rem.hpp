@@ -10,6 +10,7 @@
 #include <nil/blueprint/basic_non_native_policy.hpp>
 
 #include "nil/blueprint/components/algebra/fixedpoint/type.hpp"
+#include "nil/blueprint/components/algebra/fixedpoint/lookup_tables/range.hpp"
 
 namespace nil {
     namespace blueprint {
@@ -64,6 +65,9 @@ namespace nil {
 
                 using var = typename component_type::var;
                 using manifest_type = plonk_component_manifest;
+                using lookup_table_definition =
+                    typename nil::crypto3::zk::snark::detail::lookup_table_definition<BlueprintFieldType>;
+                using range_table = fixedpoint_range_table<BlueprintFieldType>;
 
                 class gate_manifest_type : public component_gate_manifest {
                 public:
@@ -77,11 +81,10 @@ namespace nil {
                     return manifest;
                 }
 
-                // TACEO_TODO Update to lookup tables
                 static manifest_type get_manifest(uint8_t m1, uint8_t m2) {
                     static manifest_type manifest =
-                        manifest_type(std::shared_ptr<manifest_param>(new manifest_range_param(
-                                          3 + 2 * (M(m2) + M(m1)), 5 + 4 * (m2 + m1))),
+                        manifest_type(std::shared_ptr<manifest_param>(
+                                          new manifest_range_param(3 + 2 * (M(m2) + M(m1)), 5 + 4 * (m2 + m1))),
                                       false);
                     return manifest;
                 }
@@ -95,7 +98,8 @@ namespace nil {
                     }
                 }
 
-                constexpr static const std::size_t gates_amount = 1;
+                // Includes the constraints + lookup_gates
+                constexpr static const std::size_t gates_amount = 2;
                 const std::size_t rows_amount = get_rows_amount(this->witness_amount(), 0, m1, m2);
 
                 struct input_type {
@@ -138,15 +142,15 @@ namespace nil {
 
                             // trace layout (3 + 2*m col(s), 2 row(s))
                             //
-                            //  r\c|  0  |  1  | 2  | 3  | 2+m-1 | 2+m  | 3+m | 2+2m-1 | 3+2m-1   |
-                            // +---+-----+-----+----+----+-------+------+-----+--------+----------+
-                            // | 0 | s_y | s_a | a0 | .. | am-1  | d_0  | ..  | d_m-1  | <unused> |
-                            // | 1 | x   | y   | z  | y0 | ..    | ym-1 | z0  | ..     | zm-1     |
+                            //  r\c|  0  |  1  | 2 | 3  | .. | 3+m-1 | 3+m | .. | 3+2m-1 |
+                            // +---+-----+-----+---+----+----+-------+-----+----+--------+
+                            // | 0 | s_y | s_a | - | a0 | .. | am-1  | d0  | .. | dm-1   |
+                            // | 1 | x   | y   | z | y0 | .. | ym-1  | z0  | .. | zm-1   |
 
                             pos.s_y = CellPosition(this->W(0), start_row_index);
                             pos.s_a = CellPosition(this->W(1), start_row_index);
-                            pos.a0 = CellPosition(this->W(2 + 0 * m), start_row_index);    // occupies m cells
-                            pos.d0 = CellPosition(this->W(2 + 1 * m), start_row_index);    // occupies m cells
+                            pos.a0 = CellPosition(this->W(3 + 0 * m), start_row_index);    // occupies m cells
+                            pos.d0 = CellPosition(this->W(3 + 1 * m), start_row_index);    // occupies m cells
                             pos.x = CellPosition(this->W(0), start_row_index + 1);
                             pos.y = CellPosition(this->W(1), start_row_index + 1);
                             pos.z = CellPosition(this->W(2), start_row_index + 1);
@@ -175,6 +179,22 @@ namespace nil {
                         return {output};
                     }
                 };
+
+// Allows disabling the lookup tables for faster testing
+#ifndef TEST_WITHOUT_LOOKUP_TABLES
+                std::vector<std::shared_ptr<lookup_table_definition>> component_custom_lookup_tables() {
+                    std::vector<std::shared_ptr<lookup_table_definition>> result = {};
+                    auto table = std::shared_ptr<lookup_table_definition>(new range_table());
+                    result.push_back(table);
+                    return result;
+                }
+
+                std::map<std::string, std::size_t> component_lookup_tables() {
+                    std::map<std::string, std::size_t> lookup_tables;
+                    lookup_tables[range_table::FULL_TABLE_NAME] = 0;    // REQUIRED_TABLE
+                    return lookup_tables;
+                }
+#endif
 
                 template<typename ContainerType>
                 explicit fix_rem(ContainerType witness, uint8_t m1, uint8_t m2) :
@@ -302,7 +322,6 @@ namespace nil {
                 auto s_a = var(magic(var_pos.s_a));
                 auto s_y = var(magic(var_pos.s_y));
 
-                // TACEO_TODO extend for lookup constraint
                 auto constraint_1 = x - s_a * a0 * y - z;
                 auto constraint_2 = y - s_y * y0;
                 auto constraint_3 = z - s_y * z0;
@@ -312,6 +331,71 @@ namespace nil {
 
                 return bp.add_gate(
                     {constraint_1, constraint_2, constraint_3, constraint_4, constraint_5, constraint_6});
+            }
+
+            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            std::size_t generate_lookup_gates(
+                const plonk_fixedpoint_rem<BlueprintFieldType, ArithmetizationParams> &component,
+                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                    &assignment,
+                const typename plonk_fixedpoint_rem<BlueprintFieldType, ArithmetizationParams>::input_type
+                    &instance_input) {
+                const int64_t start_row_index = 1 - static_cast<int64_t>(component.rows_amount);
+                const auto var_pos = component.get_var_pos(start_row_index);
+                auto m = component.get_m();
+
+                const std::map<std::string, std::size_t> &lookup_tables_indices = bp.get_reserved_indices();
+
+                using var = typename plonk_fixedpoint_rem<BlueprintFieldType, ArithmetizationParams>::var;
+                using constraint_type = typename crypto3::zk::snark::plonk_lookup_constraint<BlueprintFieldType>;
+                using range_table =
+                    typename plonk_fixedpoint_rem<BlueprintFieldType, ArithmetizationParams>::range_table;
+
+                std::vector<constraint_type> constraints;
+
+                auto table_id = lookup_tables_indices.at(range_table::FULL_TABLE_NAME);
+                if (component.rows_amount == 2) {
+                    constraints.reserve(2 * m);
+                    // We put just two decompositions into the constraint and activate it twice
+                    BLUEPRINT_RELEASE_ASSERT(var_pos.a0.row() == var_pos.d0.row());
+                    BLUEPRINT_RELEASE_ASSERT(var_pos.y0.row() == var_pos.z0.row());
+                    BLUEPRINT_RELEASE_ASSERT(var_pos.a0.column() == var_pos.y0.column());
+                    BLUEPRINT_RELEASE_ASSERT(var_pos.d0.column() == var_pos.z0.column());
+                } else {
+                    constraints.reserve(4 * m);
+                }
+
+                for (auto i = 0; i < m; i++) {
+                    constraint_type constraint_y, constraint_z;
+                    constraint_y.table_id = table_id;
+                    constraint_z.table_id = table_id;
+
+                    // We put row=0 here and enable the selector in the correct one
+                    auto yi = var(var_pos.y0.column() + i, 0);
+                    auto zi = var(var_pos.z0.column() + i, 0);
+                    constraint_y.lookup_input = {yi};
+                    constraint_z.lookup_input = {zi};
+
+                    constraints.push_back(constraint_y);
+                    constraints.push_back(constraint_z);
+
+                    if (component.rows_amount == 1) {
+                        constraint_type constraint_a, constraint_d;
+                        constraint_a.table_id = table_id;
+                        constraint_d.table_id = table_id;
+
+                        auto ai = var(var_pos.a0.column() + i, 0);
+                        auto di = var(var_pos.d0.column() + i, 0);
+                        constraint_a.lookup_input = {ai};
+                        constraint_d.lookup_input = {di};
+
+                        constraints.push_back(constraint_a);
+                        constraints.push_back(constraint_d);
+                    }
+                }
+
+                return bp.add_lookup_gate(constraints);
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
@@ -344,11 +428,20 @@ namespace nil {
                     &instance_input,
                 const std::size_t start_row_index) {
 
-                // TACEO_TODO extend for lookup?
                 std::size_t selector_index = generate_gates(component, bp, assignment, instance_input);
 
                 // selector goes onto last row and gate uses all rows
                 assignment.enable_selector(selector_index, start_row_index + component.rows_amount - 1);
+
+// Allows disabling the lookup tables for faster testing
+#ifndef TEST_WITHOUT_LOOKUP_TABLES
+                std::size_t lookup_selector_index = generate_lookup_gates(component, bp, assignment, instance_input);
+                assignment.enable_selector(lookup_selector_index, start_row_index);
+                if (component.rows_amount == 2) {
+                    // We put just two decompositions into the constraint and activate it twice
+                    assignment.enable_selector(lookup_selector_index, start_row_index + 1);
+                }
+#endif
 
                 generate_copy_constraints(component, bp, assignment, instance_input, start_row_index);
 
