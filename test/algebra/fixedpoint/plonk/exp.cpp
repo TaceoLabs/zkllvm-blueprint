@@ -43,8 +43,8 @@ void test_fixedpoint_exp(FixedType input) {
     using BlueprintFieldType = typename FixedType::field_type;
     constexpr std::size_t WitnessColumns = 6 + 2 * FixedType::M_2;
     constexpr std::size_t PublicInputColumns = 1;
-    constexpr std::size_t ConstantColumns = 5;
-    constexpr std::size_t SelectorColumns = 5;
+    constexpr std::size_t ConstantColumns = 10;
+    constexpr std::size_t SelectorColumns = 10;
     using ArithmetizationParams = crypto3::zk::snark::
         plonk_arithmetization_params<WitnessColumns, PublicInputColumns, ConstantColumns, SelectorColumns>;
     using ArithmetizationType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>;
@@ -102,8 +102,8 @@ void test_fixedpoint_exp_ranged(FixedType input) {
     using BlueprintFieldType = typename FixedType::field_type;
     constexpr std::size_t WitnessColumns = 16;
     constexpr std::size_t PublicInputColumns = 1;
-    constexpr std::size_t ConstantColumns = 5;
-    constexpr std::size_t SelectorColumns = 5;
+    constexpr std::size_t ConstantColumns = 10;
+    constexpr std::size_t SelectorColumns = 10;
     using ArithmetizationParams = crypto3::zk::snark::
         plonk_arithmetization_params<WitnessColumns, PublicInputColumns, ConstantColumns, SelectorColumns>;
     using ArithmetizationType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>;
@@ -179,7 +179,7 @@ void test_fixedpoint_tanh(FixedType input) {
     using BlueprintFieldType = typename FixedType::field_type;
     constexpr std::size_t WitnessColumns = 16;
     constexpr std::size_t PublicInputColumns = 1;
-    constexpr std::size_t ConstantColumns = 5;
+    constexpr std::size_t ConstantColumns = 10;
     constexpr std::size_t SelectorColumns = 10;
     using ArithmetizationParams = crypto3::zk::snark::
         plonk_arithmetization_params<WitnessColumns, PublicInputColumns, ConstantColumns, SelectorColumns>;
