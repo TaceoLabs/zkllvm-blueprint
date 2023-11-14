@@ -173,11 +173,13 @@ namespace nil {
 
                 using var = typename component_type::var;
                 using manifest_type = plonk_component_manifest;
+                using lookup_table_definition =
+                    typename nil::crypto3::zk::snark::detail::lookup_table_definition<BlueprintFieldType>;
 
                 class gate_manifest_type : public component_gate_manifest {
                 public:
                     std::uint32_t gates_amount() const override {
-                        return 2;
+                        return 4;    // includes the lookup gates
                     }
                 };
 
@@ -215,6 +217,19 @@ namespace nil {
                     const auto var_pos = get_var_pos(static_cast<int64_t>(start_row_index));
                     return result_type(exp, static_cast<size_t>(var_pos.exp_row));
                 }
+
+// Allows disabling the lookup tables for faster testing
+#ifndef TEST_WITHOUT_LOOKUP_TABLES
+                std::vector<std::shared_ptr<lookup_table_definition>> component_custom_lookup_tables() {
+                    // includes the ones for the range component
+                    return exp.component_custom_lookup_tables();
+                }
+
+                std::map<std::string, std::size_t> component_lookup_tables() {
+                    // includes the ones for the range component
+                    return exp.component_lookup_tables();
+                }
+#endif
 
                 template<typename WitnessContainerType, typename ConstantContainerType,
                          typename PublicInputContainerType>
@@ -335,6 +350,13 @@ namespace nil {
                 // We slightly modify the exp component
                 std::size_t exp_selector = generate_exp_gates(component, bp, assignment, instance_input);
                 assignment.enable_selector(exp_selector, var_pos.exp_row);
+
+// Allows disabling the lookup tables for faster testing
+#ifndef TEST_WITHOUT_LOOKUP_TABLES
+                // Enable the lookup gates for exp
+                std::size_t lookup_selector_index = generate_lookup_gates(exp_comp, bp, assignment, instance_input);
+                assignment.enable_selector(lookup_selector_index, var_pos.exp_row);
+#endif
 
                 // Enable the copy constraints of exp
                 auto exp_comp = component.get_exp_component();

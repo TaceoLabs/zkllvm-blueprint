@@ -138,6 +138,8 @@ namespace nil {
 
                 using var = typename component_type::var;
                 using manifest_type = plonk_component_manifest;
+                using lookup_table_definition =
+                    typename nil::crypto3::zk::snark::detail::lookup_table_definition<BlueprintFieldType>;
 
                 class gate_manifest_type : public component_gate_manifest {
                 public:
@@ -247,6 +249,19 @@ namespace nil {
                         return {output};
                     }
                 };
+
+// Allows disabling the lookup tables for faster testing
+#ifndef TEST_WITHOUT_LOOKUP_TABLES
+                std::vector<std::shared_ptr<lookup_table_definition>> component_custom_lookup_tables() {
+                    // includes all required ones
+                    return exp.component_custom_lookup_tables();
+                }
+
+                std::map<std::string, std::size_t> component_lookup_tables() {
+                    // includes all required ones
+                    return exp.component_lookup_tables();
+                }
+#endif
 
                 template<typename WitnessContainerType, typename ConstantContainerType,
                          typename PublicInputContainerType>

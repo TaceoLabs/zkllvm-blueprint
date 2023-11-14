@@ -45,7 +45,6 @@ namespace nil {
                     return manifest;
                 }
 
-                // TACEO_TODO Update to lookup tables
                 static manifest_type get_manifest() {
                     static manifest_type manifest =
                         manifest_type(std::shared_ptr<manifest_param>(new manifest_single_value_param(2)), false);
@@ -178,7 +177,7 @@ namespace nil {
                 using var = typename plonk_fixedpoint_neg<BlueprintFieldType, ArithmetizationParams>::var;
 
                 const auto var_pos = component.get_var_pos(start_row_index);
-                
+
                 var x = var(magic(var_pos.x), false);
                 bp.add_copy_constraint({instance_input.x, x});
             }
@@ -193,7 +192,6 @@ namespace nil {
                     &instance_input,
                 const std::size_t start_row_index) {
 
-                // TACEO_TODO extend for lookup?
                 std::size_t selector_index = generate_gates(component, bp, assignment, instance_input);
 
                 assignment.enable_selector(selector_index, start_row_index);

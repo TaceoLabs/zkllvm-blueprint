@@ -465,7 +465,6 @@ namespace nil {
                     &instance_input,
                 const std::size_t start_row_index) {
 
-                // TACEO_TODO extend for lookup?
                 std::size_t selector_index = generate_gates(component, bp, assignment, instance_input);
 
                 // selector goes onto last row and gate uses all rows

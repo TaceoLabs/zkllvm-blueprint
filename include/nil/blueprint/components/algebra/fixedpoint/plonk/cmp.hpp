@@ -87,7 +87,6 @@ namespace nil {
                     return manifest;
                 }
 
-                // TACEO_TODO Update to lookup tables
                 static manifest_type get_manifest(uint8_t m1, uint8_t m2) {
                     static manifest_type manifest = manifest_type(
                         std::shared_ptr<manifest_param>(new manifest_single_value_param(get_witness_columns(m1, m2))),

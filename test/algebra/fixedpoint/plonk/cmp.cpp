@@ -669,9 +669,8 @@ void test_fixedpoint_range(FixedType input, FixedType x_lo, FixedType x_hi) {
         witness_list.push_back(i);
     }
     // Is done by the manifest in a real circuit
-    // constant columns 1 and 2 are used by the lookup table
     component_type component_instance(witness_list,
-                                      std::array<std::uint32_t, 2>({0, 3}),
+                                      std::array<std::uint32_t, 2>({0, 1}),
                                       std::array<std::uint32_t, 0>(),
                                       FixedType::M_1,
                                       FixedType::M_2,

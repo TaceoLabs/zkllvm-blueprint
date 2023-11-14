@@ -94,11 +94,14 @@ namespace nil {
 
                 using var = typename component_type::var;
                 using manifest_type = plonk_component_manifest;
+                using lookup_table_definition =
+                    typename nil::crypto3::zk::snark::detail::lookup_table_definition<BlueprintFieldType>;
+                using range_table = fixedpoint_range_table<BlueprintFieldType>;
 
                 class gate_manifest_type : public component_gate_manifest {
                 public:
                     std::uint32_t gates_amount() const override {
-                        return 3;
+                        return 6;
                     }
                 };
 
@@ -109,7 +112,6 @@ namespace nil {
                     return manifest;
                 }
 
-                // TACEO_TODO Update to lookup tables
                 static manifest_type get_manifest(uint8_t m1, uint8_t m2) {
                     static manifest_type manifest =
                         manifest_type(std::shared_ptr<manifest_param>(new manifest_range_param(
@@ -233,6 +235,19 @@ namespace nil {
                     }
                 };
 
+// Allows disabling the lookup tables for faster testing
+#ifndef TEST_WITHOUT_LOOKUP_TABLES
+                std::vector<std::shared_ptr<lookup_table_definition>> component_custom_lookup_tables() {
+                    // includes the ones for the range component
+                    return exp.component_custom_lookup_tables();
+                }
+
+                std::map<std::string, std::size_t> component_lookup_tables() {
+                    // includes the ones for the range component
+                    return exp.component_lookup_tables();
+                }
+#endif
+
                 template<typename WitnessContainerType, typename ConstantContainerType,
                          typename PublicInputContainerType>
                 fix_log(WitnessContainerType witness, ConstantContainerType constant,
@@ -354,12 +369,53 @@ namespace nil {
                 auto exp2_in = var(magic(var_pos.exp2_in));
                 auto exp2_out = var(magic(var_pos.exp2_out));
 
-                // TACEO_TODO extend for lookup constraint
                 auto constraint_1 = exp1_out - x - a0;
                 auto constraint_2 = x - exp2_out - 1 - b0;
                 auto constraint_3 = y - 1 - exp2_in;
 
                 return bp.add_gate({constraint_1, constraint_2, constraint_3});
+            }
+
+            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            std::size_t generate_lookup_gates(
+                const plonk_fixedpoint_div<BlueprintFieldType, ArithmetizationParams> &component,
+                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                    &assignment,
+                const typename plonk_fixedpoint_div<BlueprintFieldType, ArithmetizationParams>::input_type
+                    &instance_input) {
+                int64_t start_row_index = 1 - component.rows_amount;
+                const auto var_pos = component.get_var_pos(start_row_index);
+                auto m = component.get_m();
+
+                const std::map<std::string, std::size_t> &lookup_tables_indices = bp.get_reserved_indices();
+
+                using var = typename plonk_fixedpoint_div<BlueprintFieldType, ArithmetizationParams>::var;
+                using constraint_type = typename crypto3::zk::snark::plonk_lookup_constraint<BlueprintFieldType>;
+                using range_table =
+                    typename plonk_fixedpoint_div<BlueprintFieldType, ArithmetizationParams>::range_table;
+
+                std::vector<constraint_type> constraints;
+                constraints.reserve(2 * m);
+
+                auto table_id = lookup_tables_indices.at(range_table::FULL_TABLE_NAME);
+                BLUEPRINT_RELEASE_ASSERT(var_pos.a0.row() == var_pos.b0.row());
+
+                for (auto i = 0; i < m_; i++) {
+                    constraint_type constraint_a, constraint_b;
+                    constraint_a.table_id = table_id;
+                    constraint_b.table_id = table_id;
+
+                    // We put row=0 here and enable the selector in the correct one
+                    auto ai = var(var_pos.a0.column() + i, 0);
+                    auto bi = var(var_pos.b0.column() + i, 0);
+                    constraint_a.lookup_input = {ai};
+                    constraint_b.lookup_input = {bi};
+                    constraints.push_back(constraint_a);
+                    constraints.push_back(constraint_b);
+                }
+
+                return bp.add_lookup_gate(constraints);
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
@@ -417,8 +473,14 @@ namespace nil {
                 generate_circuit(exp_comp, bp, assignment, exp2_input, var_pos.exp2_row);
 
                 // Enable the log component
-                // TACEO_TODO extend for lookup?
                 std::size_t selector_index = generate_gates(component, bp, assignment, instance_input);
+
+// Allows disabling the lookup tables for faster testing
+#ifndef TEST_WITHOUT_LOOKUP_TABLES
+                // Enable the log lookup tables
+                std::size_t lookup_selector_index = generate_lookup_gates(component, bp, assignment, instance_input);
+                assignment.enable_selector(lookup_selector_index, var_pos.a0.row());    // same as b0.row()
+#endif
 
                 // selector goes onto last row and gate uses all rows
                 assignment.enable_selector(selector_index, start_row_index + component.rows_amount - 1);
