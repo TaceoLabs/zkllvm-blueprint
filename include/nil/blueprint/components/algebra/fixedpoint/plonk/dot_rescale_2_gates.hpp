@@ -105,7 +105,7 @@ namespace nil {
                     }
 
                     std::uint32_t gates_amount() const override {
-                        return rescale_component::gates_amount + 2;
+                        return fix_dot_rescale_2_gates::gates_amount;
                     }
                 };
 
@@ -137,6 +137,7 @@ namespace nil {
                     return rows;
                 }
 
+                constexpr static const std::size_t gates_amount = rescale_component::gates_amount + 2;
                 const std::size_t rows_amount = get_rows_amount(this->witness_amount(), 0, dots, rescale.get_m2());
 
                 struct input_type {

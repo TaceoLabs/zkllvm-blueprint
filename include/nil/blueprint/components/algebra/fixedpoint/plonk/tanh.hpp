@@ -144,7 +144,7 @@ namespace nil {
                 class gate_manifest_type : public component_gate_manifest {
                 public:
                     std::uint32_t gates_amount() const override {
-                        return 4;
+                        return fix_tanh::gates_amount;
                     }
                 };
 
@@ -173,6 +173,8 @@ namespace nil {
                            div_component::get_rows_amount(witness_amount, lookup_column_amount, m1, m2) + 1;
                 }
 
+                constexpr static const std::size_t gates_amount =
+                    exp_component::gates_amount + div_component::gates_amount + range_component::gates_amount + 1;
                 const std::size_t rows_amount =
                     get_rows_amount(this->witness_amount(), 0, range.get_m1(), range.get_m2());
 

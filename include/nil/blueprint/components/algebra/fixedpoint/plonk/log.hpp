@@ -101,7 +101,7 @@ namespace nil {
                 class gate_manifest_type : public component_gate_manifest {
                 public:
                     std::uint32_t gates_amount() const override {
-                        return 6;
+                        return fix_log::gates_amount;
                     }
                 };
 
@@ -138,6 +138,7 @@ namespace nil {
                     return 2 * exp_rows + log_rows;
                 }
 
+                constexpr static const std::size_t gates_amount = exp_component::gates_amount + 2;
                 const std::size_t rows_amount = get_rows_amount(this->witness_amount(), 0, get_m1(), get_m2());
                 const std::size_t log_rows_amount = get_log_rows_amount(this->witness_amount(), 0, get_m1(), get_m2());
 
