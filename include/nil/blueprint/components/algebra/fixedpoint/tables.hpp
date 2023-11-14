@@ -19,6 +19,11 @@ namespace nil {
 
                 static std::vector<value_type> fill_exp_a_table(uint8_t m2);
                 static std::vector<value_type> fill_exp_b_table(uint8_t m2);
+                static std::vector<value_type> fill_sin_a_table(uint8_t m2);    // 2^16*0
+                static std::vector<value_type> fill_sin_b_table(uint8_t m2);    // 2^16*-1
+                static std::vector<value_type> fill_sin_c_table(uint8_t m2);    // 2^16*-2
+                static std::vector<value_type> fill_cos_a_table(uint8_t m2);    // 2^16*0
+                static std::vector<value_type> fill_cos_b_table(uint8_t m2);    // 2^16*-1
 
             public:
                 FixedPointTables() = delete;
@@ -29,13 +34,26 @@ namespace nil {
                 static constexpr uint16_t ExpBScale = 16;
                 static constexpr uint32_t ExpALen = 201;
                 static constexpr uint32_t ExpBLen = (1ULL << ExpBScale);
+                static constexpr uint16_t SinXScale = ExpBScale;
+                static constexpr uint16_t CosXScale = ExpBScale;
+                static constexpr uint32_t SinXLen = (1ULL << SinXScale);
+                static constexpr uint32_t CosXLen = (1ULL << CosXScale);
 
                 static const std::vector<value_type> &get_range_table();
 
                 static const std::vector<value_type> &get_exp_a_16();
+                static const std::vector<value_type> &get_sin_a_16();
+                static const std::vector<value_type> &get_cos_a_16();
                 static const std::vector<value_type> &get_exp_a_32();
+                static const std::vector<value_type> &get_sin_a_32();
+                static const std::vector<value_type> &get_cos_a_32();
                 static const std::vector<value_type> &get_exp_b_16();
+                static const std::vector<value_type> &get_sin_b_16();
+                static const std::vector<value_type> &get_cos_b_16();
                 static const std::vector<value_type> &get_exp_b_32();
+                static const std::vector<value_type> &get_sin_b_32();
+                static const std::vector<value_type> &get_cos_b_32();
+                static const std::vector<value_type> &get_sin_c_32();
 
                 template<uint8_t M2>
                 static constexpr uint16_t get_exp_scale();
@@ -61,9 +79,37 @@ namespace nil {
 
             template<typename BlueprintFieldType>
             const std::vector<typename FixedPointTables<BlueprintFieldType>::value_type> &
+                FixedPointTables<BlueprintFieldType>::get_sin_a_16() {
+                static std::vector<value_type> sin_a = fill_sin_a_table(1);
+                return sin_a;
+            }
+
+            template<typename BlueprintFieldType>
+            const std::vector<typename FixedPointTables<BlueprintFieldType>::value_type> &
+                FixedPointTables<BlueprintFieldType>::get_cos_a_16() {
+                static std::vector<value_type> cos_a = fill_cos_a_table(1);
+                return cos_a;
+            }
+
+            template<typename BlueprintFieldType>
+            const std::vector<typename FixedPointTables<BlueprintFieldType>::value_type> &
                 FixedPointTables<BlueprintFieldType>::get_exp_a_32() {
                 static std::vector<value_type> exp_a = fill_exp_a_table(2);
                 return exp_a;
+            }
+
+            template<typename BlueprintFieldType>
+            const std::vector<typename FixedPointTables<BlueprintFieldType>::value_type> &
+                FixedPointTables<BlueprintFieldType>::get_sin_a_32() {
+                static std::vector<value_type> sin_a = fill_sin_a_table(2);
+                return sin_a;
+            }
+
+            template<typename BlueprintFieldType>
+            const std::vector<typename FixedPointTables<BlueprintFieldType>::value_type> &
+                FixedPointTables<BlueprintFieldType>::get_cos_a_32() {
+                static std::vector<value_type> cos_a = fill_cos_a_table(2);
+                return cos_a;
             }
 
             template<typename BlueprintFieldType>
@@ -75,9 +121,44 @@ namespace nil {
 
             template<typename BlueprintFieldType>
             const std::vector<typename FixedPointTables<BlueprintFieldType>::value_type> &
+                FixedPointTables<BlueprintFieldType>::get_sin_b_16() {
+                static std::vector<value_type> sin_b = fill_sin_b_table(1);
+                return sin_b;
+            }
+
+            template<typename BlueprintFieldType>
+            const std::vector<typename FixedPointTables<BlueprintFieldType>::value_type> &
+                FixedPointTables<BlueprintFieldType>::get_cos_b_16() {
+                static std::vector<value_type> cos_b = fill_cos_b_table(1);
+                return cos_b;
+            }
+
+            template<typename BlueprintFieldType>
+            const std::vector<typename FixedPointTables<BlueprintFieldType>::value_type> &
                 FixedPointTables<BlueprintFieldType>::get_exp_b_32() {
                 static std::vector<value_type> exp_b = fill_exp_b_table(2);
                 return exp_b;
+            }
+
+            template<typename BlueprintFieldType>
+            const std::vector<typename FixedPointTables<BlueprintFieldType>::value_type> &
+                FixedPointTables<BlueprintFieldType>::get_sin_b_32() {
+                static std::vector<value_type> sin_b = fill_sin_b_table(2);
+                return sin_b;
+            }
+
+            template<typename BlueprintFieldType>
+            const std::vector<typename FixedPointTables<BlueprintFieldType>::value_type> &
+                FixedPointTables<BlueprintFieldType>::get_cos_b_32() {
+                static std::vector<value_type> cos_b = fill_cos_b_table(2);
+                return cos_b;
+            }
+
+            template<typename BlueprintFieldType>
+            const std::vector<typename FixedPointTables<BlueprintFieldType>::value_type> &
+                FixedPointTables<BlueprintFieldType>::get_sin_c_32() {
+                static std::vector<value_type> sin_c = fill_sin_c_table(2);
+                return sin_c;
             }
 
             template<typename BlueprintFieldType>
@@ -123,6 +204,86 @@ namespace nil {
                     exp_b.push_back(field_val);
                 }
                 return exp_b;
+            }
+
+            template<typename BlueprintFieldType>
+            std::vector<typename FixedPointTables<BlueprintFieldType>::value_type>
+                FixedPointTables<BlueprintFieldType>::fill_sin_a_table(uint8_t m2) {
+                BLUEPRINT_RELEASE_ASSERT(m2 == 1 || m2 == 2);
+                std::vector<value_type> sin_a;
+                sin_a.reserve(SinXLen);
+                for (auto i = 0; i < SinXLen; ++i) {
+                    double val = std::sin(static_cast<double>(i) / (1ULL << SinXScale * 0));
+                    val *= (1ULL << (16 * m2));
+                    auto int_val = int64_t(val);
+                    auto field_val = value_type(int_val);
+                    sin_a.push_back(field_val);
+                }
+                return sin_a;
+            }
+
+            template<typename BlueprintFieldType>
+            std::vector<typename FixedPointTables<BlueprintFieldType>::value_type>
+                FixedPointTables<BlueprintFieldType>::fill_sin_b_table(uint8_t m2) {
+                BLUEPRINT_RELEASE_ASSERT(m2 == 1 || m2 == 2);
+                std::vector<value_type> sin_b;
+                sin_b.reserve(SinXLen);
+                for (auto i = 0; i < SinXLen; ++i) {
+                    double val = std::sin(static_cast<double>(i) / (1ULL << SinXScale * 1));
+                    val *= (1ULL << (16 * m2));
+                    auto int_val = uint64_t(val);
+                    auto field_val = value_type(int_val);
+                    sin_b.push_back(field_val);
+                }
+                return sin_b;
+            }
+
+            template<typename BlueprintFieldType>
+            std::vector<typename FixedPointTables<BlueprintFieldType>::value_type>
+                FixedPointTables<BlueprintFieldType>::fill_sin_c_table(uint8_t m2) {
+                BLUEPRINT_RELEASE_ASSERT(m2 == 2);
+                std::vector<value_type> sin_c;
+                sin_c.reserve(SinXLen);
+                for (auto i = 0; i < SinXLen; ++i) {
+                    double val = std::sin(static_cast<double>(i) / (1ULL << SinXScale * 2));
+                    val *= (1ULL << (16 * m2));
+                    auto int_val = uint64_t(val);
+                    auto field_val = value_type(int_val);
+                    sin_c.push_back(field_val);
+                }
+                return sin_c;
+            }
+
+            template<typename BlueprintFieldType>
+            std::vector<typename FixedPointTables<BlueprintFieldType>::value_type>
+                FixedPointTables<BlueprintFieldType>::fill_cos_a_table(uint8_t m2) {
+                BLUEPRINT_RELEASE_ASSERT(m2 == 1 || m2 == 2);
+                std::vector<value_type> cos_a;
+                cos_a.reserve(CosXLen);
+                for (auto i = 0; i < CosXLen; ++i) {
+                    double val = std::cos(static_cast<double>(i) / (1ULL << CosXScale * 0));
+                    val *= (1ULL << (16 * m2));
+                    auto int_val = int64_t(val);
+                    auto field_val = value_type(int_val);
+                    cos_a.push_back(field_val);
+                }
+                return cos_a;
+            }
+
+            template<typename BlueprintFieldType>
+            std::vector<typename FixedPointTables<BlueprintFieldType>::value_type>
+                FixedPointTables<BlueprintFieldType>::fill_cos_b_table(uint8_t m2) {
+                BLUEPRINT_RELEASE_ASSERT(m2 == 1 || m2 == 2);
+                std::vector<value_type> cos_b;
+                cos_b.reserve(CosXLen);
+                for (auto i = 0; i < CosXLen; ++i) {
+                    double val = std::cos(static_cast<double>(i) / (1ULL << CosXScale * 1));
+                    val *= (1ULL << (16 * m2));
+                    auto int_val = uint64_t(val);
+                    auto field_val = value_type(int_val);
+                    cos_b.push_back(field_val);
+                }
+                return cos_b;
             }
 
             template<typename BlueprintFieldType>

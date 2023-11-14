@@ -18,8 +18,8 @@ namespace nil {
              * Uses one gate (and one selector column) for the constraints and two columns for the (intermediate) sums
              * of the dot product.
              *
-             * Input:    x    ... field element
-             *           y    ... field element
+             * Input:    x    ... vector of field elements
+             *           y    ... vector of field elements
              *
              * Output:   z    ... x dot y (field element)
              *

@@ -20,7 +20,7 @@ namespace nil {
             // (https://github.com/onnx/onnx/blob/main/docs/Operators.md#ArgMin), the select_last_index attribute
             // decides what should happen during a tie. We set this attribute during initialization of the gadget, and
             // do *not* prove it.
-            // This gadget also assumes, that index_x < index_y!
+            // This gadget also assumes that index_x < index_y!
             // Index_y is a constant, while index_x is a witness.
 
             /**
