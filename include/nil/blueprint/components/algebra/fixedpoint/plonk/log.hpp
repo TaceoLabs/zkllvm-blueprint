@@ -378,11 +378,11 @@ namespace nil {
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
             std::size_t generate_lookup_gates(
-                const plonk_fixedpoint_div<BlueprintFieldType, ArithmetizationParams> &component,
+                const plonk_fixedpoint_log<BlueprintFieldType, ArithmetizationParams> &component,
                 circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
                 assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                     &assignment,
-                const typename plonk_fixedpoint_div<BlueprintFieldType, ArithmetizationParams>::input_type
+                const typename plonk_fixedpoint_log<BlueprintFieldType, ArithmetizationParams>::input_type
                     &instance_input) {
                 int64_t start_row_index = 1 - component.rows_amount;
                 const auto var_pos = component.get_var_pos(start_row_index);
@@ -390,10 +390,10 @@ namespace nil {
 
                 const std::map<std::string, std::size_t> &lookup_tables_indices = bp.get_reserved_indices();
 
-                using var = typename plonk_fixedpoint_div<BlueprintFieldType, ArithmetizationParams>::var;
+                using var = typename plonk_fixedpoint_log<BlueprintFieldType, ArithmetizationParams>::var;
                 using constraint_type = typename crypto3::zk::snark::plonk_lookup_constraint<BlueprintFieldType>;
                 using range_table =
-                    typename plonk_fixedpoint_div<BlueprintFieldType, ArithmetizationParams>::range_table;
+                    typename plonk_fixedpoint_log<BlueprintFieldType, ArithmetizationParams>::range_table;
 
                 std::vector<constraint_type> constraints;
                 constraints.reserve(2 * m);
@@ -401,7 +401,7 @@ namespace nil {
                 auto table_id = lookup_tables_indices.at(range_table::FULL_TABLE_NAME);
                 BLUEPRINT_RELEASE_ASSERT(var_pos.a0.row() == var_pos.b0.row());
 
-                for (auto i = 0; i < m_; i++) {
+                for (auto i = 0; i < m; i++) {
                     constraint_type constraint_a, constraint_b;
                     constraint_a.table_id = table_id;
                     constraint_b.table_id = table_id;

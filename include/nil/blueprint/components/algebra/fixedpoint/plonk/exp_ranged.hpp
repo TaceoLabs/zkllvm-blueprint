@@ -351,6 +351,7 @@ namespace nil {
                 std::size_t exp_selector = generate_exp_gates(component, bp, assignment, instance_input);
                 assignment.enable_selector(exp_selector, var_pos.exp_row);
 
+                auto exp_comp = component.get_exp_component();
 // Allows disabling the lookup tables for faster testing
 #ifndef TEST_WITHOUT_LOOKUP_TABLES
                 // Enable the lookup gates for exp
@@ -359,7 +360,6 @@ namespace nil {
 #endif
 
                 // Enable the copy constraints of exp
-                auto exp_comp = component.get_exp_component();
                 generate_copy_constraints(exp_comp, bp, assignment, instance_input, var_pos.exp_row);
 
                 // Finally, we have to put the min/max values into the constant columns
