@@ -286,8 +286,13 @@ namespace nil {
                 // So we reserve the first column for non-lookup constants. 
                 // Rather universal for testing
                 // We may start from zero if component doesn't use ordinary constants.
+                auto start_index = 1;
+                if constexpr (!blueprint::components::is_component_stretcher<
+                              BlueprintFieldType, ArithmetizationParams, ComponentType>::value) {
+                    start_index = component_type::constants_amount;
+                }
                 std::vector<size_t> lookup_columns_indices;
-                for( std::size_t i = 1; i < ArithmetizationParams::constant_columns; i++ )  lookup_columns_indices.push_back(i);
+                for( std::size_t i = start_index; i < ArithmetizationParams::constant_columns; i++ )  lookup_columns_indices.push_back(i);
                 desc.usable_rows_amount = zk::snark::detail::pack_lookup_tables(
                     bp.get_reserved_indices(),
                     bp.get_reserved_tables(),
