@@ -131,6 +131,51 @@ void add_mod(ComponentType &component, FixedType input1, FixedType input2) {
 }
 
 template<typename FixedType, typename ComponentType>
+void add_rescale(ComponentType &component, FixedType input) {
+
+    double expected_res_f = input.to_double();
+    auto expected_res = input.rescale();
+
+    BLUEPRINT_RELEASE_ASSERT(doubleEquals(expected_res_f, expected_res.to_double(), EPSILON));
+
+    std::vector<typename FixedType::value_type> inputs = {input.get_value()};
+    std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};
+    std::vector<typename FixedType::value_type> constants = {};
+
+    component.add_testcase(blueprint::components::FixedPointComponents::RESCALE, inputs, outputs, constants);
+}
+
+template<typename FixedType, typename ComponentType>
+void add_neg(ComponentType &component, FixedType input) {
+
+    double expected_res_f = -input.to_double();
+    auto expected_res = -input;
+
+    BLUEPRINT_RELEASE_ASSERT(doubleEquals(expected_res_f, expected_res.to_double(), EPSILON));
+
+    std::vector<typename FixedType::value_type> inputs = {input.get_value()};
+    std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};
+    std::vector<typename FixedType::value_type> constants = {};
+
+    component.add_testcase(blueprint::components::FixedPointComponents::NEG, inputs, outputs, constants);
+}
+
+template<typename FixedType, typename ComponentType>
+void add_int_to_fixedpoint(ComponentType &component, typename FixedType::value_type input) {
+
+    double expected_res_f = FixedType::helper::field_to_double(input);
+    auto expected_res = FixedType(input);
+
+    BLUEPRINT_RELEASE_ASSERT(doubleEquals(expected_res_f, expected_res.to_double(), EPSILON));
+
+    std::vector<typename FixedType::value_type> inputs = {input};
+    std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};
+    std::vector<typename FixedType::value_type> constants = {};
+
+    component.add_testcase(blueprint::components::FixedPointComponents::TO_FIXEDPOINT, inputs, outputs, constants);
+}
+
+template<typename FixedType, typename ComponentType>
 void add_cmp(ComponentType &component, FixedType input1, FixedType input2) {
     double input1_f = input1.to_double();
     double input2_f = input2.to_double();
@@ -464,6 +509,10 @@ FieldType generate_random_for_fixedpoint(uint8_t m1, uint8_t m2, RngType &rng) {
 template<typename FixedType, typename ComponentType>
 void test_components_unary_basic(ComponentType &component, int i) {
     FixedType x((int64_t)i);
+
+    add_rescale<FixedType, ComponentType>(component, FixedType(x.get_value() * FixedType::DELTA, FixedType::SCALE * 2));
+    add_neg<FixedType, ComponentType>(component, x);
+    add_int_to_fixedpoint<FixedType, ComponentType>(component, (int64_t)i);
 }
 
 template<typename FixedType, typename ComponentType>
@@ -482,11 +531,8 @@ void test_components_binary_basic(ComponentType &component, int i, int j) {
     // BASIC
     add_add<FixedType, ComponentType>(component, x, y);
     add_sub<FixedType, ComponentType>(component, x, y);
-    // test_fixedpoint_rescale<FixedType>(FixedType(x.get_value() * FixedType::DELTA, FixedType::SCALE * 2));
     add_mul_rescale<FixedType, ComponentType>(component, x, y);
     add_mul_rescale_const<FixedType, ComponentType>(component, x, y);
-    // test_fixedpoint_neg<FixedType>(x);
-    // test_int_to_fixedpoint<FixedType>((int64_t)i);
     if (y.get_value() != 0) {
         add_div<FixedType, ComponentType>(component, x, y);
         add_mod<FixedType, ComponentType>(component, x, y);
@@ -528,11 +574,11 @@ void test_components_on_random_data(ComponentType &component, std::size_t i, Rng
     // BASIC
     add_add<FixedType, ComponentType>(component, x, y);
     add_sub<FixedType, ComponentType>(component, x, y);
-    // test_fixedpoint_rescale<FixedType>(FixedType(x.get_value() * FixedType::DELTA, FixedType::SCALE * 2));
+    add_rescale<FixedType, ComponentType>(component, FixedType(x.get_value() * FixedType::DELTA, FixedType::SCALE * 2));
     add_mul_rescale<FixedType, ComponentType>(component, x, y);
     add_mul_rescale_const<FixedType, ComponentType>(component, x, y);
-    // test_fixedpoint_neg<FixedType>(x);
-    // test_int_to_fixedpoint<FixedType>((int64_t)i);
+    add_neg<FixedType, ComponentType>(component, x);
+    add_int_to_fixedpoint<FixedType, ComponentType>(component, (int64_t)i);
     if (y.get_value() != 0) {
         add_div<FixedType, ComponentType>(component, x, y);
         add_mod<FixedType, ComponentType>(component, x, y);
@@ -559,7 +605,7 @@ void test_components_on_random_data(ComponentType &component, std::size_t i, Rng
 template<typename FixedType, typename ComponentType, std::size_t RandomTestsAmount>
 void field_operations_test_inner(ComponentType &component) {
     for (int i = -2; i < 3; i++) {
-        // test_components_unary_basic<FixedType, ComponentType>(component, i);
+        test_components_unary_basic<FixedType, ComponentType>(component, i);
         for (int j = -2; j < 3; j++) {
             test_components_binary_basic<FixedType, ComponentType>(component, i, j);
         }
