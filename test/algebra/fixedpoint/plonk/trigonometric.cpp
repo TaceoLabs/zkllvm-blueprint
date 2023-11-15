@@ -1,7 +1,7 @@
 #define BOOST_TEST_MODULE blueprint_plonk_fixedpoint_trigonometric_operations_test
 
 // Enable for faster tests
-#define TEST_WITHOUT_LOOKUP_TABLES
+// #define TEST_WITHOUT_LOOKUP_TABLES
 
 #include <boost/test/unit_test.hpp>
 
@@ -31,7 +31,7 @@ using nil::blueprint::components::FixedPoint32_32;
 static constexpr double EPSILON = 0.01;
 
 #define PRINT_FIXED_POINT_TEST(what)                                            \
-    std::cout << "fixed_point " << what << " test:\n";                                     \
+    std::cout << "fixed_point " << what << " test:\n";                          \
     std::cout << "input           : " << input.get_value().data << "\n";        \
     std::cout << "input (float)   : " << input.to_double() << "\n";             \
     std::cout << "expected        : " << expected_res.get_value().data << "\n"; \
@@ -51,8 +51,13 @@ void test_fixedpoint_sin(FixedType input) {
     using BlueprintFieldType = typename FixedType::field_type;
     constexpr std::size_t WitnessColumns = FixedType::M_2 == 1 ? 10 : 15;
     constexpr std::size_t PublicInputColumns = 1;
+#ifdef TEST_WITHOUT_LOOKUP_TABLES
     constexpr std::size_t ConstantColumns = 1;
     constexpr std::size_t SelectorColumns = FixedType::M_1 == 1 ? 1 : 2;
+#else
+    constexpr std::size_t ConstantColumns = 15;
+    constexpr std::size_t SelectorColumns = 15;
+#endif
     using ArithmetizationParams = crypto3::zk::snark::
         plonk_arithmetization_params<WitnessColumns, PublicInputColumns, ConstantColumns, SelectorColumns>;
     using ArithmetizationType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>;
@@ -102,14 +107,18 @@ void test_fixedpoint_sin(FixedType input) {
         component_instance, public_input, result_check, instance_input);
 }
 
-
 template<typename FixedType>
 void test_fixedpoint_cos(FixedType input) {
     using BlueprintFieldType = typename FixedType::field_type;
     constexpr std::size_t WitnessColumns = FixedType::M_2 == 1 ? 9 : 14;
     constexpr std::size_t PublicInputColumns = 1;
+#ifdef TEST_WITHOUT_LOOKUP_TABLES
     constexpr std::size_t ConstantColumns = 1;
     constexpr std::size_t SelectorColumns = FixedType::M_1 == 1 ? 1 : 2;
+#else
+    constexpr std::size_t ConstantColumns = 15;
+    constexpr std::size_t SelectorColumns = 15;
+#endif
     using ArithmetizationParams = crypto3::zk::snark::
         plonk_arithmetization_params<WitnessColumns, PublicInputColumns, ConstantColumns, SelectorColumns>;
     using ArithmetizationType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>;

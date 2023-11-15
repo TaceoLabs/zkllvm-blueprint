@@ -2,6 +2,7 @@
 #define CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_COS_HPP
 
 #include "nil/blueprint/components/algebra/fixedpoint/plonk/rem.hpp"
+#include "nil/blueprint/components/algebra/fixedpoint/lookup_tables/trigonometric.hpp"
 
 namespace nil {
     namespace blueprint {
@@ -146,6 +147,9 @@ namespace nil {
                 using var = typename component_type::var;
                 using value_type = typename BlueprintFieldType::value_type;
                 using manifest_type = plonk_component_manifest;
+                using lookup_table_definition =
+                    typename nil::crypto3::zk::snark::detail::lookup_table_definition<BlueprintFieldType>;
+                using range_table = fixedpoint_range_table<BlueprintFieldType>;
 
                 value_type two_pi;
 
@@ -204,6 +208,57 @@ namespace nil {
                         return {output};
                     }
                 };
+
+// Allows disabling lookup tables for faster testing
+#ifndef TEST_WITHOUT_LOOKUP_TABLES
+                std::vector<std::shared_ptr<lookup_table_definition>> component_custom_lookup_tables() {
+                    std::vector<std::shared_ptr<lookup_table_definition>> result = rem.component_custom_lookup_tables();
+
+                    if (m2 == 1) {
+                        auto table = std::shared_ptr<lookup_table_definition>(
+                            new fixedpoint_trigon_16_table<BlueprintFieldType>());
+                        result.push_back(table);
+                    } else if (m2 == 2) {
+                        auto table = std::shared_ptr<lookup_table_definition>(
+                            new fixedpoint_trigon_32_table<BlueprintFieldType>());
+                        result.push_back(table);
+                    } else {
+                        BLUEPRINT_RELEASE_ASSERT(false);
+                    }
+
+                    return result;
+                }
+
+                std::map<std::string, std::size_t> component_lookup_tables() {
+                    std::map<std::string, std::size_t> lookup_tables = rem.component_lookup_tables();
+
+                    if (m2 == 1) {
+                        lookup_tables[fixedpoint_trigon_16_table<BlueprintFieldType>::FULL_SIN_A] =
+                            0;    // REQUIRED_TABLE
+                        lookup_tables[fixedpoint_trigon_16_table<BlueprintFieldType>::FULL_SIN_B] =
+                            0;    // REQUIRED_TABLE
+                        lookup_tables[fixedpoint_trigon_16_table<BlueprintFieldType>::FULL_COS_A] =
+                            0;    // REQUIRED_TABLE
+                        lookup_tables[fixedpoint_trigon_16_table<BlueprintFieldType>::FULL_COS_B] =
+                            0;    // REQUIRED_TABLE
+                    } else if (m2 == 2) {
+                        lookup_tables[fixedpoint_trigon_32_table<BlueprintFieldType>::FULL_SIN_A] =
+                            0;    // REQUIRED_TABLE
+                        lookup_tables[fixedpoint_trigon_32_table<BlueprintFieldType>::FULL_SIN_B] =
+                            0;    // REQUIRED_TABLE
+                        lookup_tables[fixedpoint_trigon_32_table<BlueprintFieldType>::FULL_SIN_C] =
+                            0;    // REQUIRED_TABLE
+                        lookup_tables[fixedpoint_trigon_32_table<BlueprintFieldType>::FULL_COS_A] =
+                            0;    // REQUIRED_TABLE
+                        lookup_tables[fixedpoint_trigon_32_table<BlueprintFieldType>::FULL_COS_B] =
+                            0;    // REQUIRED_TABLE
+                    } else {
+                        BLUEPRINT_RELEASE_ASSERT(false);
+                    }
+
+                    return lookup_tables;
+                }
+#endif    // TEST_WITHOUT_LOOKUP_TABLES
 
                 template<typename ContainerType>
                 explicit fix_cos(ContainerType witness, uint8_t m1, uint8_t m2) :
@@ -418,6 +473,102 @@ namespace nil {
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
+            std::size_t generate_lookup_gates(
+                const plonk_fixedpoint_cos<BlueprintFieldType, ArithmetizationParams> &component,
+                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                    &assignment,
+                const typename plonk_fixedpoint_cos<BlueprintFieldType, ArithmetizationParams>::input_type
+                    &instance_input) {
+                const int64_t start_row_index = 1 - static_cast<int64_t>(component.rows_amount);
+                const auto var_pos = component.get_var_pos(start_row_index);
+                auto m2 = component.get_m2();
+
+                const std::map<std::string, std::size_t> &lookup_tables_indices = bp.get_reserved_indices();
+
+                using var = typename plonk_fixedpoint_cos<BlueprintFieldType, ArithmetizationParams>::var;
+                using constraint_type = typename crypto3::zk::snark::plonk_lookup_constraint<BlueprintFieldType>;
+                using range_table =
+                    typename plonk_fixedpoint_cos<BlueprintFieldType, ArithmetizationParams>::range_table;
+
+                auto range_table_id = lookup_tables_indices.at(range_table::FULL_TABLE_NAME);
+                auto sin_a_table_id =
+                    m2 == 1 ? lookup_tables_indices.at(fixedpoint_trigon_16_table<BlueprintFieldType>::FULL_SIN_A) :
+                              lookup_tables_indices.at(fixedpoint_trigon_32_table<BlueprintFieldType>::FULL_SIN_A);
+                auto sin_b_table_id =
+                    m2 == 1 ? lookup_tables_indices.at(fixedpoint_trigon_16_table<BlueprintFieldType>::FULL_SIN_B) :
+                              lookup_tables_indices.at(fixedpoint_trigon_32_table<BlueprintFieldType>::FULL_SIN_B);
+                auto cos_a_table_id =
+                    m2 == 1 ? lookup_tables_indices.at(fixedpoint_trigon_16_table<BlueprintFieldType>::FULL_COS_A) :
+                              lookup_tables_indices.at(fixedpoint_trigon_32_table<BlueprintFieldType>::FULL_COS_A);
+                auto cos_b_table_id =
+                    m2 == 1 ? lookup_tables_indices.at(fixedpoint_trigon_16_table<BlueprintFieldType>::FULL_COS_B) :
+                              lookup_tables_indices.at(fixedpoint_trigon_32_table<BlueprintFieldType>::FULL_COS_B);
+
+                std::vector<constraint_type> constraints;
+
+                // lookup decomposition of x
+                for (size_t i = 0; i < m2 + 1; i++) {
+                    constraint_type constraint;
+                    constraint.table_id = range_table_id;
+                    auto xi = var(var_pos.x0.column() + i, var_pos.x0.row());
+                    constraint.lookup_input = {xi};
+                    constraints.push_back(constraint);
+                }
+
+                // lookup decomposition of q
+                for (size_t i = 0; i < m2 * m2; i++) {
+                    constraint_type constraint;
+                    constraint.table_id = range_table_id;
+                    auto qi = var(var_pos.q0.column() + i, var_pos.q0.row());
+                    constraint.lookup_input = {qi};
+                    constraints.push_back(constraint);
+                }
+
+                // lookup sin, cos
+                auto x0 = var(var_pos.x0.column() + 0, var_pos.x0.row());
+                auto x1 = var(var_pos.x0.column() + 1, var_pos.x0.row());
+                auto x2 = var(var_pos.x0.column() + 2, var_pos.x0.row());
+                auto sin0 = var(var_pos.sin0.column() + 0, var_pos.sin0.row());
+                auto sin1 = var(var_pos.sin0.column() + 1, var_pos.sin0.row());
+                auto sin2 = var(var_pos.sin0.column() + 2, var_pos.sin0.row());
+                {
+                    constraint_type constraint;
+                    constraint.table_id = sin_a_table_id;
+                    constraint.lookup_input = {x0, sin0};
+                    constraints.push_back(constraint);
+                }
+                {
+                    constraint_type constraint;
+                    constraint.table_id = cos_a_table_id;
+                    constraint.lookup_input = {x0, var(splat(var_pos.cos0))};
+                    constraints.push_back(constraint);
+                }
+                {
+                    constraint_type constraint;
+                    constraint.table_id = sin_b_table_id;
+                    constraint.lookup_input = {x1, sin1};
+                    constraints.push_back(constraint);
+                }
+                {
+                    constraint_type constraint;
+                    constraint.table_id = cos_b_table_id;
+                    constraint.lookup_input = {x1, var(splat(var_pos.cos1))};
+                    constraints.push_back(constraint);
+                }
+                if (m2 == 2) {
+                    constraint_type constraint;
+                    auto sin_c_table_id =
+                        lookup_tables_indices.at(fixedpoint_trigon_32_table<BlueprintFieldType>::FULL_SIN_C);
+                    constraint.table_id = sin_c_table_id;
+                    constraint.lookup_input = {x2, sin2};
+                    constraints.push_back(constraint);
+                }
+
+                return bp.add_lookup_gate(constraints);
+            }
+
+            template<typename BlueprintFieldType, typename ArithmetizationParams>
             typename plonk_fixedpoint_cos<BlueprintFieldType, ArithmetizationParams>::result_type generate_circuit(
                 const plonk_fixedpoint_cos<BlueprintFieldType, ArithmetizationParams> &component,
                 circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
@@ -444,6 +595,11 @@ namespace nil {
 
                 assignment.enable_selector(selector_index, start_row_index + component.rows_amount - 1);
 
+// Allows disabling lookup tables for faster testing
+#ifndef TEST_WITHOUT_LOOKUP_TABLES
+                std::size_t lookup_selector_index = generate_lookup_gates(component, bp, assignment, instance_input);
+                assignment.enable_selector(lookup_selector_index, start_row_index + component.rows_amount - 1);
+#endif
                 generate_copy_constraints(component, bp, assignment, instance_input, start_row_index);
 
                 return typename plonk_fixedpoint_cos<BlueprintFieldType, ArithmetizationParams>::result_type(
