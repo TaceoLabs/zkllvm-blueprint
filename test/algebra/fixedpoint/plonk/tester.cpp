@@ -66,6 +66,71 @@ void add_sub(ComponentType &component, FixedType input1, FixedType input2) {
 }
 
 template<typename FixedType, typename ComponentType>
+void add_mul_rescale(ComponentType &component, FixedType input1, FixedType input2) {
+
+    double expected_res_f = input1.to_double() * input2.to_double();
+    auto expected_res = input1 * input2;
+
+    BLUEPRINT_RELEASE_ASSERT(doubleEquals(expected_res_f, expected_res.to_double(), EPSILON));
+
+    std::vector<typename FixedType::value_type> inputs = {input1.get_value(), input2.get_value()};
+    std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};
+    std::vector<typename FixedType::value_type> constants = {};
+
+    component.add_testcase(blueprint::components::FixedPointComponents::MUL_RESCALE, inputs, outputs, constants);
+}
+
+template<typename FixedType, typename ComponentType>
+void add_mul_rescale_const(ComponentType &component, FixedType input1, FixedType input2) {
+
+    double expected_res_f = input1.to_double() * input2.to_double();
+    auto expected_res = input1 * input2;
+
+    BLUEPRINT_RELEASE_ASSERT(doubleEquals(expected_res_f, expected_res.to_double(), EPSILON));
+
+    std::vector<typename FixedType::value_type> inputs = {input1.get_value()};
+    std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};
+    std::vector<typename FixedType::value_type> constants = {input2.get_value()};
+
+    component.add_testcase(blueprint::components::FixedPointComponents::MUL_RESCALE_CONST, inputs, outputs, constants);
+}
+
+template<typename FixedType, typename ComponentType>
+void add_div(ComponentType &component, FixedType input1, FixedType input2) {
+
+    double expected_res_f = input1.to_double() / input2.to_double();
+    auto expected_res = input1 / input2;
+
+    BLUEPRINT_RELEASE_ASSERT(doubleEquals(expected_res_f, expected_res.to_double(), EPSILON));
+
+    std::vector<typename FixedType::value_type> inputs = {input1.get_value(), input2.get_value()};
+    std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};
+    std::vector<typename FixedType::value_type> constants = {};
+
+    component.add_testcase(blueprint::components::FixedPointComponents::DIV, inputs, outputs, constants);
+}
+
+template<typename FixedType, typename ComponentType>
+void add_mod(ComponentType &component, FixedType input1, FixedType input2) {
+
+    double input2_f = input2.to_double();
+    double expected_res_f = remainder(input1.to_double(), input2_f);
+    // Correct signs for onnx specififcation
+    if ((expected_res_f < 0 && input2_f > 0) || (expected_res_f > 0 && input2_f < 0)) {
+        expected_res_f += input2_f;
+    }
+    auto expected_res = input1 % input2;
+
+    BLUEPRINT_RELEASE_ASSERT(doubleEquals(expected_res_f, expected_res.to_double(), EPSILON));
+
+    std::vector<typename FixedType::value_type> inputs = {input1.get_value(), input2.get_value()};
+    std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};
+    std::vector<typename FixedType::value_type> constants = {};
+
+    component.add_testcase(blueprint::components::FixedPointComponents::REM, inputs, outputs, constants);
+}
+
+template<typename FixedType, typename ComponentType>
 void add_cmp(ComponentType &component, FixedType input1, FixedType input2) {
     double input1_f = input1.to_double();
     double input2_f = input2.to_double();
@@ -417,18 +482,18 @@ void test_components_binary_basic(ComponentType &component, int i, int j) {
     // BASIC
     add_add<FixedType, ComponentType>(component, x, y);
     add_sub<FixedType, ComponentType>(component, x, y);
-    // // test_fixedpoint_rescale<FixedType>(FixedType(x.get_value() * FixedType::DELTA, FixedType::SCALE * 2));
-    // add_mul_rescale<FixedType, ComponentType>(component, x, y);
-    // add_mul_rescale_const<FixedType, ComponentType>(component, x, y);
-    // // test_fixedpoint_neg<FixedType>(x);
-    // // test_int_to_fixedpoint<FixedType>((int64_t)i);
-    // if (y.get_value() != 0) {
-    //     add_div<FixedType, ComponentType>(component, x, y);
-    //     add_mod<FixedType, ComponentType>(component, x, y);
-    //     // if (y.geq_0()) {
-    //     // test_fixedpoint_div_by_pos<FixedType>(x, y);
-    //     // }
-    // }
+    // test_fixedpoint_rescale<FixedType>(FixedType(x.get_value() * FixedType::DELTA, FixedType::SCALE * 2));
+    add_mul_rescale<FixedType, ComponentType>(component, x, y);
+    add_mul_rescale_const<FixedType, ComponentType>(component, x, y);
+    // test_fixedpoint_neg<FixedType>(x);
+    // test_int_to_fixedpoint<FixedType>((int64_t)i);
+    if (y.get_value() != 0) {
+        add_div<FixedType, ComponentType>(component, x, y);
+        add_mod<FixedType, ComponentType>(component, x, y);
+        // if (y.geq_0()) {
+        // test_fixedpoint_div_by_pos<FixedType>(x, y);
+        // }
+    }
 
     // CMP
     add_select<FixedType, ComponentType>(component, x, y);
@@ -463,18 +528,18 @@ void test_components_on_random_data(ComponentType &component, std::size_t i, Rng
     // BASIC
     add_add<FixedType, ComponentType>(component, x, y);
     add_sub<FixedType, ComponentType>(component, x, y);
-    // // test_fixedpoint_rescale<FixedType>(FixedType(x.get_value() * FixedType::DELTA, FixedType::SCALE * 2));
-    // add_mul_rescale<FixedType, ComponentType>(component, x, y);
-    // add_mul_rescale_const<FixedType, ComponentType>(component, x, y);
-    // // test_fixedpoint_neg<FixedType>(x);
-    // // test_int_to_fixedpoint<FixedType>((int64_t)i);
-    // if (y.get_value() != 0) {
-    //     add_div<FixedType, ComponentType>(component, x, y);
-    //     add_mod<FixedType, ComponentType>(component, x, y);
-    //     // if (y.geq_0()) {
-    //     // test_fixedpoint_div_by_pos<FixedType>(x, y);
-    //     // }
-    // }
+    // test_fixedpoint_rescale<FixedType>(FixedType(x.get_value() * FixedType::DELTA, FixedType::SCALE * 2));
+    add_mul_rescale<FixedType, ComponentType>(component, x, y);
+    add_mul_rescale_const<FixedType, ComponentType>(component, x, y);
+    // test_fixedpoint_neg<FixedType>(x);
+    // test_int_to_fixedpoint<FixedType>((int64_t)i);
+    if (y.get_value() != 0) {
+        add_div<FixedType, ComponentType>(component, x, y);
+        add_mod<FixedType, ComponentType>(component, x, y);
+        // if (y.geq_0()) {
+        // test_fixedpoint_div_by_pos<FixedType>(x, y);
+        // }
+    }
 
     // CMP
     add_select<FixedType, ComponentType>(component, x, y);

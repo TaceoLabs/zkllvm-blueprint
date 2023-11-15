@@ -13,6 +13,10 @@
 #include "nil/blueprint/components/algebra/fixedpoint/plonk/max.hpp"
 #include <nil/blueprint/components/algebra/fields/plonk/addition.hpp>
 #include <nil/blueprint/components/algebra/fields/plonk/subtraction.hpp>
+#include "nil/blueprint/components/algebra/fixedpoint/plonk/mul_rescale.hpp"
+#include "nil/blueprint/components/algebra/fixedpoint/plonk/mul_rescale_const.hpp"
+#include "nil/blueprint/components/algebra/fixedpoint/plonk/div.hpp"
+#include "nil/blueprint/components/algebra/fixedpoint/plonk/rem.hpp"
 
 namespace nil {
     namespace blueprint {
@@ -127,7 +131,10 @@ namespace nil {
                                                    NonNativePolicyType>::get_rows_amount(witness_amount,
                                                                                          lookup_column_amount);
                         // case FixedPointComponents::DIV_BY_POS:
-                        // case FixedPointComponents::DIV:
+                        case FixedPointComponents::DIV:
+                            return fix_div<ArithmetizationType, BlueprintFieldType,
+                                           NonNativePolicyType>::get_rows_amount(witness_amount, lookup_column_amount,
+                                                                                 m1, m2);
                         // case FixedPointComponents::DOT_RESCALE1:
                         // case FixedPointComponents::DOT_RESCALE2:
                         // case FixedPointComponents::EXP:
@@ -143,14 +150,23 @@ namespace nil {
                         case FixedPointComponents::MIN:
                             return fix_min<ArithmetizationType, BlueprintFieldType,
                                            NonNativePolicyType>::get_rows_amount(witness_amount, lookup_column_amount);
-                        // case FixedPointComponents::MUL_RESCALE:
-                        // case FixedPointComponents::MUL_RESCALE_CONST:
+                        case FixedPointComponents::MUL_RESCALE:
+                            return fix_mul_rescale<ArithmetizationType, BlueprintFieldType,
+                                                   NonNativePolicyType>::get_rows_amount(witness_amount,
+                                                                                         lookup_column_amount);
+                        case FixedPointComponents::MUL_RESCALE_CONST:
+                            return fix_mul_rescale_const<ArithmetizationType, BlueprintFieldType,
+                                                         NonNativePolicyType>::get_rows_amount(witness_amount,
+                                                                                               lookup_column_amount);
                         // case FixedPointComponents::NEG:
                         case FixedPointComponents::RANGE:
                             return fix_range<ArithmetizationType, BlueprintFieldType,
                                              NonNativePolicyType>::get_rows_amount(witness_amount, lookup_column_amount,
                                                                                    m1, m2);
-                        // case FixedPointComponents::REM:
+                        case FixedPointComponents::REM:
+                            return fix_rem<ArithmetizationType, BlueprintFieldType,
+                                           NonNativePolicyType>::get_rows_amount(witness_amount, lookup_column_amount,
+                                                                                 m1, m2);
                         // case FixedPointComponents::RESCALE:
                         case FixedPointComponents::SELECT:
                             return fix_select<ArithmetizationType, BlueprintFieldType,
@@ -477,9 +493,25 @@ namespace nil {
                         // case FixedPointComponents::DIV_BY_POS: {
                         //     break;
                         // }
-                        // case FixedPointComponents::DIV: {
-                        //     break;
-                        // }
+                        case FixedPointComponents::DIV: {
+                            using new_component_type = fix_div<ArithmetizationType, BlueprintFieldType, PolicyType>;
+
+                            // Inputs
+                            typename new_component_type::input_type instance_input {
+                                var(component.W(0), current_row_index, false),
+                                var(component.W(1), current_row_index, false)};
+                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
+                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
+
+                            // Assign component
+                            new_component_type component_instance(witness_list, constant_list, public_input_list,
+                                                                  component.get_m1(), component.get_m2());
+                            vars = generate_assignments(component_instance, assignment, instance_input,
+                                                        current_row_index + 1)
+                                       .all_vars();
+                            component_rows = component_instance.rows_amount;
+                            break;
+                        }
                         // case FixedPointComponents::DOT_RESCALE1: {
                         //     break;
                         // }
@@ -554,12 +586,45 @@ namespace nil {
                             component_rows = component_instance.rows_amount;
                             break;
                         }
-                        // case FixedPointComponents::MUL_RESCALE: {
-                        //     break;
-                        // }
-                        // case FixedPointComponents::MUL_RESCALE_CONST: {
-                        //     break;
-                        // }
+                        case FixedPointComponents::MUL_RESCALE: {
+                            using new_component_type =
+                                fix_mul_rescale<ArithmetizationType, BlueprintFieldType, PolicyType>;
+
+                            // Inputs
+                            typename new_component_type::input_type instance_input {
+                                var(component.W(0), current_row_index, false),
+                                var(component.W(1), current_row_index, false)};
+                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
+                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
+
+                            // Assign component
+                            new_component_type component_instance(witness_list, constant_list, public_input_list,
+                                                                  component.get_m2());
+                            vars = generate_assignments(component_instance, assignment, instance_input,
+                                                        current_row_index + 1)
+                                       .all_vars();
+                            component_rows = component_instance.rows_amount;
+                            break;
+                        }
+                        case FixedPointComponents::MUL_RESCALE_CONST: {
+                            using new_component_type =
+                                fix_mul_rescale_const<ArithmetizationType, BlueprintFieldType, PolicyType>;
+
+                            // Inputs
+                            typename new_component_type::input_type instance_input {
+                                var(component.W(0), current_row_index, false)};
+                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
+                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 1);
+
+                            // Assign component
+                            new_component_type component_instance(witness_list, constant_list, public_input_list,
+                                                                  constants[0], component.get_m2());
+                            vars = generate_assignments(component_instance, assignment, instance_input,
+                                                        current_row_index + 1)
+                                       .all_vars();
+                            component_rows = component_instance.rows_amount;
+                            break;
+                        }
                         // case FixedPointComponents::NEG: {
                         //     break;
                         // }
@@ -582,9 +647,25 @@ namespace nil {
                             component_rows = component_instance.rows_amount;
                             break;
                         }
-                        // case FixedPointComponents::REM: {
-                        //     break;
-                        // }
+                        case FixedPointComponents::REM: {
+                            using new_component_type = fix_rem<ArithmetizationType, BlueprintFieldType, PolicyType>;
+
+                            // Inputs
+                            typename new_component_type::input_type instance_input {
+                                var(component.W(0), current_row_index, false),
+                                var(component.W(1), current_row_index, false)};
+                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
+                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
+
+                            // Assign component
+                            new_component_type component_instance(witness_list, constant_list, public_input_list,
+                                                                  component.get_m1(), component.get_m2());
+                            vars = generate_assignments(component_instance, assignment, instance_input,
+                                                        current_row_index + 1)
+                                       .all_vars();
+                            component_rows = component_instance.rows_amount;
+                            break;
+                        }
                         // case FixedPointComponents::RESCALE: {
                         //     break;
                         // }
@@ -810,9 +891,25 @@ namespace nil {
                         // case FixedPointComponents::DIV_BY_POS: {
                         //     break;
                         // }
-                        // case FixedPointComponents::DIV: {
-                        //     break;
-                        // }
+                        case FixedPointComponents::DIV: {
+                            using new_component_type = fix_div<ArithmetizationType, BlueprintFieldType, PolicyType>;
+
+                            // Inputs
+                            typename new_component_type::input_type instance_input {
+                                var(component.W(0), current_row_index, false),
+                                var(component.W(1), current_row_index, false)};
+                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
+                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
+
+                            // layout component
+                            new_component_type component_instance(witness_list, constant_list, public_input_list,
+                                                                  component.get_m1(), component.get_m2());
+                            vars = generate_circuit(component_instance, bp, assignment, instance_input,
+                                                    current_row_index + 1)
+                                       .all_vars();
+                            component_rows = component_instance.rows_amount;
+                            break;
+                        }
                         // case FixedPointComponents::DOT_RESCALE1: {
                         //     break;
                         // }
@@ -887,12 +984,45 @@ namespace nil {
                             component_rows = component_instance.rows_amount;
                             break;
                         }
-                        // case FixedPointComponents::MUL_RESCALE: {
-                        //     break;
-                        // }
-                        // case FixedPointComponents::MUL_RESCALE_CONST: {
-                        //     break;
-                        // }
+                        case FixedPointComponents::MUL_RESCALE: {
+                            using new_component_type =
+                                fix_mul_rescale<ArithmetizationType, BlueprintFieldType, PolicyType>;
+
+                            // Inputs
+                            typename new_component_type::input_type instance_input {
+                                var(component.W(0), current_row_index, false),
+                                var(component.W(1), current_row_index, false)};
+                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
+                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
+
+                            // layout component
+                            new_component_type component_instance(witness_list, constant_list, public_input_list,
+                                                                  component.get_m2());
+                            vars = generate_circuit(component_instance, bp, assignment, instance_input,
+                                                    current_row_index + 1)
+                                       .all_vars();
+                            component_rows = component_instance.rows_amount;
+                            break;
+                        }
+                        case FixedPointComponents::MUL_RESCALE_CONST: {
+                            using new_component_type =
+                                fix_mul_rescale_const<ArithmetizationType, BlueprintFieldType, PolicyType>;
+
+                            // Inputs
+                            typename new_component_type::input_type instance_input {
+                                var(component.W(0), current_row_index, false)};
+                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
+                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 1);
+
+                            // layout component
+                            new_component_type component_instance(witness_list, constant_list, public_input_list,
+                                                                  constants[0], component.get_m2());
+                            vars = generate_circuit(component_instance, bp, assignment, instance_input,
+                                                    current_row_index + 1)
+                                       .all_vars();
+                            component_rows = component_instance.rows_amount;
+                            break;
+                        }
                         // case FixedPointComponents::NEG: {
                         //     break;
                         // }
@@ -915,9 +1045,25 @@ namespace nil {
                             component_rows = component_instance.rows_amount;
                             break;
                         }
-                        // case FixedPointComponents::REM: {
-                        //     break;
-                        // }
+                        case FixedPointComponents::REM: {
+                            using new_component_type = fix_rem<ArithmetizationType, BlueprintFieldType, PolicyType>;
+
+                            // Inputs
+                            typename new_component_type::input_type instance_input {
+                                var(component.W(0), current_row_index, false),
+                                var(component.W(1), current_row_index, false)};
+                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
+                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
+
+                            // layout component
+                            new_component_type component_instance(witness_list, constant_list, public_input_list,
+                                                                  component.get_m1(), component.get_m2());
+                            vars = generate_circuit(component_instance, bp, assignment, instance_input,
+                                                    current_row_index + 1)
+                                       .all_vars();
+                            component_rows = component_instance.rows_amount;
+                            break;
+                        }
                         // case FixedPointComponents::RESCALE: {
                         //     break;
                         // }
