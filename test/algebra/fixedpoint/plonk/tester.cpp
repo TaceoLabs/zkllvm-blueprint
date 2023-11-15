@@ -1,7 +1,7 @@
 #define BOOST_TEST_MODULE blueprint_plonk_fixedpoint_tester_test
 
 // Enable for faster tests
-#define TEST_WITHOUT_LOOKUP_TABLES
+// #define TEST_WITHOUT_LOOKUP_TABLES
 
 #include <boost/test/unit_test.hpp>
 
@@ -179,7 +179,7 @@ void field_operations_test() {
     using BlueprintFieldType = typename FixedType::field_type;
     constexpr std::size_t WitnessColumns = 15;
     constexpr std::size_t PublicInputColumns = 1;
-    constexpr std::size_t ConstantColumns = blueprint::components::TESTER_MAX_CONSTANT_COLS;
+    constexpr std::size_t ConstantColumns = 15;
     constexpr std::size_t SelectorColumns = 100;
     using ArithmetizationParams = crypto3::zk::snark::plonk_arithmetization_params<WitnessColumns, PublicInputColumns,
                                                                                    ConstantColumns, SelectorColumns>;
@@ -202,8 +202,8 @@ void field_operations_test() {
         witness_list.push_back(i);
     }
     std::array<std::uint32_t, 0> public_list;
-    std::array<std::uint32_t, ConstantColumns> constant_list;
-    for (auto i = 0; i < ConstantColumns; i++) {
+    std::array<std::uint32_t, blueprint::components::TESTER_MAX_CONSTANT_COLS> constant_list;
+    for (auto i = 0; i < blueprint::components::TESTER_MAX_CONSTANT_COLS; i++) {
         constant_list[i] = i;
     }
 
