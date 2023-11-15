@@ -163,12 +163,12 @@ namespace nil {
                     var output = var(0, 0, false);
                     result_type(const fix_sqrt_floor &component, std::uint32_t start_row_index) {
                         const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-                        output = var(magic(var_pos.y), false);
+                        output = var(splat(var_pos.y), false);
                     }
 
                     result_type(const fix_sqrt_floor &component, std::size_t start_row_index) {
                         const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-                        output = var(magic(var_pos.y), false);
+                        output = var(splat(var_pos.y), false);
                     }
 
                     std::vector<var> all_vars() const {
@@ -235,8 +235,8 @@ namespace nil {
 
                 auto y_sq_val = y_val * y_val;
 
-                assignment.witness(magic(var_pos.x)) = x_val;
-                assignment.witness(magic(var_pos.y)) = y_val;
+                assignment.witness(splat(var_pos.x)) = x_val;
+                assignment.witness(splat(var_pos.y)) = y_val;
 
                 // Decompositions
                 auto a_val = x_val_delta - y_sq_val;
@@ -283,17 +283,17 @@ namespace nil {
                 const int64_t start_row_index = 1 - static_cast<int64_t>(component.rows_amount);
                 const auto var_pos = component.get_var_pos(start_row_index);
 
-                auto y0 = nil::crypto3::math::expression(var(magic(var_pos.y0)));
-                auto a0 = nil::crypto3::math::expression(var(magic(var_pos.a0)));
-                auto b0 = nil::crypto3::math::expression(var(magic(var_pos.b0)));
+                auto y0 = nil::crypto3::math::expression(var(splat(var_pos.y0)));
+                auto a0 = nil::crypto3::math::expression(var(splat(var_pos.a0)));
+                auto b0 = nil::crypto3::math::expression(var(splat(var_pos.b0)));
                 for (auto i = 1; i < m; i++) {
                     y0 += var(var_pos.y0.column() + i, var_pos.y0.row()) * (1ULL << (16 * i));
                     a0 += var(var_pos.a0.column() + i, var_pos.a0.row()) * (1ULL << (16 * i));
                     b0 += var(var_pos.b0.column() + i, var_pos.b0.row()) * (1ULL << (16 * i));
                 }
 
-                auto x = var(magic(var_pos.x)) * component.get_delta();
-                auto y = var(magic(var_pos.y));
+                auto x = var(splat(var_pos.x)) * component.get_delta();
+                auto y = var(splat(var_pos.y));
 
                 auto constraint_1 = y - y0;
                 auto constraint_2 = (x - y * y) - a0;
@@ -362,7 +362,7 @@ namespace nil {
 
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
 
-                auto x = var(magic(var_pos.x));
+                auto x = var(splat(var_pos.x));
                 bp.add_copy_constraint({instance_input.x, x});
             }
 

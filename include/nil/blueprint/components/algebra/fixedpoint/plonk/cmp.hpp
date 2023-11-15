@@ -147,16 +147,16 @@ namespace nil {
 
                     result_type(const fix_cmp &component, std::uint32_t start_row_index) {
                         const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-                        eq = var(magic(var_pos.eq), false);
-                        lt = var(magic(var_pos.lt), false);
-                        gt = var(magic(var_pos.gt), false);
+                        eq = var(splat(var_pos.eq), false);
+                        lt = var(splat(var_pos.lt), false);
+                        gt = var(splat(var_pos.gt), false);
                     }
 
                     result_type(const fix_cmp &component, std::size_t start_row_index) {
                         const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-                        eq = var(magic(var_pos.eq), false);
-                        lt = var(magic(var_pos.lt), false);
-                        gt = var(magic(var_pos.gt), false);
+                        eq = var(splat(var_pos.eq), false);
+                        lt = var(splat(var_pos.lt), false);
+                        gt = var(splat(var_pos.gt), false);
                     }
 
                     std::vector<var> all_vars() const {
@@ -223,8 +223,8 @@ namespace nil {
                 auto y_val = var_value(assignment, instance_input.y);
                 auto d_val = x_val - y_val;
 
-                assignment.witness(magic(var_pos.x)) = x_val;
-                assignment.witness(magic(var_pos.y)) = y_val;
+                assignment.witness(splat(var_pos.x)) = x_val;
+                assignment.witness(splat(var_pos.y)) = y_val;
 
                 std::vector<uint16_t> d0_val;
 
@@ -238,13 +238,13 @@ namespace nil {
                 auto eq_val = typename BlueprintFieldType::value_type(static_cast<uint64_t>(eq));
                 auto lt_val = typename BlueprintFieldType::value_type(static_cast<uint64_t>(sign));
                 auto gt_val = typename BlueprintFieldType::value_type((uint64_t)(!eq && !sign));
-                assignment.witness(magic(var_pos.eq)) = eq_val;
-                assignment.witness(magic(var_pos.lt)) = lt_val;
-                assignment.witness(magic(var_pos.gt)) = gt_val;
-                assignment.witness(magic(var_pos.s)) = sign ? -one : one;
+                assignment.witness(splat(var_pos.eq)) = eq_val;
+                assignment.witness(splat(var_pos.lt)) = lt_val;
+                assignment.witness(splat(var_pos.gt)) = gt_val;
+                assignment.witness(splat(var_pos.s)) = sign ? -one : one;
 
                 // if eq:  Does not matter what to put here
-                assignment.witness(magic(var_pos.inv)) = eq ? zero : d_val.inversed();
+                assignment.witness(splat(var_pos.inv)) = eq ? zero : d_val.inversed();
 
                 // Additional limb due to potential overflow of diff
                 // FixedPointHelper::decompose creates a vector whose size is a multiple of 4.
@@ -280,7 +280,7 @@ namespace nil {
                 using var = typename plonk_fixedpoint_cmp<BlueprintFieldType, ArithmetizationParams>::var;
                 auto m = component.get_m();
 
-                auto d = nil::crypto3::math::expression(var(magic(var_pos.d0)));
+                auto d = nil::crypto3::math::expression(var(splat(var_pos.d0)));
                 for (auto i = 1; i < m; i++) {
                     d += var(var_pos.d0.column() + i, var_pos.d0.row()) * (1ULL << (16 * i));
                 }
@@ -289,13 +289,13 @@ namespace nil {
                 tmp *= 1ULL << 16;
                 d += var(var_pos.d0.column() + m, var_pos.d0.row()) * tmp;
 
-                auto x = var(magic(var_pos.x));
-                auto y = var(magic(var_pos.y));
-                auto eq = var(magic(var_pos.eq));
-                auto lt = var(magic(var_pos.lt));
-                auto gt = var(magic(var_pos.gt));
-                auto s = var(magic(var_pos.s));
-                auto inv = var(magic(var_pos.inv));
+                auto x = var(splat(var_pos.x));
+                auto y = var(splat(var_pos.y));
+                auto eq = var(splat(var_pos.eq));
+                auto lt = var(splat(var_pos.lt));
+                auto gt = var(splat(var_pos.gt));
+                auto s = var(splat(var_pos.s));
+                auto inv = var(splat(var_pos.inv));
                 auto inv2 = typename BlueprintFieldType::value_type(2).inversed();
 
                 auto constraint_1 = x - y - s * d;
@@ -370,8 +370,8 @@ namespace nil {
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
 
                 using var = typename plonk_fixedpoint_cmp<BlueprintFieldType, ArithmetizationParams>::var;
-                var x = var(magic(var_pos.x), false);
-                var y = var(magic(var_pos.y), false);
+                var x = var(splat(var_pos.x), false);
+                var y = var(splat(var_pos.y), false);
                 bp.add_copy_constraint({instance_input.x, x});
                 bp.add_copy_constraint({instance_input.y, y});
             }

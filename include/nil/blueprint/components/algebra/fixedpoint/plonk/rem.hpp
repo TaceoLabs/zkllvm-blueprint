@@ -172,12 +172,12 @@ namespace nil {
                     var output = var(0, 0, false);
                     result_type(const fix_rem &component, std::uint32_t start_row_index) {
                         const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-                        output = var(magic(var_pos.z), false);
+                        output = var(splat(var_pos.z), false);
                     }
 
                     result_type(const fix_rem &component, std::size_t start_row_index) {
                         const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-                        output = var(magic(var_pos.z), false);
+                        output = var(splat(var_pos.z), false);
                     }
 
                     std::vector<var> all_vars() const {
@@ -247,9 +247,9 @@ namespace nil {
                 }
                 auto z_val = tmp.remainder;
 
-                assignment.witness(magic(var_pos.x)) = x_val;
-                assignment.witness(magic(var_pos.y)) = y_val;
-                assignment.witness(magic(var_pos.z)) = z_val;
+                assignment.witness(splat(var_pos.x)) = x_val;
+                assignment.witness(splat(var_pos.y)) = y_val;
+                assignment.witness(splat(var_pos.z)) = z_val;
 
                 std::vector<uint16_t> y0_val;
                 std::vector<uint16_t> z0_val;
@@ -263,11 +263,11 @@ namespace nil {
                 bool sign_y_ = FixedPointHelper<BlueprintFieldType>::decompose(y_abs, y0_val);
                 BLUEPRINT_RELEASE_ASSERT(!sign_y_);
                 auto s_y_val = sign_y ? -one : one;
-                assignment.witness(magic(var_pos.s_y)) = s_y_val;
+                assignment.witness(splat(var_pos.s_y)) = s_y_val;
 
                 bool sign_a = FixedPointHelper<BlueprintFieldType>::decompose(tmp.quotient, a0_val);
                 auto s_a_val = sign_a ? -one : one;
-                assignment.witness(magic(var_pos.s_a)) = s_a_val;
+                assignment.witness(splat(var_pos.s_a)) = s_a_val;
 
                 auto z_abs = z_val;
                 bool sign_z = FixedPointHelper<BlueprintFieldType>::abs(z_abs);
@@ -310,10 +310,10 @@ namespace nil {
                 const int64_t start_row_index = 1 - static_cast<int64_t>(component.rows_amount);
                 const auto var_pos = component.get_var_pos(start_row_index);
 
-                auto y0 = nil::crypto3::math::expression(var(magic(var_pos.y0)));
-                auto z0 = nil::crypto3::math::expression(var(magic(var_pos.z0)));
-                auto a0 = nil::crypto3::math::expression(var(magic(var_pos.a0)));
-                auto d0 = nil::crypto3::math::expression(var(magic(var_pos.d0)));
+                auto y0 = nil::crypto3::math::expression(var(splat(var_pos.y0)));
+                auto z0 = nil::crypto3::math::expression(var(splat(var_pos.z0)));
+                auto a0 = nil::crypto3::math::expression(var(splat(var_pos.a0)));
+                auto d0 = nil::crypto3::math::expression(var(splat(var_pos.d0)));
                 for (auto i = 1; i < m; i++) {
                     y0 += var(var_pos.y0.column() + i, var_pos.y0.row()) * (1ULL << (16 * i));
                     z0 += var(var_pos.z0.column() + i, var_pos.z0.row()) * (1ULL << (16 * i));
@@ -321,11 +321,11 @@ namespace nil {
                     d0 += var(var_pos.d0.column() + i, var_pos.d0.row()) * (1ULL << (16 * i));
                 }
 
-                auto x = var(magic(var_pos.x));
-                auto y = var(magic(var_pos.y));
-                auto z = var(magic(var_pos.z));
-                auto s_a = var(magic(var_pos.s_a));
-                auto s_y = var(magic(var_pos.s_y));
+                auto x = var(splat(var_pos.x));
+                auto y = var(splat(var_pos.y));
+                auto z = var(splat(var_pos.z));
+                auto s_a = var(splat(var_pos.s_a));
+                auto s_y = var(splat(var_pos.s_y));
 
                 auto constraint_1 = x - s_a * a0 * y - z;
                 auto constraint_2 = y - s_y * y0;
@@ -417,8 +417,8 @@ namespace nil {
 
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
 
-                auto x = var(magic(var_pos.x));
-                auto y = var(magic(var_pos.y));
+                auto x = var(splat(var_pos.x));
+                auto y = var(splat(var_pos.y));
                 bp.add_copy_constraint({instance_input.x, x});
                 bp.add_copy_constraint({instance_input.y, y});
             }

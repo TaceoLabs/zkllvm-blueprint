@@ -89,12 +89,12 @@ namespace nil {
                     var output = var(0, 0, false);
                     result_type(const fix_neg &component, std::uint32_t start_row_index) {
                         const auto var_pos = component.get_var_pos(start_row_index);
-                        output = var(magic(var_pos.y), false);
+                        output = var(splat(var_pos.y), false);
                     }
 
                     result_type(const fix_neg &component, std::size_t start_row_index) {
                         const auto var_pos = component.get_var_pos(start_row_index);
-                        output = var(magic(var_pos.y), false);
+                        output = var(splat(var_pos.y), false);
                     }
 
                     std::vector<var> all_vars() const {
@@ -135,8 +135,8 @@ namespace nil {
 
                 const auto var_pos = component.get_var_pos(start_row_index);
 
-                assignment.witness(magic(var_pos.x)) = var_value(assignment, instance_input.x);
-                assignment.witness(magic(var_pos.y)) = -var_value(assignment, instance_input.x);
+                assignment.witness(splat(var_pos.x)) = var_value(assignment, instance_input.x);
+                assignment.witness(splat(var_pos.y)) = -var_value(assignment, instance_input.x);
 
                 return typename plonk_fixedpoint_neg<BlueprintFieldType, ArithmetizationParams>::result_type(
                     component, start_row_index);
@@ -156,8 +156,8 @@ namespace nil {
                 uint64_t start_row_index = 0;
 
                 const auto var_pos = component.get_var_pos(start_row_index);
-                auto x = var(magic(var_pos.x));
-                auto y = var(magic(var_pos.y));
+                auto x = var(splat(var_pos.x));
+                auto y = var(splat(var_pos.y));
 
                 auto constraint_1 = x + y;
 
@@ -178,7 +178,7 @@ namespace nil {
 
                 const auto var_pos = component.get_var_pos(start_row_index);
 
-                var x = var(magic(var_pos.x), false);
+                var x = var(splat(var_pos.x), false);
                 bp.add_copy_constraint({instance_input.x, x});
             }
 

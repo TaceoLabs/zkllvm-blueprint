@@ -151,20 +151,20 @@ namespace nil {
                     var max = var(0, 0, false);
                     result_type(const fix_cmp_min_max &component, std::uint32_t start_row_index) {
                         const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-                        eq = var(magic(var_pos.eq), false);
-                        lt = var(magic(var_pos.lt), false);
-                        gt = var(magic(var_pos.gt), false);
-                        min = var(magic(var_pos.min), false);
-                        max = var(magic(var_pos.max), false);
+                        eq = var(splat(var_pos.eq), false);
+                        lt = var(splat(var_pos.lt), false);
+                        gt = var(splat(var_pos.gt), false);
+                        min = var(splat(var_pos.min), false);
+                        max = var(splat(var_pos.max), false);
                     }
 
                     result_type(const fix_cmp_min_max &component, std::size_t start_row_index) {
                         const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-                        eq = var(magic(var_pos.eq), false);
-                        lt = var(magic(var_pos.lt), false);
-                        gt = var(magic(var_pos.gt), false);
-                        min = var(magic(var_pos.min), false);
-                        max = var(magic(var_pos.max), false);
+                        eq = var(splat(var_pos.eq), false);
+                        lt = var(splat(var_pos.lt), false);
+                        gt = var(splat(var_pos.gt), false);
+                        min = var(splat(var_pos.min), false);
+                        max = var(splat(var_pos.max), false);
                     }
 
                     std::vector<var> all_vars() const {
@@ -228,14 +228,14 @@ namespace nil {
                 auto y_val = var_value(assignment, instance_input.y);
 
                 if (var_value(assignment, result.eq) == one) {
-                    assignment.witness(magic(var_pos.min)) = x_val;
-                    assignment.witness(magic(var_pos.max)) = x_val;
+                    assignment.witness(splat(var_pos.min)) = x_val;
+                    assignment.witness(splat(var_pos.max)) = x_val;
                 } else if (var_value(assignment, result.lt) == one) {
-                    assignment.witness(magic(var_pos.min)) = x_val;
-                    assignment.witness(magic(var_pos.max)) = y_val;
+                    assignment.witness(splat(var_pos.min)) = x_val;
+                    assignment.witness(splat(var_pos.max)) = y_val;
                 } else {
-                    assignment.witness(magic(var_pos.min)) = y_val;
-                    assignment.witness(magic(var_pos.max)) = x_val;
+                    assignment.witness(splat(var_pos.min)) = y_val;
+                    assignment.witness(splat(var_pos.max)) = x_val;
                 }
 
                 return typename plonk_fixedpoint_cmp_min_max<BlueprintFieldType, ArithmetizationParams>::result_type(
@@ -259,11 +259,11 @@ namespace nil {
                 auto cmp_comp = component.get_cmp_component();
                 auto constraints = get_constraints(cmp_comp, bp, assignment, instance_input);
 
-                auto x = var(magic(var_pos.x));
-                auto y = var(magic(var_pos.y));
-                auto min = var(magic(var_pos.min));
-                auto max = var(magic(var_pos.max));
-                auto s = var(magic(var_pos.s));
+                auto x = var(splat(var_pos.x));
+                auto y = var(splat(var_pos.y));
+                auto min = var(splat(var_pos.min));
+                auto max = var(splat(var_pos.max));
+                auto s = var(splat(var_pos.s));
                 auto inv2 = typename BlueprintFieldType::value_type(2).inversed();
 
                 auto constraint_1 = min - inv2 * (s * (y - x) + x + y);

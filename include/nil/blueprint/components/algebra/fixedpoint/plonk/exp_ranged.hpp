@@ -290,9 +290,9 @@ namespace nil {
 
                 // update output if out of range!
                 if (var_value(assignment, range_result.lt) == one) {
-                    assignment.witness(magic(var_pos.exp_pos.y)) = component.get_exp_min();
+                    assignment.witness(splat(var_pos.exp_pos.y)) = component.get_exp_min();
                 } else if (var_value(assignment, range_result.gt) == one) {
-                    assignment.witness(magic(var_pos.exp_pos.y)) = component.get_exp_max();
+                    assignment.witness(splat(var_pos.exp_pos.y)) = component.get_exp_max();
                 }
 
                 return exp_result;
@@ -316,12 +316,12 @@ namespace nil {
 
                 auto constraints = get_constraints(exp_comp, bp, assignment, instance_input);
 
-                auto in = var(magic(var_pos.range_pos.in));
-                auto lt = var(magic(var_pos.range_pos.lt));
-                auto gt = var(magic(var_pos.range_pos.gt));
-                auto y = var(magic(var_pos.exp_pos.y));
-                auto exp_min = var(magic(var_pos.exp_min), true, var::column_type::constant);
-                auto exp_max = var(magic(var_pos.exp_max), true, var::column_type::constant);
+                auto in = var(splat(var_pos.range_pos.in));
+                auto lt = var(splat(var_pos.range_pos.lt));
+                auto gt = var(splat(var_pos.range_pos.gt));
+                auto y = var(splat(var_pos.exp_pos.y));
+                auto exp_min = var(splat(var_pos.exp_min), true, var::column_type::constant);
+                auto exp_max = var(splat(var_pos.exp_max), true, var::column_type::constant);
 
                 constraints[0] *= in;
                 constraints[2] *= in;
@@ -381,8 +381,8 @@ namespace nil {
                 const std::size_t start_row_index) {
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
 
-                assignment.constant(magic(var_pos.exp_min)) = component.get_exp_min();
-                assignment.constant(magic(var_pos.exp_max)) = component.get_exp_max();
+                assignment.constant(splat(var_pos.exp_min)) = component.get_exp_min();
+                assignment.constant(splat(var_pos.exp_max)) = component.get_exp_max();
             }
 
         }    // namespace components

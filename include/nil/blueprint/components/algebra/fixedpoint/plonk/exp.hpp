@@ -161,12 +161,12 @@ namespace nil {
                     var output = var(0, 0, false);
                     result_type(const fix_exp &component, std::uint32_t start_row_index) {
                         const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-                        output = var(magic(var_pos.y), false);
+                        output = var(splat(var_pos.y), false);
                     }
 
                     result_type(const fix_exp &component, std::size_t start_row_index) {
                         const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-                        output = var(magic(var_pos.y), false);
+                        output = var(splat(var_pos.y), false);
                     }
 
                     std::vector<var> all_vars() const {
@@ -255,7 +255,7 @@ namespace nil {
                 auto m2 = component.get_m2();
 
                 auto x_val = var_value(assignment, instance_input.x);
-                assignment.witness(magic(var_pos.x)) = x_val;
+                assignment.witness(splat(var_pos.x)) = x_val;
 
                 uint64_t x_pre_val, x_post_val;
                 bool sign = FixedPointHelper<BlueprintFieldType>::split_exp(x_val, 16 * m2, x_pre_val, x_post_val);
@@ -271,12 +271,12 @@ namespace nil {
                 auto output_a = exp_a_table[0];
                 if (input_a >= 0 && input_a < exp_a_table.size()) {
                     output_a = exp_a_table[input_a];
-                    assignment.witness(magic(var_pos.x_pre)) = input_a;
+                    assignment.witness(splat(var_pos.x_pre)) = input_a;
                 } else {
                     BLUEPRINT_RELEASE_ASSERT(!assert_on_out_of_range);
-                    assignment.witness(magic(var_pos.x_pre)) = 0;
+                    assignment.witness(splat(var_pos.x_pre)) = 0;
                 }
-                assignment.witness(magic(var_pos.y_pre)) = output_a;
+                assignment.witness(splat(var_pos.y_pre)) = output_a;
 
                 if (m2 == 2) {
                     uint32_t input_b = x_post_val >> 16;
@@ -285,24 +285,24 @@ namespace nil {
                     BLUEPRINT_RELEASE_ASSERT(input_c >= 0 && input_c < exp_b_table.size());
                     auto output_b = exp_b_table[input_b];
                     auto y_mul_val = output_a * output_b;
-                    assignment.witness(magic(var_pos.y_mul)) = y_mul_val;
-                    assignment.witness(magic(var_pos.x_post0)) = input_b;
-                    assignment.witness(magic(var_pos.y_post0)) = output_b;
+                    assignment.witness(splat(var_pos.y_mul)) = y_mul_val;
+                    assignment.witness(splat(var_pos.x_post0)) = input_b;
+                    assignment.witness(splat(var_pos.y_post0)) = output_b;
                     assignment.witness(var_pos.x_post0.column() + 1, var_pos.x_post0.row()) = input_c;
                 } else {
                     BLUEPRINT_RELEASE_ASSERT(x_post_val >= 0 && x_post_val < exp_b_table.size());
                     auto output_b = exp_b_table[x_post_val];
                     auto y_mul_val = output_a * output_b;
-                    assignment.witness(magic(var_pos.y_mul)) = y_mul_val;
-                    assignment.witness(magic(var_pos.x_post0)) = x_post_val;
-                    assignment.witness(magic(var_pos.y_post0)) = output_b;
+                    assignment.witness(splat(var_pos.y_mul)) = y_mul_val;
+                    assignment.witness(splat(var_pos.x_post0)) = x_post_val;
+                    assignment.witness(splat(var_pos.y_post0)) = output_b;
                 }
 
                 // Assign rescale
                 using var = typename plonk_fixedpoint_exp<BlueprintFieldType, ArithmetizationParams>::var;
                 typename plonk_fixedpoint_exp<BlueprintFieldType, ArithmetizationParams>::rescale_component::input_type
                     rescale_input;
-                rescale_input.x = var(magic(var_pos.y_mul));
+                rescale_input.x = var(splat(var_pos.y_mul));
                 auto rescale_comp = component.get_rescale_component();
                 generate_assignments(rescale_comp, assignment, rescale_input, start_row_index);
 
@@ -326,11 +326,11 @@ namespace nil {
                 auto delta = component.get_delta();
                 uint32_t table_half = FixedPointTables<BlueprintFieldType>::ExpALen / 2;
 
-                auto x = var(magic(var_pos.x));
-                auto x_pre = var(magic(var_pos.x_pre));
-                auto y_pre = var(magic(var_pos.y_pre));
-                auto x_post0 = var(magic(var_pos.x_post0));
-                auto y_post0 = var(magic(var_pos.y_post0));
+                auto x = var(splat(var_pos.x));
+                auto x_pre = var(splat(var_pos.x_pre));
+                auto y_pre = var(splat(var_pos.y_pre));
+                auto x_post0 = var(splat(var_pos.x_post0));
+                auto y_post0 = var(splat(var_pos.y_post0));
 
                 auto constraint_1 = delta * (x_pre - table_half) - x;
                 auto constraint_2 = nil::crypto3::math::expression(y_pre * y_post0);
@@ -341,13 +341,13 @@ namespace nil {
                 } else {
                     constraint_1 += x_post0;
                 }
-                auto y_mul = var(magic(var_pos.y_mul));
+                auto y_mul = var(splat(var_pos.y_mul));
                 constraint_2 -= y_mul;
 
                 // Constrain rescale
                 typename plonk_fixedpoint_exp<BlueprintFieldType, ArithmetizationParams>::rescale_component::input_type
                     rescale_input;
-                rescale_input.x = var(magic(var_pos.y_mul));
+                rescale_input.x = var(splat(var_pos.y_mul));
                 auto rescale_comp = component.get_rescale_component();
                 auto constraint_3 = get_constraint(rescale_comp, bp, assignment, rescale_input);
 
@@ -403,10 +403,10 @@ namespace nil {
                 constraint_post.table_id = exp_b_table_id;
 
                 // We only need the first x_post limb, since the second one (if there) does not influence the result
-                auto x_pre = var(magic(var_pos.x_pre));
-                auto x_post = var(magic(var_pos.x_post0));
-                auto y_pre = var(magic(var_pos.y_pre));
-                auto y_post = var(magic(var_pos.y_post0));
+                auto x_pre = var(splat(var_pos.x_pre));
+                auto x_post = var(splat(var_pos.x_post0));
+                auto y_pre = var(splat(var_pos.y_pre));
+                auto y_post = var(splat(var_pos.y_post0));
 
                 constraint_pre.lookup_input = {x_pre, y_pre};
                 constraint_post.lookup_input = {x_post, y_post};
@@ -449,7 +449,7 @@ namespace nil {
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
 
                 using var = typename plonk_fixedpoint_exp<BlueprintFieldType, ArithmetizationParams>::var;
-                var x = var(magic(var_pos.x), false);
+                var x = var(splat(var_pos.x), false);
                 bp.add_copy_constraint({instance_input.x, x});
             }
 

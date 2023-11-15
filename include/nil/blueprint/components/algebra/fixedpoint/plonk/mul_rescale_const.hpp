@@ -130,12 +130,12 @@ namespace nil {
                     var output = var(0, 0, false);
                     result_type(const fix_mul_rescale_const &component, std::uint32_t start_row_index) {
                         const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-                        output = var(magic(var_pos.z), false);
+                        output = var(splat(var_pos.z), false);
                     }
 
                     result_type(const fix_mul_rescale_const &component, std::size_t start_row_index) {
                         const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-                        output = var(magic(var_pos.z), false);
+                        output = var(splat(var_pos.z), false);
                     }
 
                     std::vector<var> all_vars() const {
@@ -203,11 +203,11 @@ namespace nil {
                 auto z_val = res.quotient;
                 auto q_val = res.remainder;
 
-                assignment.witness(magic(var_pos.x)) = x_val;
-                assignment.witness(magic(var_pos.z)) = z_val;
+                assignment.witness(splat(var_pos.x)) = x_val;
+                assignment.witness(splat(var_pos.z)) = z_val;
 
                 if (component.get_m2() == 1) {
-                    assignment.witness(magic(var_pos.q0)) = q_val;
+                    assignment.witness(splat(var_pos.q0)) = q_val;
                 } else {
                     std::vector<uint16_t> q0_val;
                     bool sign = FixedPointHelper<BlueprintFieldType>::decompose(q_val, q0_val);
@@ -241,14 +241,14 @@ namespace nil {
                 // 2^16, hence q could be decomposed into 16-bit limbs
                 auto delta = component.get_delta();
 
-                auto q = nil::crypto3::math::expression(var(magic(var_pos.q0)));
+                auto q = nil::crypto3::math::expression(var(splat(var_pos.q0)));
                 for (auto i = 1; i < component.get_m2(); i++) {
                     q += var(var_pos.q0.column() + i, var_pos.q0.row()) * (1ULL << (16 * i));
                 }
 
-                auto x = var(magic(var_pos.x));
-                auto y = var(magic(var_pos.y), true, var::column_type::constant);
-                auto z = var(magic(var_pos.z));
+                auto x = var(splat(var_pos.x));
+                auto y = var(splat(var_pos.y), true, var::column_type::constant);
+                auto z = var(splat(var_pos.z));
 
                 auto constraint_1 = 2 * (x * y - z * delta - q) + delta;    // see the definition of rescale
 
@@ -305,7 +305,7 @@ namespace nil {
 
                 using var = typename plonk_fixedpoint_mul_rescale_const<BlueprintFieldType, ArithmetizationParams>::var;
 
-                var x = var(magic(var_pos.x), false);
+                var x = var(splat(var_pos.x), false);
                 bp.add_copy_constraint({instance_input.x, x});
             }
 
@@ -351,7 +351,7 @@ namespace nil {
 
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
 
-                assignment.constant(magic(var_pos.y)) = component.constant;
+                assignment.constant(splat(var_pos.y)) = component.constant;
             }
 
         }    // namespace components

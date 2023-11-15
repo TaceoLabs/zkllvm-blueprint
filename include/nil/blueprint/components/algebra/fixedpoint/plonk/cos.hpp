@@ -192,12 +192,12 @@ namespace nil {
                     var output = var(0, 0, false);
                     result_type(const fix_cos &component, std::uint32_t start_row_index) {
                         const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-                        output = var(magic(var_pos.y), false);
+                        output = var(splat(var_pos.y), false);
                     }
 
                     result_type(const fix_cos &component, std::size_t start_row_index) {
                         const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-                        output = var(magic(var_pos.y), false);
+                        output = var(splat(var_pos.y), false);
                     }
 
                     std::vector<var> all_vars() const {
@@ -253,16 +253,16 @@ namespace nil {
                 auto delta = value_type(component.get_delta());
 
                 auto x_val = var_value(assignment, instance_input.x);
-                assignment.witness(magic(var_pos.x)) = x_val;
+                assignment.witness(splat(var_pos.x)) = x_val;
                 std::vector<uint16_t> x0_val;
                 auto x_reduced_val = x_val;    // x_reduced guarantees the use of only one pre-comma limb
                 if (m1 == 2) {                 // if two pre-comma limbs are used, x is reduced mod 2*pi
-                    assignment.constant(magic(var_pos.two_pi)) = component.two_pi;
+                    assignment.constant(splat(var_pos.two_pi)) = component.two_pi;
                     auto rem_component = component.get_rem_component();
                     typename plonk_fixedpoint_cos<BlueprintFieldType, ArithmetizationParams>::rem_component::input_type
                         rem_input;
-                    rem_input.x = var(magic(var_pos.x));
-                    rem_input.y = var(magic(var_pos.two_pi), true, var::column_type::constant);
+                    rem_input.x = var(splat(var_pos.x));
+                    rem_input.y = var(splat(var_pos.two_pi), true, var::column_type::constant);
                     auto rem_result = generate_assignments(rem_component, assignment, rem_input, var_pos.rem_row);
                     x_reduced_val = var_value(assignment, rem_result.output);
                 }
@@ -292,13 +292,13 @@ namespace nil {
                 auto cos1_val = cos_b_table[x0_val[m2 - 1]];
                 auto cos2_val = delta;
 
-                assignment.witness(magic(var_pos.sin0)) = sin0_val;
+                assignment.witness(splat(var_pos.sin0)) = sin0_val;
                 assignment.witness(var_pos.sin0.column() + 1, var_pos.sin0.row()) = sin1_val;
                 if (m2 == 2) {
                     assignment.witness(var_pos.sin0.column() + 2, var_pos.sin0.row()) = sin2_val;
                 }
-                assignment.witness(magic(var_pos.cos0)) = cos0_val;
-                assignment.witness(magic(var_pos.cos1)) = cos1_val;
+                assignment.witness(splat(var_pos.cos0)) = cos0_val;
+                assignment.witness(splat(var_pos.cos1)) = cos1_val;
 
                 // cos(-a)    = cos(a)
                 // sin(a+b)   = sin(a)cos(b) + cos(a)sin(b)
@@ -315,10 +315,10 @@ namespace nil {
                 auto y_val = tmp.quotient;
                 auto q_val = tmp.remainder;
 
-                assignment.witness(magic(var_pos.y)) = y_val;
+                assignment.witness(splat(var_pos.y)) = y_val;
 
                 if (m2 == 1) {
-                    assignment.witness(magic(var_pos.q0)) = q_val;
+                    assignment.witness(splat(var_pos.q0)) = q_val;
                 } else {    // m2 == 2
                     std::vector<uint16_t> q0_val;
                     bool sign_ = FixedPointHelper<BlueprintFieldType>::decompose(q_val, q0_val);
@@ -350,8 +350,8 @@ namespace nil {
                 auto m = component.get_m();
 
                 auto delta = typename BlueprintFieldType::value_type(component.get_delta());
-                auto x = var(magic(var_pos.x));
-                auto x0 = nil::crypto3::math::expression(var(magic(var_pos.x0)));
+                auto x = var(splat(var_pos.x));
+                auto x0 = nil::crypto3::math::expression(var(splat(var_pos.x0)));
 
                 // decomposition of x
                 for (size_t i = 1; i < m2 + 1; i++) {
@@ -367,14 +367,14 @@ namespace nil {
                 // we don't care about the sign of x
                 auto constraint_1 = (x_reduced - x0) * (x_reduced + x0);
 
-                auto y = var(magic(var_pos.y));
-                auto sin0 = var(magic(var_pos.sin0));
+                auto y = var(splat(var_pos.y));
+                auto sin0 = var(splat(var_pos.sin0));
                 auto sin1 = var(var_pos.sin0.column() + 1, var_pos.sin0.row());
-                auto cos0 = var(magic(var_pos.cos0));
-                auto cos1 = var(magic(var_pos.cos1));
+                auto cos0 = var(splat(var_pos.cos0));
+                auto cos1 = var(splat(var_pos.cos1));
                 auto sin2 = var(var_pos.sin0.column() + 2, var_pos.sin0.row());
                 auto cos2 = delta;
-                auto q = nil::crypto3::math::expression(var(magic(var_pos.q0)));
+                auto q = nil::crypto3::math::expression(var(splat(var_pos.q0)));
                 for (size_t i = 1; i < m2 * m2; i++) {
                     q += var(var_pos.q0.column() + i, var_pos.q0.row()) * (1ULL << (16 * i));
                 }
@@ -413,7 +413,7 @@ namespace nil {
                 const std::size_t start_row_index) {
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
                 using var = typename plonk_fixedpoint_cos<BlueprintFieldType, ArithmetizationParams>::var;
-                var x = var(magic(var_pos.x), false);
+                var x = var(splat(var_pos.x), false);
                 bp.add_copy_constraint({instance_input.x, x});
             }
 
@@ -433,8 +433,8 @@ namespace nil {
 
                     using var = typename plonk_fixedpoint_cos<BlueprintFieldType, ArithmetizationParams>::var;
 
-                    rem_input.x = var(magic(var_pos.x), false);
-                    rem_input.y = var(magic(var_pos.two_pi), false, var::column_type::constant);
+                    rem_input.x = var(splat(var_pos.x), false);
+                    rem_input.y = var(splat(var_pos.two_pi), false, var::column_type::constant);
 
                     generate_circuit(component.get_rem_component(), bp, assignment, rem_input, var_pos.rem_row);
                 }

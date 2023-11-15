@@ -299,7 +299,7 @@ namespace nil {
                     typename plonk_fixedpoint_dot_rescale_1_gate<BlueprintFieldType, ArithmetizationParams>::var;
                 typename plonk_fixedpoint_dot_rescale_1_gate<
                     BlueprintFieldType, ArithmetizationParams>::rescale_component::input_type rescale_input;
-                rescale_input.x = var(magic(var_pos.dot_result), false);
+                rescale_input.x = var(splat(var_pos.dot_result), false);
 
                 auto rescale_comp = component.get_rescale_component();
                 return generate_assignments(rescale_comp, assignment, rescale_input, var_pos.rescale_row);
@@ -328,8 +328,8 @@ namespace nil {
                     dot += var(component.W(x_pos.second), x_pos.first) * var(component.W(y_pos.second), y_pos.first);
                 }
 
-                auto dot_p = var(magic(var_pos.dot_p_0));
-                auto dot_c = var(magic(var_pos.dot_c_0));
+                auto dot_p = var(splat(var_pos.dot_p_0));
+                auto dot_c = var(splat(var_pos.dot_c_0));
                 auto constraint_1 = dot + dot_p - dot_c;
 
                 return bp.add_gate(constraint_1);
@@ -355,7 +355,7 @@ namespace nil {
                 auto dots_per_row = component.get_dots_per_row();
 
                 // constraint first previous dot to zero
-                bp.add_copy_constraint({instance_input.zero, var(magic(var_pos.dot_p_0), false)});
+                bp.add_copy_constraint({instance_input.zero, var(splat(var_pos.dot_p_0), false)});
 
                 for (auto i = 0; i < dots; i++) {
                     var x_i = get_copy_var(component, start_row_index, i, true);
@@ -407,7 +407,7 @@ namespace nil {
                     typename plonk_fixedpoint_dot_rescale_1_gate<BlueprintFieldType, ArithmetizationParams>::var;
                 typename plonk_fixedpoint_dot_rescale_1_gate<
                     BlueprintFieldType, ArithmetizationParams>::rescale_component::input_type rescale_input;
-                rescale_input.x = var(magic(var_pos.dot_result), false);
+                rescale_input.x = var(splat(var_pos.dot_result), false);
 
                 auto rescale_comp = component.get_rescale_component();
                 return generate_circuit(rescale_comp, bp, assignment, rescale_input, var_pos.rescale_row);

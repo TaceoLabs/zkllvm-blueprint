@@ -294,7 +294,7 @@ namespace nil {
                     typename plonk_fixedpoint_dot_rescale_2_gates<BlueprintFieldType, ArithmetizationParams>::var;
                 typename plonk_fixedpoint_dot_rescale_2_gates<
                     BlueprintFieldType, ArithmetizationParams>::rescale_component::input_type rescale_input;
-                rescale_input.x = var(magic(var_pos.dot_result), false);
+                rescale_input.x = var(splat(var_pos.dot_result), false);
 
                 auto rescale_comp = component.get_rescale_component();
                 return generate_assignments(rescale_comp, assignment, rescale_input, var_pos.rescale_row);
@@ -323,7 +323,7 @@ namespace nil {
                     dot += var(component.W(x_pos.second), x_pos.first) * var(component.W(y_pos.second), y_pos.first);
                 }
 
-                auto constraint_1 = dot - var(magic(var_pos.dot_0));
+                auto constraint_1 = dot - var(splat(var_pos.dot_0));
 
                 return bp.add_gate(constraint_1);
             }
@@ -352,7 +352,7 @@ namespace nil {
                 }
 
                 auto dot_p = var(var_pos.dot_0.column(), var_pos.dot_0.row() - 1);
-                auto dot_c = var(magic(var_pos.dot_0));
+                auto dot_c = var(splat(var_pos.dot_0));
                 auto constraint_1 = dot + dot_p - dot_c;
 
                 return bp.add_gate(constraint_1);
@@ -426,7 +426,7 @@ namespace nil {
                     typename plonk_fixedpoint_dot_rescale_2_gates<BlueprintFieldType, ArithmetizationParams>::var;
                 typename plonk_fixedpoint_dot_rescale_2_gates<
                     BlueprintFieldType, ArithmetizationParams>::rescale_component::input_type rescale_input;
-                rescale_input.x = var(magic(var_pos.dot_result), false);
+                rescale_input.x = var(splat(var_pos.dot_result), false);
 
                 auto rescale_comp = component.get_rescale_component();
                 return generate_circuit(rescale_comp, bp, assignment, rescale_input, var_pos.rescale_row);

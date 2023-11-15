@@ -172,12 +172,12 @@ namespace nil {
                     var output = var(0, 0, false);
                     result_type(const fix_div_by_pos &component, std::uint32_t start_row_index) {
                         const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-                        output = var(magic(var_pos.z), false);
+                        output = var(splat(var_pos.z), false);
                     }
 
                     result_type(const fix_div_by_pos &component, std::size_t start_row_index) {
                         const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-                        output = var(magic(var_pos.z), false);
+                        output = var(splat(var_pos.z), false);
                     }
 
                     std::vector<var> all_vars() const {
@@ -248,9 +248,9 @@ namespace nil {
                     FixedPointHelper<BlueprintFieldType>::round_div_mod(tmp_mul, y_val);
                 auto z_val = tmp_div.quotient;
 
-                assignment.witness(magic(var_pos.x)) = x_val;
-                assignment.witness(magic(var_pos.y)) = y_val;
-                assignment.witness(magic(var_pos.z)) = z_val;
+                assignment.witness(splat(var_pos.x)) = x_val;
+                assignment.witness(splat(var_pos.y)) = y_val;
+                assignment.witness(splat(var_pos.z)) = z_val;
 
                 std::vector<uint16_t> q0_val;
                 std::vector<uint16_t> a0_val;
@@ -265,7 +265,7 @@ namespace nil {
                 BLUEPRINT_RELEASE_ASSERT(a0_val.size() >= m);
 
                 auto y_ = FixedPointHelper<BlueprintFieldType>::field_to_backend(y_val);
-                assignment.witness(magic(var_pos.c)) = typename BlueprintFieldType::value_type(y_.limbs()[0] & 1);
+                assignment.witness(splat(var_pos.c)) = typename BlueprintFieldType::value_type(y_.limbs()[0] & 1);
 
                 for (auto i = 0; i < m; i++) {
                     assignment.witness(var_pos.q0.column() + i, var_pos.q0.row()) = q0_val[i];
@@ -293,17 +293,17 @@ namespace nil {
                 auto m = component.get_m();
                 auto delta = component.get_delta();
 
-                auto q = nil::crypto3::math::expression(var(magic(var_pos.q0)));
-                auto a = nil::crypto3::math::expression(var(magic(var_pos.a0)));
+                auto q = nil::crypto3::math::expression(var(splat(var_pos.q0)));
+                auto a = nil::crypto3::math::expression(var(splat(var_pos.a0)));
                 for (auto i = 1; i < m; i++) {
                     q += var(var_pos.q0.column() + i, var_pos.q0.row()) * (1ULL << (16 * i));
                     a += var(var_pos.a0.column() + i, var_pos.a0.row()) * (1ULL << (16 * i));
                 }
 
-                auto x = var(magic(var_pos.x));
-                auto y = var(magic(var_pos.y));
-                auto z = var(magic(var_pos.z));
-                auto c = var(magic(var_pos.c));
+                auto x = var(splat(var_pos.x));
+                auto y = var(splat(var_pos.y));
+                auto z = var(splat(var_pos.z));
+                auto c = var(splat(var_pos.c));
 
                 auto constraint_1 = 2 * (x * delta - y * z - q) + y - c;
                 auto constraint_2 = (c - 1) * c;
@@ -368,8 +368,8 @@ namespace nil {
 
                 using var = typename plonk_fixedpoint_div_by_pos<BlueprintFieldType, ArithmetizationParams>::var;
 
-                var x = var(magic(var_pos.x), false);
-                var y = var(magic(var_pos.y), false);
+                var x = var(splat(var_pos.x), false);
+                var y = var(splat(var_pos.y), false);
                 bp.add_copy_constraint({instance_input.x, x});
                 bp.add_copy_constraint({instance_input.y, y});
             }

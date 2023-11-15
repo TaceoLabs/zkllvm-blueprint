@@ -237,7 +237,7 @@ namespace nil {
                 std::vector<uint16_t> y0_val;
 
                 bool sign = FixedPointHelper<BlueprintFieldType>::decompose(y_val, y0_val);
-                assignment.witness(magic(var_pos.s_y)) = sign ? -one : one;
+                assignment.witness(splat(var_pos.s_y)) = sign ? -one : one;
                 // is ok because decomp is at least of size 4 and the biggest we have is 32.32
                 BLUEPRINT_RELEASE_ASSERT(y0_val.size() >= m);
 
@@ -264,20 +264,20 @@ namespace nil {
                 auto m = component.get_m();
                 auto delta = component.get_delta();
 
-                auto y_abs = nil::crypto3::math::expression(var(magic(var_pos.y0)));
-                auto q = nil::crypto3::math::expression(var(magic(var_pos.q0)));
-                auto a = nil::crypto3::math::expression(var(magic(var_pos.a0)));
+                auto y_abs = nil::crypto3::math::expression(var(splat(var_pos.y0)));
+                auto q = nil::crypto3::math::expression(var(splat(var_pos.q0)));
+                auto a = nil::crypto3::math::expression(var(splat(var_pos.a0)));
 
                 for (auto i = 1; i < m; i++) {
                     y_abs += var(var_pos.y0.column() + i, var_pos.y0.row()) * (1ULL << (16 * i));
                     q += var(var_pos.q0.column() + i, var_pos.q0.row()) * (1ULL << (16 * i));
                     a += var(var_pos.a0.column() + i, var_pos.a0.row()) * (1ULL << (16 * i));
                 }
-                auto s_y = var(magic(var_pos.s_y));
-                auto x = var(magic(var_pos.x));
-                auto y = var(magic(var_pos.y));
-                auto z = var(magic(var_pos.z));
-                auto c = var(magic(var_pos.c));
+                auto s_y = var(splat(var_pos.s_y));
+                auto x = var(splat(var_pos.x));
+                auto y = var(splat(var_pos.y));
+                auto z = var(splat(var_pos.z));
+                auto c = var(splat(var_pos.c));
 
                 auto constraint_1 = 2 * (x * delta - y * z - q) + y_abs - c;
                 auto constraint_2 = (c - 1) * c;

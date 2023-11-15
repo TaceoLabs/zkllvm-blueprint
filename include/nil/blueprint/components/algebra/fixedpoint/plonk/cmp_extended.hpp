@@ -153,22 +153,22 @@ namespace nil {
                     var geq = var(0, 0, false);
                     result_type(const fix_cmp_extended &component, std::uint32_t start_row_index) {
                         const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-                        eq = var(magic(var_pos.eq), false);
-                        lt = var(magic(var_pos.lt), false);
-                        gt = var(magic(var_pos.gt), false);
-                        neq = var(magic(var_pos.neq), false);
-                        leq = var(magic(var_pos.leq), false);
-                        geq = var(magic(var_pos.geq), false);
+                        eq = var(splat(var_pos.eq), false);
+                        lt = var(splat(var_pos.lt), false);
+                        gt = var(splat(var_pos.gt), false);
+                        neq = var(splat(var_pos.neq), false);
+                        leq = var(splat(var_pos.leq), false);
+                        geq = var(splat(var_pos.geq), false);
                     }
 
                     result_type(const fix_cmp_extended &component, std::size_t start_row_index) {
                         const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-                        eq = var(magic(var_pos.eq), false);
-                        lt = var(magic(var_pos.lt), false);
-                        gt = var(magic(var_pos.gt), false);
-                        neq = var(magic(var_pos.neq), false);
-                        leq = var(magic(var_pos.leq), false);
-                        geq = var(magic(var_pos.geq), false);
+                        eq = var(splat(var_pos.eq), false);
+                        lt = var(splat(var_pos.lt), false);
+                        gt = var(splat(var_pos.gt), false);
+                        neq = var(splat(var_pos.neq), false);
+                        leq = var(splat(var_pos.leq), false);
+                        geq = var(splat(var_pos.geq), false);
                     }
 
                     std::vector<var> all_vars() const {
@@ -228,9 +228,9 @@ namespace nil {
                 auto result = generate_assignments(cmp_comp, assignment, instance_input, start_row_index);
 
                 auto one = BlueprintFieldType::value_type::one();
-                assignment.witness(magic(var_pos.neq)) = one - var_value(assignment, result.eq);
-                assignment.witness(magic(var_pos.leq)) = one - var_value(assignment, result.gt);
-                assignment.witness(magic(var_pos.geq)) = one - var_value(assignment, result.lt);
+                assignment.witness(splat(var_pos.neq)) = one - var_value(assignment, result.eq);
+                assignment.witness(splat(var_pos.leq)) = one - var_value(assignment, result.gt);
+                assignment.witness(splat(var_pos.geq)) = one - var_value(assignment, result.lt);
 
                 return typename plonk_fixedpoint_cmp_extended<BlueprintFieldType, ArithmetizationParams>::result_type(
                     component, start_row_index);
@@ -253,12 +253,12 @@ namespace nil {
                 auto cmp_comp = component.get_cmp_component();
                 auto constraints = get_constraints(cmp_comp, bp, assignment, instance_input);
 
-                auto eq = var(magic(var_pos.eq));
-                auto lt = var(magic(var_pos.lt));
-                auto gt = var(magic(var_pos.gt));
-                auto neq = var(magic(var_pos.neq));
-                auto leq = var(magic(var_pos.leq));
-                auto geq = var(magic(var_pos.geq));
+                auto eq = var(splat(var_pos.eq));
+                auto lt = var(splat(var_pos.lt));
+                auto gt = var(splat(var_pos.gt));
+                auto neq = var(splat(var_pos.neq));
+                auto leq = var(splat(var_pos.leq));
+                auto geq = var(splat(var_pos.geq));
 
                 auto one = BlueprintFieldType::value_type::one();
                 auto constraint_1 = eq + neq - one;

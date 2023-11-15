@@ -134,12 +134,12 @@ namespace nil {
                     var output = var(0, 0, false);
                     result_type(const fix_min &component, std::uint32_t start_row_index) {
                         const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-                        output = var(magic(var_pos.z), false);
+                        output = var(splat(var_pos.z), false);
                     }
 
                     result_type(const fix_min &component, std::size_t start_row_index) {
                         const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-                        output = var(magic(var_pos.z), false);
+                        output = var(splat(var_pos.z), false);
                     }
 
                     std::vector<var> all_vars() const {
@@ -210,8 +210,8 @@ namespace nil {
                 auto tmp = x_val + y_val;
                 auto inv2 = typename BlueprintFieldType::value_type(2).inversed();
 
-                assignment.witness(magic(var_pos.x)) = x_val;
-                assignment.witness(magic(var_pos.y)) = y_val;
+                assignment.witness(splat(var_pos.x)) = x_val;
+                assignment.witness(splat(var_pos.y)) = y_val;
 
                 std::vector<uint16_t> d0_val;
 
@@ -223,8 +223,8 @@ namespace nil {
                 tmp -= d_val;
                 tmp *= inv2;
                 auto z_val = tmp;
-                assignment.witness(magic(var_pos.z)) = z_val;
-                assignment.witness(magic(var_pos.s)) = sign ? -one : one;
+                assignment.witness(splat(var_pos.z)) = z_val;
+                assignment.witness(splat(var_pos.s)) = sign ? -one : one;
 
                 // Additional limb due to potential overflow of d_val
                 if (d0_val.size() > m) {
@@ -259,7 +259,7 @@ namespace nil {
                 // Output: z = min(x, y)
                 // is equivalent to: z = 2^-1 * (s * (y - x) + x + y)
 
-                auto d = nil::crypto3::math::expression(var(magic(var_pos.d0)));
+                auto d = nil::crypto3::math::expression(var(splat(var_pos.d0)));
                 for (auto i = 1; i < m; i++) {
                     d += var(var_pos.d0.column() + i, var_pos.d0.row()) * (1ULL << (16 * i));
                 }
@@ -268,10 +268,10 @@ namespace nil {
                 tmp *= 1ULL << 16;
                 d += var(var_pos.d0.column() + m, var_pos.d0.row()) * tmp;
 
-                auto x = var(magic(var_pos.x));
-                auto y = var(magic(var_pos.y));
-                auto z = var(magic(var_pos.z));
-                auto s = var(magic(var_pos.s));
+                auto x = var(splat(var_pos.x));
+                auto y = var(splat(var_pos.y));
+                auto z = var(splat(var_pos.z));
+                auto s = var(splat(var_pos.s));
 
                 auto inv2 = typename BlueprintFieldType::value_type(2).inversed();
 
@@ -333,8 +333,8 @@ namespace nil {
 
                 using var = typename plonk_fixedpoint_min<BlueprintFieldType, ArithmetizationParams>::var;
 
-                var x = var(magic(var_pos.x), false);
-                var y = var(magic(var_pos.y), false);
+                var x = var(splat(var_pos.x), false);
+                var y = var(splat(var_pos.y), false);
                 bp.add_copy_constraint({instance_input.x, x});
                 bp.add_copy_constraint({instance_input.y, y});
             }

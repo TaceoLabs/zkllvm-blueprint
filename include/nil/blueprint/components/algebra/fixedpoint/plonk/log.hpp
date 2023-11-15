@@ -223,12 +223,12 @@ namespace nil {
                     var output = var(0, 0, false);
                     result_type(const fix_log &component, std::uint32_t start_row_index) {
                         const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-                        output = var(magic(var_pos.y), false);
+                        output = var(splat(var_pos.y), false);
                     }
 
                     result_type(const fix_log &component, std::size_t start_row_index) {
                         const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-                        output = var(magic(var_pos.y), false);
+                        output = var(splat(var_pos.y), false);
                     }
 
                     std::vector<var> all_vars() const {
@@ -289,8 +289,8 @@ namespace nil {
                 typename plonk_fixedpoint_log<BlueprintFieldType, ArithmetizationParams>::exp_component::input_type
                     exp1_input,
                     exp2_input;
-                exp1_input.x = var(magic(var_pos.y), false);
-                exp2_input.x = var(magic(var_pos.exp2_in), false);
+                exp1_input.x = var(splat(var_pos.y), false);
+                exp2_input.x = var(splat(var_pos.exp2_in), false);
 
                 ////////////////////////////////////////////////////////
                 // Build the trace
@@ -304,9 +304,9 @@ namespace nil {
 
                 auto exp2_in_val = y_val - 1;
 
-                assignment.witness(magic(var_pos.x)) = x_val;
-                assignment.witness(magic(var_pos.y)) = y_val;
-                assignment.witness(magic(var_pos.exp2_in)) = exp2_in_val;
+                assignment.witness(splat(var_pos.x)) = x_val;
+                assignment.witness(splat(var_pos.y)) = y_val;
+                assignment.witness(splat(var_pos.exp2_in)) = exp2_in_val;
 
                 // Assign exp gadgets
                 auto exp1_out = generate_assignments(exp_comp, assignment, exp1_input, var_pos.exp1_row);
@@ -314,8 +314,8 @@ namespace nil {
 
                 auto exp1_out_val = var_value(assignment, exp1_out.output);
                 auto exp2_out_val = var_value(assignment, exp2_out.output);
-                assignment.witness(magic(var_pos.exp1_out)) = exp1_out_val;
-                assignment.witness(magic(var_pos.exp2_out)) = exp2_out_val;
+                assignment.witness(splat(var_pos.exp1_out)) = exp1_out_val;
+                assignment.witness(splat(var_pos.exp2_out)) = exp2_out_val;
 
                 // Decompositions
                 auto a_val = exp1_out_val - x_val;
@@ -357,18 +357,18 @@ namespace nil {
                 const int64_t start_row_index = 1 - static_cast<int64_t>(component.rows_amount);
                 const auto var_pos = component.get_var_pos(start_row_index);
 
-                auto a0 = nil::crypto3::math::expression(var(magic(var_pos.a0)));
-                auto b0 = nil::crypto3::math::expression(var(magic(var_pos.b0)));
+                auto a0 = nil::crypto3::math::expression(var(splat(var_pos.a0)));
+                auto b0 = nil::crypto3::math::expression(var(splat(var_pos.b0)));
                 for (auto i = 1; i < m; i++) {
                     a0 += var(var_pos.a0.column() + i, var_pos.a0.row()) * (1ULL << (16 * i));
                     b0 += var(var_pos.b0.column() + i, var_pos.b0.row()) * (1ULL << (16 * i));
                 }
 
-                auto x = var(magic(var_pos.x));
-                auto y = var(magic(var_pos.y));
-                auto exp1_out = var(magic(var_pos.exp1_out));
-                auto exp2_in = var(magic(var_pos.exp2_in));
-                auto exp2_out = var(magic(var_pos.exp2_out));
+                auto x = var(splat(var_pos.x));
+                auto y = var(splat(var_pos.y));
+                auto exp1_out = var(splat(var_pos.exp1_out));
+                auto exp2_in = var(splat(var_pos.exp2_in));
+                auto exp2_out = var(splat(var_pos.exp2_out));
 
                 auto constraint_1 = exp1_out - x - a0;
                 auto constraint_2 = x - exp2_out - 1 - b0;
@@ -438,9 +438,9 @@ namespace nil {
                 auto exp1_res = exp_comp.get_result((std::size_t)var_pos.exp1_row);
                 auto exp2_res = exp_comp.get_result((std::size_t)var_pos.exp2_row);
 
-                auto x = var(magic(var_pos.x));
-                auto exp1_out = var(magic(var_pos.exp1_out));
-                auto exp2_out = var(magic(var_pos.exp2_out));
+                auto x = var(splat(var_pos.x));
+                auto exp1_out = var(splat(var_pos.exp1_out));
+                auto exp2_out = var(splat(var_pos.exp2_out));
 
                 bp.add_copy_constraint({instance_input.x, x});
                 bp.add_copy_constraint({exp1_res.output, exp1_out});
@@ -466,8 +466,8 @@ namespace nil {
                 typename plonk_fixedpoint_log<BlueprintFieldType, ArithmetizationParams>::exp_component::input_type
                     exp1_input,
                     exp2_input;
-                exp1_input.x = var(magic(var_pos.y), false);
-                exp2_input.x = var(magic(var_pos.exp2_in), false);
+                exp1_input.x = var(splat(var_pos.y), false);
+                exp2_input.x = var(splat(var_pos.exp2_in), false);
 
                 // Enable the exp components
                 generate_circuit(exp_comp, bp, assignment, exp1_input, var_pos.exp1_row);

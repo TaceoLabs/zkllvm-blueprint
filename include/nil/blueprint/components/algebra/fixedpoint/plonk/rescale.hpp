@@ -137,12 +137,12 @@ namespace nil {
                     var output = var(0, 0, false);
                     result_type(const fix_rescale &component, std::uint32_t start_row_index) {
                         const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-                        output = var(magic(var_pos.y), false);
+                        output = var(splat(var_pos.y), false);
                     }
 
                     result_type(const fix_rescale &component, std::size_t start_row_index) {
                         const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-                        output = var(magic(var_pos.y), false);
+                        output = var(splat(var_pos.y), false);
                     }
 
                     std::vector<var> all_vars() const {
@@ -210,11 +210,11 @@ namespace nil {
                 auto y_val = tmp.quotient;
                 auto q_val = tmp.remainder;
 
-                assignment.witness(magic(var_pos.x)) = x_val;
-                assignment.witness(magic(var_pos.y)) = y_val;
+                assignment.witness(splat(var_pos.x)) = x_val;
+                assignment.witness(splat(var_pos.y)) = y_val;
 
                 if (component.get_m2() == 1) {
-                    assignment.witness(magic(var_pos.q0)) = q_val;    // q0
+                    assignment.witness(splat(var_pos.q0)) = q_val;    // q0
                 } else {
                     std::vector<uint16_t> decomp;
                     bool sign = FixedPointHelper<BlueprintFieldType>::decompose(q_val, decomp);
@@ -249,13 +249,13 @@ namespace nil {
                 using var = typename plonk_fixedpoint_rescale<BlueprintFieldType, ArithmetizationParams>::var;
                 auto delta = component.get_delta();
 
-                auto q = nil::crypto3::math::expression(var(magic(var_pos.q0)));
+                auto q = nil::crypto3::math::expression(var(splat(var_pos.q0)));
                 for (auto i = 1; i < component.get_m2(); i++) {
                     q += var(var_pos.q0.column() + i, var_pos.q0.row()) * (1ULL << (16 * i));    // qi for i in [0, m2)
                 }
 
-                auto x = var(magic(var_pos.x));
-                auto y = var(magic(var_pos.y));
+                auto x = var(splat(var_pos.x));
+                auto y = var(splat(var_pos.y));
 
                 auto constraint = 2 * (x - y * delta - q) + delta;
 
@@ -325,7 +325,7 @@ namespace nil {
 
                 using var = typename plonk_fixedpoint_rescale<BlueprintFieldType, ArithmetizationParams>::var;
 
-                auto x = var(magic(var_pos.x), false);
+                auto x = var(splat(var_pos.x), false);
                 bp.add_copy_constraint({instance_input.x, x});
             }
 

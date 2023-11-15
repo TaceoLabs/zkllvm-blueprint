@@ -11,7 +11,7 @@
 #include <nil/crypto3/multiprecision/detail/default_ops.hpp>
 
 // macro for getting a variable list from a cell position for fixedpoint components
-#define magic(x) x.column(), x.row()
+#define splat(x) x.column(), x.row()
 
 namespace nil {
     namespace blueprint {

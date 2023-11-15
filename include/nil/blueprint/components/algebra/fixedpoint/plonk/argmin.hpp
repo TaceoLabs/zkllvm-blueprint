@@ -206,14 +206,14 @@ namespace nil {
 
                     result_type(const fix_argmin &component, std::uint32_t start_row_index) {
                         const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-                        min = var(magic(var_pos.min), false);
-                        index = var(magic(var_pos.index), false);
+                        min = var(splat(var_pos.min), false);
+                        index = var(splat(var_pos.index), false);
                     }
 
                     result_type(const fix_argmin &component, std::size_t start_row_index) {
                         const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-                        min = var(magic(var_pos.min), false);
-                        index = var(magic(var_pos.index), false);
+                        min = var(splat(var_pos.min), false);
+                        index = var(splat(var_pos.index), false);
                     }
 
                     std::vector<var> all_vars() const {
@@ -281,9 +281,9 @@ namespace nil {
 
                 BLUEPRINT_RELEASE_ASSERT(index_x_val < index_y_val);
 
-                assignment.witness(magic(var_pos.x)) = x_val;
-                assignment.witness(magic(var_pos.y)) = y_val;
-                assignment.witness(magic(var_pos.index_x)) = index_x_val;
+                assignment.witness(splat(var_pos.x)) = x_val;
+                assignment.witness(splat(var_pos.y)) = y_val;
+                assignment.witness(splat(var_pos.index_x)) = index_x_val;
 
                 // decomposition of difference
                 auto d_val = x_val - y_val;
@@ -294,7 +294,7 @@ namespace nil {
                 BLUEPRINT_RELEASE_ASSERT(!sign_);
                 // is ok because d0_val is at least of size 4 and the biggest we have is 32.32
                 BLUEPRINT_RELEASE_ASSERT(d0_val.size() >= m);
-                assignment.witness(magic(var_pos.s)) = sign ? -one : one;
+                assignment.witness(splat(var_pos.s)) = sign ? -one : one;
 
                 // Additional limb due to potential overflow of d_val
                 if (d0_val.size() > m) {
@@ -311,25 +311,25 @@ namespace nil {
                 // equal, flag and min
                 bool eq = d_val == 0;
 
-                assignment.witness(magic(var_pos.eq)) = typename BlueprintFieldType::value_type((uint64_t)eq);
+                assignment.witness(splat(var_pos.eq)) = typename BlueprintFieldType::value_type((uint64_t)eq);
 
                 // if eq:  Does not matter what to put here
-                assignment.witness(magic(var_pos.inv)) = eq ? BlueprintFieldType::value_type::zero() : d_val.inversed();
+                assignment.witness(splat(var_pos.inv)) = eq ? BlueprintFieldType::value_type::zero() : d_val.inversed();
 
                 // Which component to we have
                 if (component.select_last_index) {
                     // We have to evaluate x < y
                     bool lt = !eq && sign;
-                    assignment.witness(magic(var_pos.flag)) = typename BlueprintFieldType::value_type((uint64_t)lt);
-                    assignment.witness(magic(var_pos.min)) = lt ? x_val : y_val;
-                    assignment.witness(magic(var_pos.index)) = lt ? index_x_val : index_y_val;
+                    assignment.witness(splat(var_pos.flag)) = typename BlueprintFieldType::value_type((uint64_t)lt);
+                    assignment.witness(splat(var_pos.min)) = lt ? x_val : y_val;
+                    assignment.witness(splat(var_pos.index)) = lt ? index_x_val : index_y_val;
 
                 } else {
                     // We have to evaluate x <= y
                     bool leq = sign || eq;
-                    assignment.witness(magic(var_pos.flag)) = typename BlueprintFieldType::value_type((uint64_t)leq);
-                    assignment.witness(magic(var_pos.min)) = leq ? x_val : y_val;
-                    assignment.witness(magic(var_pos.index)) = leq ? index_x_val : index_y_val;
+                    assignment.witness(splat(var_pos.flag)) = typename BlueprintFieldType::value_type((uint64_t)leq);
+                    assignment.witness(splat(var_pos.min)) = leq ? x_val : y_val;
+                    assignment.witness(splat(var_pos.index)) = leq ? index_x_val : index_y_val;
                 }
 
                 return typename plonk_fixedpoint_argmin<BlueprintFieldType, ArithmetizationParams>::result_type(
@@ -352,7 +352,7 @@ namespace nil {
 
                 auto m = component.get_m();
 
-                auto d0 = nil::crypto3::math::expression(var(magic(var_pos.d0)));
+                auto d0 = nil::crypto3::math::expression(var(splat(var_pos.d0)));
                 for (auto i = 1; i < m; i++) {
                     d0 += var(var_pos.d0.column() + i, var_pos.d0.row()) * (1ULL << (16 * i));
                 }
@@ -361,16 +361,16 @@ namespace nil {
                 tmp *= 1ULL << 16;
                 d0 += var(var_pos.d0.column() + m, var_pos.d0.row()) * tmp;
 
-                auto x = var(magic(var_pos.x));
-                auto y = var(magic(var_pos.y));
-                auto index_x = var(magic(var_pos.index_x));
-                auto index_y = var(magic(var_pos.index_y), true, var::column_type::constant);
-                auto min = var(magic(var_pos.min));
-                auto index = var(magic(var_pos.index));
-                auto flag = var(magic(var_pos.flag));
-                auto eq = var(magic(var_pos.eq));
-                auto inv = var(magic(var_pos.inv));
-                auto s = var(magic(var_pos.s));
+                auto x = var(splat(var_pos.x));
+                auto y = var(splat(var_pos.y));
+                auto index_x = var(splat(var_pos.index_x));
+                auto index_y = var(splat(var_pos.index_y), true, var::column_type::constant);
+                auto min = var(splat(var_pos.min));
+                auto index = var(splat(var_pos.index));
+                auto flag = var(splat(var_pos.flag));
+                auto eq = var(splat(var_pos.eq));
+                auto inv = var(splat(var_pos.inv));
+                auto s = var(splat(var_pos.s));
 
                 auto constraint_1 = x - y - s * d0;
                 auto constraint_2 = (s - 1) * (s + 1);
@@ -447,9 +447,9 @@ namespace nil {
 
                 using var = typename plonk_fixedpoint_argmin<BlueprintFieldType, ArithmetizationParams>::var;
 
-                var x = var(magic(var_pos.x), false);
-                var y = var(magic(var_pos.y), false);
-                var index_x = var(magic(var_pos.index_x), false);
+                var x = var(splat(var_pos.x), false);
+                var y = var(splat(var_pos.y), false);
+                var index_x = var(splat(var_pos.index_x), false);
                 bp.add_copy_constraint({instance_input.x, x});
                 bp.add_copy_constraint({instance_input.y, y});
                 bp.add_copy_constraint({instance_input.index_x, index_x});
@@ -495,7 +495,7 @@ namespace nil {
 
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
 
-                assignment.constant(magic(var_pos.index_y)) = component.index_y;
+                assignment.constant(splat(var_pos.index_y)) = component.index_y;
             }
 
         }    // namespace components
