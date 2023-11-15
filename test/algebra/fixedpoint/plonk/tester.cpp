@@ -510,6 +510,7 @@ template<typename FixedType, typename ComponentType>
 void test_components_unary_basic(ComponentType &component, int i) {
     FixedType x((int64_t)i);
 
+    // BASIC
     add_rescale<FixedType, ComponentType>(component, FixedType(x.get_value() * FixedType::DELTA, FixedType::SCALE * 2));
     add_neg<FixedType, ComponentType>(component, x);
     add_int_to_fixedpoint<FixedType, ComponentType>(component, (int64_t)i);
