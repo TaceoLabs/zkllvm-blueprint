@@ -39,7 +39,6 @@ namespace nil {
             };
 
             static constexpr uint8_t TESTER_MAX_CONSTANT_COLS = 2;
-            static constexpr uint8_t TESTER_MAX_PUBLIC_COLS = 10;
 
             template<typename ArithmetizationType, typename FieldType, typename NonNativePolicyType>
             class fix_tester;
@@ -47,8 +46,7 @@ namespace nil {
             template<typename BlueprintFieldType, typename ArithmetizationParams, typename NonNativePolicyType>
             class fix_tester<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                              BlueprintFieldType, NonNativePolicyType>
-                : public plonk_component<BlueprintFieldType, ArithmetizationParams, TESTER_MAX_CONSTANT_COLS,
-                                         TESTER_MAX_PUBLIC_COLS> {
+                : public plonk_component<BlueprintFieldType, ArithmetizationParams, TESTER_MAX_CONSTANT_COLS, 0> {
             public:
                 using value_type = typename BlueprintFieldType::value_type;
 
@@ -111,7 +109,7 @@ namespace nil {
                     test.outputs = outputs;
                     test.constants = constants;
                     testcases.push_back(test);
-                    rows_amount += get_component_rows_amount(component, this->witness_amount(), 0, m1, m2);
+                    rows_amount += get_component_rows_amount(component, this->witness_amount(), 0, m1, m2) + 1;
                 }
 
                 std::vector<std::uint32_t> get_witness_list() const {
@@ -131,16 +129,13 @@ namespace nil {
                     return result;
                 }
 
-                std::array<std::uint32_t, TESTER_MAX_PUBLIC_COLS> get_public_input_list() const {
-                    std::array<std::uint32_t, TESTER_MAX_PUBLIC_COLS> result;
-                    for (std::size_t i = 0; i < this->public_input_amount(); ++i) {
-                        result[i] = this->PI(i);
-                    }
+                std::array<std::uint32_t, 0> get_public_input_list() const {
+                    std::array<std::uint32_t, 0> result;
                     return result;
                 }
 
-                using component_type = plonk_component<BlueprintFieldType, ArithmetizationParams,
-                                                       TESTER_MAX_CONSTANT_COLS, TESTER_MAX_PUBLIC_COLS>;
+                using component_type =
+                    plonk_component<BlueprintFieldType, ArithmetizationParams, TESTER_MAX_CONSTANT_COLS, 0>;
 
                 using var = typename component_type::var;
                 using manifest_type = plonk_component_manifest;
@@ -271,14 +266,14 @@ namespace nil {
                     auto &outputs = test.outputs;
                     auto &constants = test.constants;
 
-                    BLUEPRINT_RELEASE_ASSERT(inputs.size() + outputs.size() <= public_input_list.size());
+                    BLUEPRINT_RELEASE_ASSERT(inputs.size() + outputs.size() <= witness_list.size());
 
                     // Put inputs and outputs in the public columns, we will have coppy constraints to them later
                     for (std::size_t i = 0; i < inputs.size(); ++i) {
-                        assignment.public_input(component.PI(i), current_row_index) = inputs[i];
+                        assignment.witness(component.W(i), current_row_index) = inputs[i];
                     }
                     for (std::size_t i = 0; i < outputs.size(); ++i) {
-                        assignment.public_input(component.PI(i + inputs.size()), current_row_index) = outputs[i];
+                        assignment.witness(component.W(i + inputs.size()), current_row_index) = outputs[i];
                     }
 
                     switch (test.component) {
@@ -289,9 +284,9 @@ namespace nil {
 
                             // Inputs
                             typename new_component_type::input_type instance_input {
-                                var(component.PI(0), current_row_index, false, var::column_type::public_input),
-                                var(component.PI(1), current_row_index, false, var::column_type::public_input),
-                                var(component.PI(2), current_row_index, false, var::column_type::public_input)};
+                                var(component.W(0), current_row_index, false),
+                                var(component.W(1), current_row_index, false),
+                                var(component.W(2), current_row_index, false)};
                             BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
 
                             // Assign component
@@ -299,8 +294,8 @@ namespace nil {
                             new_component_type component_instance(witness_list, constant_list, public_input_list,
                                                                   component.get_m1(), component.get_m2(), constants[0],
                                                                   select_last_index);
-                            auto instance_result =
-                                generate_assignments(component_instance, assignment, instance_input, current_row_index);
+                            auto instance_result = generate_assignments(component_instance, assignment, instance_input,
+                                                                        current_row_index + 1);
 
                             // Outputs
                             auto vars = instance_result.all_vars();
@@ -309,7 +304,7 @@ namespace nil {
                                 BLUEPRINT_RELEASE_ASSERT(var_value(assignment, vars[i]) == outputs[i]);
                             }
 
-                            current_row_index += component_instance.rows_amount;
+                            current_row_index += component_instance.rows_amount + 1;
                             break;
                         }
                         default:
@@ -344,7 +339,7 @@ namespace nil {
                     auto &outputs = test.outputs;
                     auto &constants = test.constants;
 
-                    BLUEPRINT_RELEASE_ASSERT(inputs.size() + outputs.size() <= public_input_list.size());
+                    BLUEPRINT_RELEASE_ASSERT(inputs.size() + outputs.size() <= witness_list.size());
 
                     switch (test.component) {
                         case FixedPointComponents::ARGMAX: {
@@ -354,9 +349,9 @@ namespace nil {
 
                             // Inputs
                             typename new_component_type::input_type instance_input {
-                                var(component.PI(0), current_row_index, false, var::column_type::public_input),
-                                var(component.PI(1), current_row_index, false, var::column_type::public_input),
-                                var(component.PI(2), current_row_index, false, var::column_type::public_input)};
+                                var(component.W(0), current_row_index, false),
+                                var(component.W(1), current_row_index, false),
+                                var(component.W(2), current_row_index, false)};
                             BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
 
                             // layout component
@@ -364,19 +359,18 @@ namespace nil {
                             new_component_type component_instance(witness_list, constant_list, public_input_list,
                                                                   component.get_m1(), component.get_m2(), constants[0],
                                                                   select_last_index);
-                            auto instance_result =
-                                generate_circuit(component_instance, bp, assignment, instance_input, current_row_index);
+                            auto instance_result = generate_circuit(component_instance, bp, assignment, instance_input,
+                                                                    current_row_index + 1);
 
                             // Copy constraints for outputs
                             auto vars = instance_result.all_vars();
                             BLUEPRINT_RELEASE_ASSERT(vars.size() == outputs.size());
                             for (auto i = 0; i < vars.size(); i++) {
-                                bp.add_copy_constraint({var(component.PI(i + inputs.size()), current_row_index, false,
-                                                            var::column_type::public_input),
-                                                        vars[i]});
+                                bp.add_copy_constraint(
+                                    {var(component.W(i + inputs.size()), current_row_index, false), vars[i]});
                             }
 
-                            current_row_index += component_instance.rows_amount;
+                            current_row_index += component_instance.rows_amount + 1;
                             break;
                         }
                         default:
@@ -387,6 +381,14 @@ namespace nil {
                 return typename plonk_fixedpoint_tester<BlueprintFieldType, ArithmetizationParams>::result_type(
                     component, start_row_index);
             }
+
+            template<typename BlueprintFieldType, typename ArithmetizationParams, typename ComponentType>
+            struct is_component_tester : std::false_type { };
+
+            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            struct is_component_tester<BlueprintFieldType, ArithmetizationParams,
+                                       plonk_fixedpoint_tester<BlueprintFieldType, ArithmetizationParams>>
+                : std::true_type { };
 
         }    // namespace components
     }        // namespace blueprint

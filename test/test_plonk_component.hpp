@@ -51,6 +51,7 @@
 //#include <nil/blueprint/utils/table_profiling.hpp>
 #include <nil/blueprint/utils/satisfiability_check.hpp>
 #include <nil/blueprint/component_stretcher.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/plonk/tester.hpp>
 #include <nil/blueprint/utils/connectedness_check.hpp>
 
 #include <nil/crypto3/math/algorithms/calculate_domain_set.hpp>
@@ -264,6 +265,8 @@ namespace nil {
                                 "Component rows amount does not match actual rows amount.");
                 // Stretched components do not have a manifest, as they are dynamically generated.
                 if constexpr (!blueprint::components::is_component_stretcher<
+                                    BlueprintFieldType, ArithmetizationParams, ComponentType>::value
+                           && !blueprint::components::is_component_tester<
                                     BlueprintFieldType, ArithmetizationParams, ComponentType>::value) {
                     BOOST_ASSERT_MSG(assignment.rows_amount() - start_row ==
                                     component_type::get_rows_amount(component_instance.witness_amount(), 0,
@@ -273,6 +276,8 @@ namespace nil {
             }
             // Stretched components do not have a manifest, as they are dynamically generated.
             if constexpr (!blueprint::components::is_component_stretcher<
+                                    BlueprintFieldType, ArithmetizationParams, ComponentType>::value
+                       && !blueprint::components::is_component_tester<
                                     BlueprintFieldType, ArithmetizationParams, ComponentType>::value) {
                 BOOST_ASSERT_MSG(bp.num_gates() + bp.num_lookup_gates()==
                                 component_type::get_gate_manifest(component_instance.witness_amount(), 0,

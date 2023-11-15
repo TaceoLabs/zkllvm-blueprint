@@ -178,7 +178,7 @@ template<typename FixedType, std::size_t RandomTestsAmount>
 void field_operations_test() {
     using BlueprintFieldType = typename FixedType::field_type;
     constexpr std::size_t WitnessColumns = 15;
-    constexpr std::size_t PublicInputColumns = blueprint::components::TESTER_MAX_PUBLIC_COLS;
+    constexpr std::size_t PublicInputColumns = 1;
     constexpr std::size_t ConstantColumns = blueprint::components::TESTER_MAX_CONSTANT_COLS;
     constexpr std::size_t SelectorColumns = 100;
     using ArithmetizationParams = crypto3::zk::snark::plonk_arithmetization_params<WitnessColumns, PublicInputColumns,
@@ -201,10 +201,7 @@ void field_operations_test() {
     for (auto i = 0; i < WitnessColumns; i++) {
         witness_list.push_back(i);
     }
-    std::array<std::uint32_t, PublicInputColumns> public_list;
-    for (auto i = 0; i < PublicInputColumns; i++) {
-        public_list[i] = i;
-    }
+    std::array<std::uint32_t, 0> public_list;
     std::array<std::uint32_t, ConstantColumns> constant_list;
     for (auto i = 0; i < ConstantColumns; i++) {
         constant_list[i] = i;
@@ -218,7 +215,9 @@ void field_operations_test() {
     std::vector<typename BlueprintFieldType::value_type> public_input = {};
 
     nil::crypto3::test_component<component_type, BlueprintFieldType, ArithmetizationParams, hash_type, Lambda>(
-        component_instance, public_input, result_check, instance_input);
+        component_instance, public_input, result_check, instance_input,
+        crypto3::detail::connectedness_check_type::WEAK);
+    // We do not have inputs/outputs so the weak check is sufficient
 }
 
 constexpr static const std::size_t random_tests_amount = 10;
