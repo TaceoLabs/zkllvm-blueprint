@@ -36,6 +36,186 @@ bool doubleEquals(double a, double b, double epsilon) {
 }
 
 template<typename FixedType, typename ComponentType>
+void add_cmp(ComponentType &component, FixedType input1, FixedType input2) {
+    double input1_f = input1.to_double();
+    double input2_f = input2.to_double();
+    bool expected_res_less_f = input1_f < input2_f;
+    bool expected_res_greater_f = input1_f > input2_f;
+    bool expected_res_equal_f = fabs(input1_f - input2_f) < pow(2., -FixedType::SCALE);
+    bool expected_res_less = input1 < input2;
+    bool expected_res_greater = input1 > input2;
+    bool expected_res_equal = input1 == input2;
+
+    BLUEPRINT_RELEASE_ASSERT(expected_res_less_f == expected_res_less);
+    BLUEPRINT_RELEASE_ASSERT(expected_res_greater_f == expected_res_greater);
+    BLUEPRINT_RELEASE_ASSERT(expected_res_equal_f == expected_res_equal);
+    BLUEPRINT_RELEASE_ASSERT((uint8_t)expected_res_equal + (uint8_t)expected_res_greater + (uint8_t)expected_res_less ==
+                             1);
+
+    std::vector<typename FixedType::value_type> inputs = {input1.get_value(), input2.get_value()};
+    std::vector<typename FixedType::value_type> outputs = {expected_res_equal ? 1 : 0, expected_res_less ? 1 : 0,
+                                                           expected_res_greater ? 1 : 0};
+    std::vector<typename FixedType::value_type> constants = {};
+
+    component.add_testcase(blueprint::components::FixedPointComponents::CMP, inputs, outputs, constants);
+}
+
+template<typename FixedType, typename ComponentType>
+void add_cmp_extended(ComponentType &component, FixedType input1, FixedType input2) {
+    double input1_f = input1.to_double();
+    double input2_f = input2.to_double();
+    bool expected_res_less_f = input1_f < input2_f;
+    bool expected_res_greater_f = input1_f > input2_f;
+    bool expected_res_equal_f = fabs(input1_f - input2_f) < pow(2., -FixedType::SCALE);
+    bool expected_res_leq_f = input1_f <= input2_f;
+    bool expected_res_geq_f = input1_f >= input2_f;
+    bool expected_res_neq_f = fabs(input1_f - input2_f) >= pow(2., -FixedType::SCALE);
+    bool expected_res_less = input1 < input2;
+    bool expected_res_greater = input1 > input2;
+    bool expected_res_equal = input1 == input2;
+    bool expected_res_geq = input1 >= input2;
+    bool expected_res_leq = input1 <= input2;
+    bool expected_res_neq = input1 != input2;
+
+    BLUEPRINT_RELEASE_ASSERT(expected_res_less_f == expected_res_less);
+    BLUEPRINT_RELEASE_ASSERT(expected_res_greater_f == expected_res_greater);
+    BLUEPRINT_RELEASE_ASSERT(expected_res_equal_f == expected_res_equal);
+    BLUEPRINT_RELEASE_ASSERT(expected_res_leq_f == expected_res_leq);
+    BLUEPRINT_RELEASE_ASSERT(expected_res_geq_f == expected_res_geq);
+    BLUEPRINT_RELEASE_ASSERT(expected_res_neq_f == expected_res_neq);
+    BLUEPRINT_RELEASE_ASSERT((uint8_t)expected_res_equal + (uint8_t)expected_res_greater + (uint8_t)expected_res_less ==
+                             1);
+    BLUEPRINT_ASSERT(expected_res_eq != expected_res_neq);
+    BLUEPRINT_ASSERT(expected_res_geq != expected_res_less);
+    BLUEPRINT_ASSERT(expected_res_leq != expected_res_greater);
+
+    std::vector<typename FixedType::value_type> inputs = {input1.get_value(), input2.get_value()};
+    std::vector<typename FixedType::value_type> outputs = {expected_res_equal ? 1 : 0,   expected_res_less ? 1 : 0,
+                                                           expected_res_greater ? 1 : 0, expected_res_neq ? 1 : 0,
+                                                           expected_res_leq ? 1 : 0,     expected_res_geq ? 1 : 0};
+    std::vector<typename FixedType::value_type> constants = {};
+
+    component.add_testcase(blueprint::components::FixedPointComponents::CMP_EXTENDED, inputs, outputs, constants);
+}
+
+template<typename FixedType, typename ComponentType>
+void add_select_internal(ComponentType &component, FixedType input1, FixedType input2, bool input1_select) {
+
+    double expected_res_f = input1_select ? input1.to_double() : input2.to_double();
+    auto expected_res = input1_select ? input1 : input2;
+
+    BLUEPRINT_RELEASE_ASSERT(doubleEquals(expected_res_f, expected_res.to_double(), EPSILON));
+
+    std::vector<typename FixedType::value_type> inputs = {input1_select ? 1 : 0, input1.get_value(),
+                                                          input2.get_value()};
+    std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};
+    std::vector<typename FixedType::value_type> constants = {};
+
+    component.add_testcase(blueprint::components::FixedPointComponents::SELECT, inputs, outputs, constants);
+}
+
+template<typename FixedType, typename ComponentType>
+void add_select(ComponentType &component, FixedType input1, FixedType input2) {
+    add_select_internal(component, input1, input2, true);
+    add_select_internal(component, input1, input2, false);
+}
+
+template<typename FixedType, typename ComponentType>
+void add_max(ComponentType &component, FixedType input1, FixedType input2) {
+    double input1_f = input1.to_double();
+    double input2_f = input2.to_double();
+    double expected_res_f = input1_f > input2_f ? input1_f : input2_f;
+    auto expected_res = input1 > input2 ? input1 : input2;
+
+    BLUEPRINT_RELEASE_ASSERT(doubleEquals(expected_res_f, expected_res.to_double(), EPSILON));
+
+    std::vector<typename FixedType::value_type> inputs = {input1.get_value(), input2.get_value()};
+    std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};
+    std::vector<typename FixedType::value_type> constants = {};
+
+    component.add_testcase(blueprint::components::FixedPointComponents::MAX, inputs, outputs, constants);
+}
+
+template<typename FixedType, typename ComponentType>
+void add_min(ComponentType &component, FixedType input1, FixedType input2) {
+    double input1_f = input1.to_double();
+    double input2_f = input2.to_double();
+    double expected_res_f = input1_f < input2_f ? input1_f : input2_f;
+    auto expected_res = input1 < input2 ? input1 : input2;
+
+    BLUEPRINT_RELEASE_ASSERT(doubleEquals(expected_res_f, expected_res.to_double(), EPSILON));
+
+    std::vector<typename FixedType::value_type> inputs = {input1.get_value(), input2.get_value()};
+    std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};
+    std::vector<typename FixedType::value_type> constants = {};
+
+    component.add_testcase(blueprint::components::FixedPointComponents::MIN, inputs, outputs, constants);
+}
+
+template<typename FixedType, typename ComponentType>
+void add_cmp_min_max(ComponentType &component, FixedType input1, FixedType input2) {
+    double input1_f = input1.to_double();
+    double input2_f = input2.to_double();
+    bool expected_res_less_f = input1_f < input2_f;
+    bool expected_res_greater_f = input1_f > input2_f;
+    bool expected_res_equal_f = fabs(input1_f - input2_f) < pow(2., -FixedType::SCALE);
+    double expected_res_min_f = input1_f < input2_f ? input1_f : input2_f;
+    double expected_res_max_f = input1_f > input2_f ? input1_f : input2_f;
+    bool expected_res_less = input1 < input2;
+    bool expected_res_greater = input1 > input2;
+    bool expected_res_equal = input1 == input2;
+    auto expected_res_min = input1 < input2 ? input1 : input2;
+    auto expected_res_max = input1 > input2 ? input1 : input2;
+
+    BLUEPRINT_RELEASE_ASSERT(expected_res_less_f == expected_res_less);
+    BLUEPRINT_RELEASE_ASSERT(expected_res_greater_f == expected_res_greater);
+    BLUEPRINT_RELEASE_ASSERT(expected_res_equal_f == expected_res_equal);
+    BLUEPRINT_RELEASE_ASSERT((uint8_t)expected_res_equal + (uint8_t)expected_res_greater + (uint8_t)expected_res_less ==
+                             1);
+
+    BLUEPRINT_RELEASE_ASSERT(doubleEquals(expected_res_min_f, expected_res_min.to_double(), EPSILON));
+    BLUEPRINT_RELEASE_ASSERT(doubleEquals(expected_res_max_f, expected_res_max.to_double(), EPSILON));
+
+    std::vector<typename FixedType::value_type> inputs = {input1.get_value(), input2.get_value()};
+    std::vector<typename FixedType::value_type> outputs = {expected_res_equal ? 1 : 0, expected_res_less ? 1 : 0,
+                                                           expected_res_greater ? 1 : 0, expected_res_min.get_value(),
+                                                           expected_res_max.get_value()};
+    std::vector<typename FixedType::value_type> constants = {};
+
+    component.add_testcase(blueprint::components::FixedPointComponents::CMP_MIN_MAX, inputs, outputs, constants);
+}
+
+template<typename FixedType, typename ComponentType>
+void add_range(ComponentType &component, FixedType input, FixedType x_lo, FixedType x_hi) {
+    if (x_lo > x_hi) {
+        std::swap(x_lo, x_hi);
+    }
+
+    double input_f = input.to_double();
+    double x_lo_f = x_lo.to_double();
+    double x_hi_f = x_hi.to_double();
+    bool expected_res_less_f = input_f < x_lo_f;
+    bool expected_res_greater_f = input_f > x_hi_f;
+    bool expected_res_in_f = (input_f >= x_lo_f) && (input_f <= x_hi_f);
+    bool expected_res_less = input < x_lo;
+    bool expected_res_greater = input > x_hi;
+    bool expected_res_in = (input >= x_lo) && (input <= x_hi);
+
+    BLUEPRINT_RELEASE_ASSERT(expected_res_less_f == expected_res_less);
+    BLUEPRINT_RELEASE_ASSERT(expected_res_greater_f == expected_res_greater);
+    BLUEPRINT_RELEASE_ASSERT(expected_res_in_f == expected_res_in);
+    BLUEPRINT_RELEASE_ASSERT((uint8_t)expected_res_in + (uint8_t)expected_res_greater + (uint8_t)expected_res_less ==
+                             1);
+
+    std::vector<typename FixedType::value_type> inputs = {input.get_value()};
+    std::vector<typename FixedType::value_type> outputs = {expected_res_in ? 1 : 0, expected_res_less ? 1 : 0,
+                                                           expected_res_greater ? 1 : 0};
+    std::vector<typename FixedType::value_type> constants = {x_lo.get_value(), x_hi.get_value()};
+
+    component.add_testcase(blueprint::components::FixedPointComponents::RANGE, inputs, outputs, constants);
+}
+
+template<typename FixedType, typename ComponentType>
 void add_gather_acc_inner(ComponentType &component, FixedType acc, FixedType data,
                           typename FixedType::value_type index_a, typename FixedType::value_type index_b) {
 
@@ -204,6 +384,15 @@ void test_components_binary_basic(ComponentType &component, int i, int j) {
     auto index_a = FixedType::value_type::one();
     auto index_b = typename FixedType::value_type(2);
 
+    // CMP
+    add_select<FixedType, ComponentType>(component, x, y);
+    add_cmp<FixedType, ComponentType>(component, x, y);
+    add_cmp_extended<FixedType, ComponentType>(component, x, y);
+    add_max<FixedType, ComponentType>(component, x, y);
+    add_min<FixedType, ComponentType>(component, x, y);
+    add_cmp_min_max<FixedType, ComponentType>(component, x, y);
+    add_range<FixedType, ComponentType>(component, x, x, y);
+
     // ML
     add_gather_acc<FixedType, ComponentType>(component, x, y, index_a, index_b);
     add_argmax<FixedType, ComponentType>(component, x, y, index_a, index_b);
@@ -216,12 +405,23 @@ void test_components_on_random_data(ComponentType &component, std::size_t i, Rng
                 FixedType::SCALE);
     FixedType y(generate_random_for_fixedpoint<typename FixedType::value_type>(FixedType::M_1, FixedType::M_2, rng),
                 FixedType::SCALE);
+    FixedType z(generate_random_for_fixedpoint<typename FixedType::value_type>(FixedType::M_1, FixedType::M_2, rng),
+                FixedType::SCALE);
 
     auto index_a = generate_random_index<typename FixedType::value_type>(rng);
     auto index_b = generate_random_index<typename FixedType::value_type>(rng);
     while (index_a == index_b) {
         index_b = generate_random_index<typename FixedType::value_type>(rng);
     }
+
+    // CMP
+    add_select<FixedType, ComponentType>(component, x, y);
+    add_cmp<FixedType, ComponentType>(component, x, y);
+    add_cmp_extended<FixedType, ComponentType>(component, x, y);
+    add_max<FixedType, ComponentType>(component, x, y);
+    add_min<FixedType, ComponentType>(component, x, y);
+    add_cmp_min_max<FixedType, ComponentType>(component, x, y);
+    add_range<FixedType, ComponentType>(component, x, y, z);
 
     // ML
     add_gather_acc<FixedType, ComponentType>(component, x, y, index_a, index_b);
