@@ -1,7 +1,7 @@
 #define BOOST_TEST_MODULE blueprint_plonk_fixedpoint_tester_test
 
 // Enable for faster tests
-// #define TEST_WITHOUT_LOOKUP_TABLES
+#define TEST_WITHOUT_LOOKUP_TABLES
 
 #include <boost/test/unit_test.hpp>
 
@@ -33,6 +33,30 @@ bool doubleEquals(double a, double b, double epsilon) {
     // Essentially equal from
     // https://stackoverflow.com/questions/17333/how-do-you-compare-float-and-double-while-accounting-for-precision-loss
     return fabs(a - b) <= ((fabs(a) > fabs(b) ? fabs(b) : fabs(a)) * epsilon);
+}
+
+template<typename FixedType, typename ComponentType>
+void add_gather_acc_inner(ComponentType &component, FixedType acc, FixedType data,
+                          typename FixedType::value_type index_a, typename FixedType::value_type index_b) {
+
+    double expected_res_f = (index_a == index_b) ? acc.to_double() + data.to_double() : acc.to_double();
+    auto expected_res = (index_a == index_b) ? acc + data : acc;
+
+    BLUEPRINT_RELEASE_ASSERT(doubleEquals(expected_res_f, expected_res.to_double(), EPSILON));
+
+    std::vector<typename FixedType::value_type> inputs = {acc.get_value(), data.get_value(), index_a};
+    std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};
+    std::vector<typename FixedType::value_type> constants = {index_b};
+
+    component.add_testcase(blueprint::components::FixedPointComponents::GATHER_ACC, inputs, outputs, constants);
+}
+
+template<typename FixedType, typename ComponentType>
+void add_gather_acc(ComponentType &component, FixedType x, FixedType y, typename FixedType::value_type index_a,
+                    typename FixedType::value_type index_b) {
+    auto acc = FixedType::value_type::zero();
+    add_gather_acc_inner<FixedType, ComponentType>(component, acc, x, index_a, index_a);    // new_acc should be x
+    add_gather_acc_inner<FixedType, ComponentType>(component, x, y, index_a, index_b);      // new_acc should stay x
 }
 
 template<typename FixedType, typename ComponentType>
@@ -78,6 +102,51 @@ void add_argmax(ComponentType &component, FixedType x, FixedType y, typename Fix
     }
     add_argmax_inner<FixedType, ComponentType>(component, x, y, index_x, index_y, true);
     add_argmax_inner<FixedType, ComponentType>(component, x, y, index_x, index_y, false);
+}
+
+template<typename FixedType, typename ComponentType>
+void add_argmin_inner(ComponentType &component, FixedType x, FixedType y, typename FixedType::value_type index_x,
+                      typename FixedType::value_type index_y, bool select_last_index) {
+    BLUEPRINT_RELEASE_ASSERT(index_x < index_y);
+
+    double x_f = x.to_double();
+    double y_f = y.to_double();
+
+    double expected_res_f;
+    FixedType expected_res(0, FixedType::SCALE);
+    typename FixedType::value_type expected_index;
+
+    expected_res_f = y.to_double();
+
+    if (select_last_index) {
+        // We have to evaluate x < y
+        expected_res_f = x_f < y_f ? x_f : y_f;
+        expected_res = x < y ? x : y;
+        expected_index = x_f < y_f ? index_x : index_y;
+    } else {
+        // We have to evaluate x <= y
+        expected_res_f = x_f <= y_f ? x_f : y_f;
+        expected_res = x <= y ? x : y;
+        expected_index = x_f <= y_f ? index_x : index_y;
+    }
+
+    BLUEPRINT_RELEASE_ASSERT(doubleEquals(expected_res_f, expected_res.to_double(), EPSILON));
+
+    std::vector<typename FixedType::value_type> inputs = {x.get_value(), y.get_value(), index_x};
+    std::vector<typename FixedType::value_type> outputs = {expected_res.get_value(), expected_index};
+    std::vector<typename FixedType::value_type> constants = {index_y, select_last_index ? 1 : 0};
+
+    component.add_testcase(blueprint::components::FixedPointComponents::ARGMIN, inputs, outputs, constants);
+}
+
+template<typename FixedType, typename ComponentType>
+void add_argmin(ComponentType &component, FixedType x, FixedType y, typename FixedType::value_type index_x,
+                typename FixedType::value_type index_y) {
+    if (index_y < index_x) {
+        std::swap(index_x, index_y);
+    }
+    add_argmin_inner<FixedType, ComponentType>(component, x, y, index_x, index_y, true);
+    add_argmin_inner<FixedType, ComponentType>(component, x, y, index_x, index_y, false);
 }
 
 static constexpr std::size_t INDEX_MAX = 1000;
@@ -135,7 +204,10 @@ void test_components_binary_basic(ComponentType &component, int i, int j) {
     auto index_a = FixedType::value_type::one();
     auto index_b = typename FixedType::value_type(2);
 
+    // ML
+    add_gather_acc<FixedType, ComponentType>(component, x, y, index_a, index_b);
     add_argmax<FixedType, ComponentType>(component, x, y, index_a, index_b);
+    add_argmin<FixedType, ComponentType>(component, x, y, index_a, index_b);
 }
 
 template<typename FixedType, typename ComponentType, typename RngType>
@@ -151,7 +223,10 @@ void test_components_on_random_data(ComponentType &component, std::size_t i, Rng
         index_b = generate_random_index<typename FixedType::value_type>(rng);
     }
 
+    // ML
+    add_gather_acc<FixedType, ComponentType>(component, x, y, index_a, index_b);
     add_argmax<FixedType, ComponentType>(component, x, y, index_a, index_b);
+    add_argmin<FixedType, ComponentType>(component, x, y, index_a, index_b);
 }
 
 template<typename FixedType, typename ComponentType, std::size_t RandomTestsAmount>
