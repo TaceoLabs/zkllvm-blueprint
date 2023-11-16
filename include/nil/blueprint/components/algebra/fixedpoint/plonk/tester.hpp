@@ -94,6 +94,13 @@ namespace nil {
                     return testcases;
                 }
 
+///////////////////////////////////////////////////////////////////////////////
+//  macro
+#define macro_rows_amount(name, ...)                                                     \
+    name<ArithmetizationType, BlueprintFieldType, NonNativePolicyType>::get_rows_amount( \
+        witness_amount, lookup_column_amount, ##__VA_ARGS__);
+                ///////////////////////////////////////////////////////////////////////////////
+
                 static std::size_t get_component_rows_amount(FixedPointComponents component, std::size_t witness_amount,
                                                              std::size_t lookup_column_amount, uint8_t m1, uint8_t m2) {
                     using ArithmetizationType =
@@ -101,110 +108,65 @@ namespace nil {
 
                     switch (component) {
                         case FixedPointComponents::ADD:
-                            return addition<ArithmetizationType, BlueprintFieldType,
-                                            NonNativePolicyType>::get_rows_amount(witness_amount, lookup_column_amount);
+                            return macro_rows_amount(addition);
                         case FixedPointComponents::ARGMAX:
-                            return fix_argmax<ArithmetizationType, BlueprintFieldType,
-                                              NonNativePolicyType>::get_rows_amount(witness_amount,
-                                                                                    lookup_column_amount, m1, m2);
+                            return macro_rows_amount(fix_argmax, m1, m2);
                         case FixedPointComponents::ARGMIN:
-                            return fix_argmin<ArithmetizationType, BlueprintFieldType,
-                                              NonNativePolicyType>::get_rows_amount(witness_amount,
-                                                                                    lookup_column_amount, m1, m2);
+                            return macro_rows_amount(fix_argmin, m1, m2);
                         case FixedPointComponents::CMP:
-                            return fix_cmp<ArithmetizationType, BlueprintFieldType,
-                                           NonNativePolicyType>::get_rows_amount(witness_amount, lookup_column_amount);
+                            return macro_rows_amount(fix_cmp);
                         case FixedPointComponents::CMP_EXTENDED:
-                            return fix_cmp_extended<ArithmetizationType, BlueprintFieldType,
-                                                    NonNativePolicyType>::get_rows_amount(witness_amount,
-                                                                                          lookup_column_amount);
+                            return macro_rows_amount(fix_cmp_extended);
                         case FixedPointComponents::CMP_MIN_MAX:
-                            return fix_cmp_min_max<ArithmetizationType, BlueprintFieldType,
-                                                   NonNativePolicyType>::get_rows_amount(witness_amount,
-                                                                                         lookup_column_amount);
+                            return macro_rows_amount(fix_cmp_min_max);
                         case FixedPointComponents::DIV_BY_POS:
-                            return fix_div_by_pos<ArithmetizationType, BlueprintFieldType,
-                                                  NonNativePolicyType>::get_rows_amount(witness_amount,
-                                                                                        lookup_column_amount, m1, m2);
+                            return macro_rows_amount(fix_div_by_pos, m1, m2);
                         case FixedPointComponents::DIV:
-                            return fix_div<ArithmetizationType, BlueprintFieldType,
-                                           NonNativePolicyType>::get_rows_amount(witness_amount, lookup_column_amount,
-                                                                                 m1, m2);
+                            return macro_rows_amount(fix_div, m1, m2);
                         // case FixedPointComponents::DOT_RESCALE1:
                         // case FixedPointComponents::DOT_RESCALE2:
                         case FixedPointComponents::EXP:
-                            return fix_exp<ArithmetizationType, BlueprintFieldType,
-                                           NonNativePolicyType>::get_rows_amount(witness_amount, lookup_column_amount);
+                            return macro_rows_amount(fix_exp);
                         case FixedPointComponents::EXP_RANGED:
-                            return fix_exp_ranged<ArithmetizationType, BlueprintFieldType,
-                                                  NonNativePolicyType>::get_rows_amount(witness_amount,
-                                                                                        lookup_column_amount, m1, m2);
+                            return macro_rows_amount(fix_exp_ranged, m1, m2);
                         case FixedPointComponents::GATHER_ACC:
-                            return fix_gather_acc<ArithmetizationType, BlueprintFieldType,
-                                                  NonNativePolicyType>::get_rows_amount(witness_amount,
-                                                                                        lookup_column_amount);
+                            return macro_rows_amount(fix_gather_acc);
                         case FixedPointComponents::LOG:
-                            return fix_log<ArithmetizationType, BlueprintFieldType,
-                                           NonNativePolicyType>::get_rows_amount(witness_amount, lookup_column_amount,
-                                                                                 m1, m2);
+                            return macro_rows_amount(fix_log, m1, m2);
                         case FixedPointComponents::MAX:
-                            return fix_max<ArithmetizationType, BlueprintFieldType,
-                                           NonNativePolicyType>::get_rows_amount(witness_amount, lookup_column_amount);
+                            return macro_rows_amount(fix_max);
                         case FixedPointComponents::MIN:
-                            return fix_min<ArithmetizationType, BlueprintFieldType,
-                                           NonNativePolicyType>::get_rows_amount(witness_amount, lookup_column_amount);
+                            return macro_rows_amount(fix_min);
                         case FixedPointComponents::MUL_RESCALE:
-                            return fix_mul_rescale<ArithmetizationType, BlueprintFieldType,
-                                                   NonNativePolicyType>::get_rows_amount(witness_amount,
-                                                                                         lookup_column_amount);
+                            return macro_rows_amount(fix_mul_rescale);
                         case FixedPointComponents::MUL_RESCALE_CONST:
-                            return fix_mul_rescale_const<ArithmetizationType, BlueprintFieldType,
-                                                         NonNativePolicyType>::get_rows_amount(witness_amount,
-                                                                                               lookup_column_amount);
+                            return macro_rows_amount(fix_mul_rescale_const);
                         case FixedPointComponents::NEG:
-                            return fix_neg<ArithmetizationType, BlueprintFieldType,
-                                           NonNativePolicyType>::get_rows_amount(witness_amount, lookup_column_amount);
+                            return macro_rows_amount(fix_neg);
                         case FixedPointComponents::RANGE:
-                            return fix_range<ArithmetizationType, BlueprintFieldType,
-                                             NonNativePolicyType>::get_rows_amount(witness_amount, lookup_column_amount,
-                                                                                   m1, m2);
+                            return macro_rows_amount(fix_range, m1, m2);
                         case FixedPointComponents::REM:
-                            return fix_rem<ArithmetizationType, BlueprintFieldType,
-                                           NonNativePolicyType>::get_rows_amount(witness_amount, lookup_column_amount,
-                                                                                 m1, m2);
+                            return macro_rows_amount(fix_rem, m1, m2);
                         case FixedPointComponents::RESCALE:
-                            return fix_rescale<ArithmetizationType, BlueprintFieldType,
-                                               NonNativePolicyType>::get_rows_amount(witness_amount,
-                                                                                     lookup_column_amount);
+                            return macro_rows_amount(fix_rescale);
                         case FixedPointComponents::SELECT:
-                            return fix_select<ArithmetizationType, BlueprintFieldType,
-                                              NonNativePolicyType>::get_rows_amount(witness_amount,
-                                                                                    lookup_column_amount);
+                            return macro_rows_amount(fix_select);
                         case FixedPointComponents::SQRT:
-                            return fix_sqrt<ArithmetizationType, BlueprintFieldType,
-                                            NonNativePolicyType>::get_rows_amount(witness_amount, lookup_column_amount,
-                                                                                  m1, m2);
+                            return macro_rows_amount(fix_sqrt, m1, m2);
                         case FixedPointComponents::SQRT_FLOOR:
-                            return fix_sqrt_floor<ArithmetizationType, BlueprintFieldType,
-                                                  NonNativePolicyType>::get_rows_amount(witness_amount,
-                                                                                        lookup_column_amount, m1, m2);
+                            return macro_rows_amount(fix_sqrt_floor, m1, m2);
                         case FixedPointComponents::SUB:
-                            return subtraction<ArithmetizationType, BlueprintFieldType,
-                                               NonNativePolicyType>::get_rows_amount(witness_amount,
-                                                                                     lookup_column_amount);
+                            return macro_rows_amount(subtraction);
                         case FixedPointComponents::TANH:
-                            return fix_tanh<ArithmetizationType, BlueprintFieldType,
-                                            NonNativePolicyType>::get_rows_amount(witness_amount, lookup_column_amount,
-                                                                                  m1, m2);
+                            return macro_rows_amount(fix_tanh, m1, m2);
                         case FixedPointComponents::TO_FIXEDPOINT:
-                            return int_to_fix<ArithmetizationType, BlueprintFieldType,
-                                              NonNativePolicyType>::get_rows_amount(witness_amount,
-                                                                                    lookup_column_amount);
+                            return macro_rows_amount(int_to_fix);
                         default:
                             BLUEPRINT_RELEASE_ASSERT(false);
                     }
                     return 0;
                 }
+#undef macro_rows_amount
 
                 void add_testcase(FixedPointComponents component, std::vector<value_type> &inputs,
                                   std::vector<value_type> &outputs, std::vector<value_type> &constants, uint8_t m1,
@@ -339,6 +301,34 @@ namespace nil {
                 fix_tester<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                            BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
+///////////////////////////////////////////////////////////////////////////////
+//  macro
+#define macro_assigner(num_constant, ...)                                                                          \
+    BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());                                   \
+    BLUEPRINT_RELEASE_ASSERT(constants.size() == num_constant);                                                    \
+    new_component_type component_instance(witness_list, constant_list, public_input_list, ##__VA_ARGS__);          \
+    vars = generate_assignments(component_instance, assignment, instance_input, current_row_index + 1).all_vars(); \
+    component_rows = component_instance.rows_amount;
+///////////////////////////////////////////////////////////////////////////////
+#define macro_assigner_1_input(name, num_constant, ...)                                                     \
+    using new_component_type = name<ArithmetizationType, BlueprintFieldType, PolicyType>;                   \
+    typename new_component_type::input_type instance_input {var(component.W(0), current_row_index, false)}; \
+    macro_assigner(num_constant, ##__VA_ARGS__)
+///////////////////////////////////////////////////////////////////////////////
+#define macro_assigner_2_inputs(name, num_constant, ...)                                                    \
+    using new_component_type = name<ArithmetizationType, BlueprintFieldType, PolicyType>;                   \
+    typename new_component_type::input_type instance_input {var(component.W(0), current_row_index, false),  \
+                                                            var(component.W(1), current_row_index, false)}; \
+    macro_assigner(num_constant, ##__VA_ARGS__)
+///////////////////////////////////////////////////////////////////////////////
+#define macro_assigner_3_inputs(name, num_constant, ...)                                                    \
+    using new_component_type = name<ArithmetizationType, BlueprintFieldType, PolicyType>;                   \
+    typename new_component_type::input_type instance_input {var(component.W(0), current_row_index, false),  \
+                                                            var(component.W(1), current_row_index, false),  \
+                                                            var(component.W(2), current_row_index, false)}; \
+    macro_assigner(num_constant, ##__VA_ARGS__)
+            ///////////////////////////////////////////////////////////////////////////////
+
             template<typename BlueprintFieldType, typename ArithmetizationParams>
             typename plonk_fixedpoint_tester<BlueprintFieldType, ArithmetizationParams>::result_type
                 generate_assignments(
@@ -383,161 +373,37 @@ namespace nil {
 
                     switch (test.component) {
                         case FixedPointComponents::ADD: {
-                            using new_component_type = addition<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false),
-                                var(component.W(1), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // Assign component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list);
-                            vars = generate_assignments(component_instance, assignment, instance_input,
-                                                        current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_assigner_2_inputs(addition, 0);
                             break;
                         }
                         case FixedPointComponents::ARGMAX: {
-                            using new_component_type = fix_argmax<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false),
-                                var(component.W(1), current_row_index, false),
-                                var(component.W(2), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 2);
-
-                            // Assign component
                             bool select_last_index = constants[1] == 0 ? false : true;
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
-                                                                  m2, constants[0], select_last_index);
-                            vars = generate_assignments(component_instance, assignment, instance_input,
-                                                        current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_assigner_3_inputs(fix_argmax, 2, m1, m2, constants[0], select_last_index);
                             break;
                         }
                         case FixedPointComponents::ARGMIN: {
-                            using new_component_type = fix_argmin<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false),
-                                var(component.W(1), current_row_index, false),
-                                var(component.W(2), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 2);
-
-                            // Assign component
                             bool select_last_index = constants[1] == 0 ? false : true;
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
-                                                                  m2, constants[0], select_last_index);
-                            vars = generate_assignments(component_instance, assignment, instance_input,
-                                                        current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_assigner_3_inputs(fix_argmin, 2, m1, m2, constants[0], select_last_index);
                             break;
                         }
                         case FixedPointComponents::CMP: {
-                            using new_component_type = fix_cmp<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false),
-                                var(component.W(1), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // Assign component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
-                                                                  m2);
-                            vars = generate_assignments(component_instance, assignment, instance_input,
-                                                        current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_assigner_2_inputs(fix_cmp, 0, m1, m2);
                             break;
                         }
                         case FixedPointComponents::CMP_EXTENDED: {
-                            using new_component_type =
-                                fix_cmp_extended<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false),
-                                var(component.W(1), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // Assign component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
-                                                                  m2);
-                            vars = generate_assignments(component_instance, assignment, instance_input,
-                                                        current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_assigner_2_inputs(fix_cmp_extended, 0, m1, m2);
                             break;
                         }
                         case FixedPointComponents::CMP_MIN_MAX: {
-                            using new_component_type =
-                                fix_cmp_min_max<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false),
-                                var(component.W(1), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // Assign component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
-                                                                  m2);
-                            vars = generate_assignments(component_instance, assignment, instance_input,
-                                                        current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_assigner_2_inputs(fix_cmp_min_max, 0, m1, m2);
                             break;
                         }
                         case FixedPointComponents::DIV_BY_POS: {
-                            using new_component_type =
-                                fix_div_by_pos<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false),
-                                var(component.W(1), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // Assign component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
-                                                                  m2);
-                            vars = generate_assignments(component_instance, assignment, instance_input,
-                                                        current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_assigner_2_inputs(fix_div_by_pos, 0, m1, m2);
                             break;
                         }
                         case FixedPointComponents::DIV: {
-                            using new_component_type = fix_div<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false),
-                                var(component.W(1), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // Assign component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
-                                                                  m2);
-                            vars = generate_assignments(component_instance, assignment, instance_input,
-                                                        current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_assigner_2_inputs(fix_div, 0, m1, m2);
                             break;
                         }
                         // case FixedPointComponents::DOT_RESCALE1: {
@@ -547,334 +413,75 @@ namespace nil {
                         //     break;
                         // }
                         case FixedPointComponents::EXP: {
-                            using new_component_type = fix_exp<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // Assign component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m2);
-                            vars = generate_assignments(component_instance, assignment, instance_input,
-                                                        current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_assigner_1_input(fix_exp, 0, m2);
                             break;
                         }
                         case FixedPointComponents::EXP_RANGED: {
-                            using new_component_type =
-                                fix_exp_ranged<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // Assign component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
-                                                                  m2);
-                            vars = generate_assignments(component_instance, assignment, instance_input,
-                                                        current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_assigner_1_input(fix_exp_ranged, 0, m1, m2);
                             break;
                         }
                         case FixedPointComponents::GATHER_ACC: {
-                            using new_component_type =
-                                fix_gather_acc<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false),
-                                var(component.W(1), current_row_index, false),
-                                var(component.W(2), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 1);
-
-                            // layout component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list,
-                                                                  constants[0]);
-                            vars = generate_assignments(component_instance, assignment, instance_input,
-                                                        current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_assigner_3_inputs(fix_gather_acc, 1, constants[0]);
                             break;
                         }
                         case FixedPointComponents::LOG: {
-                            using new_component_type = fix_log<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // Assign component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
-                                                                  m2);
-                            vars = generate_assignments(component_instance, assignment, instance_input,
-                                                        current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_assigner_1_input(fix_log, 0, m1, m2);
                             break;
                         }
                         case FixedPointComponents::MAX: {
-                            using new_component_type = fix_max<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false),
-                                var(component.W(1), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // Assign component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
-                                                                  m2);
-                            vars = generate_assignments(component_instance, assignment, instance_input,
-                                                        current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_assigner_2_inputs(fix_max, 0, m1, m2);
                             break;
                         }
                         case FixedPointComponents::MIN: {
-                            using new_component_type = fix_min<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false),
-                                var(component.W(1), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // Assign component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
-                                                                  m2);
-                            vars = generate_assignments(component_instance, assignment, instance_input,
-                                                        current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_assigner_2_inputs(fix_min, 0, m1, m2);
                             break;
                         }
                         case FixedPointComponents::MUL_RESCALE: {
-                            using new_component_type =
-                                fix_mul_rescale<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false),
-                                var(component.W(1), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // Assign component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m2);
-                            vars = generate_assignments(component_instance, assignment, instance_input,
-                                                        current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_assigner_2_inputs(fix_mul_rescale, 0, m2);
                             break;
                         }
                         case FixedPointComponents::MUL_RESCALE_CONST: {
-                            using new_component_type =
-                                fix_mul_rescale_const<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 1);
-
-                            // Assign component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list,
-                                                                  constants[0], m2);
-                            vars = generate_assignments(component_instance, assignment, instance_input,
-                                                        current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_assigner_1_input(fix_mul_rescale_const, 1, constants[0], m2);
                             break;
                         }
                         case FixedPointComponents::NEG: {
-                            using new_component_type = fix_neg<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // Assign component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list);
-                            vars = generate_assignments(component_instance, assignment, instance_input,
-                                                        current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_assigner_1_input(fix_neg, 0);
                             break;
                         }
                         case FixedPointComponents::RANGE: {
-                            using new_component_type = fix_range<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 2);
-
-                            // Assign component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
-                                                                  m2, constants[0], constants[1]);
-                            vars = generate_assignments(component_instance, assignment, instance_input,
-                                                        current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_assigner_1_input(fix_range, 2, m1, m2, constants[0], constants[1]);
                             break;
                         }
                         case FixedPointComponents::REM: {
-                            using new_component_type = fix_rem<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false),
-                                var(component.W(1), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // Assign component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
-                                                                  m2);
-                            vars = generate_assignments(component_instance, assignment, instance_input,
-                                                        current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_assigner_2_inputs(fix_rem, 0, m1, m2);
                             break;
                         }
                         case FixedPointComponents::RESCALE: {
-                            using new_component_type = fix_rescale<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // Assign component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m2);
-                            vars = generate_assignments(component_instance, assignment, instance_input,
-                                                        current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_assigner_1_input(fix_rescale, 0, m2);
                             break;
                         }
                         case FixedPointComponents::SELECT: {
-                            using new_component_type = fix_select<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false),
-                                var(component.W(1), current_row_index, false),
-                                var(component.W(2), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // Assign component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list);
-                            vars = generate_assignments(component_instance, assignment, instance_input,
-                                                        current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_assigner_3_inputs(fix_select, 0);
                             break;
                         }
                         case FixedPointComponents::SQRT: {
-                            using new_component_type = fix_sqrt<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // Assign component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
-                                                                  m2);
-                            vars = generate_assignments(component_instance, assignment, instance_input,
-                                                        current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_assigner_1_input(fix_sqrt, 0, m1, m2);
                             break;
                         }
                         case FixedPointComponents::SQRT_FLOOR: {
-                            using new_component_type =
-                                fix_sqrt_floor<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // Assign component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
-                                                                  m2);
-                            vars = generate_assignments(component_instance, assignment, instance_input,
-                                                        current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_assigner_1_input(fix_sqrt_floor, 0, m1, m2);
                             break;
                         }
                         case FixedPointComponents::SUB: {
-                            using new_component_type = subtraction<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false),
-                                var(component.W(1), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // Assign component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list);
-                            vars = generate_assignments(component_instance, assignment, instance_input,
-                                                        current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_assigner_2_inputs(subtraction, 0);
                             break;
                         }
                         case FixedPointComponents::TANH: {
-                            using new_component_type = fix_tanh<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // Assign component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
-                                                                  m2);
-                            vars = generate_assignments(component_instance, assignment, instance_input,
-                                                        current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_assigner_1_input(fix_tanh, 0, m1, m2);
                             break;
                         }
                         case FixedPointComponents::TO_FIXEDPOINT: {
-                            using new_component_type = int_to_fix<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // Assign component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m2);
-                            vars = generate_assignments(component_instance, assignment, instance_input,
-                                                        current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_assigner_1_input(int_to_fix, 0, m2);
                             break;
                         }
                         default:
@@ -893,6 +500,38 @@ namespace nil {
                 return typename plonk_fixedpoint_tester<BlueprintFieldType, ArithmetizationParams>::result_type(
                     component, start_row_index);
             }
+#undef macro_assigner
+#undef macro_assigner_1_input
+#undef macro_assigner_2_inputs
+#undef macro_assigner_3_inputs
+
+///////////////////////////////////////////////////////////////////////////////
+//  macro
+#define macro_circuit(num_constant, ...)                                                                           \
+    BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());                                   \
+    BLUEPRINT_RELEASE_ASSERT(constants.size() == num_constant);                                                    \
+    new_component_type component_instance(witness_list, constant_list, public_input_list, ##__VA_ARGS__);          \
+    vars = generate_circuit(component_instance, bp, assignment, instance_input, current_row_index + 1).all_vars(); \
+    component_rows = component_instance.rows_amount;
+///////////////////////////////////////////////////////////////////////////////
+#define macro_circuit_1_input(name, num_constant, ...)                                                      \
+    using new_component_type = name<ArithmetizationType, BlueprintFieldType, PolicyType>;                   \
+    typename new_component_type::input_type instance_input {var(component.W(0), current_row_index, false)}; \
+    macro_circuit(num_constant, ##__VA_ARGS__)
+///////////////////////////////////////////////////////////////////////////////
+#define macro_circuit_2_inputs(name, num_constant, ...)                                                     \
+    using new_component_type = name<ArithmetizationType, BlueprintFieldType, PolicyType>;                   \
+    typename new_component_type::input_type instance_input {var(component.W(0), current_row_index, false),  \
+                                                            var(component.W(1), current_row_index, false)}; \
+    macro_circuit(num_constant, ##__VA_ARGS__)
+///////////////////////////////////////////////////////////////////////////////
+#define macro_circuit_3_inputs(name, num_constant, ...)                                                     \
+    using new_component_type = name<ArithmetizationType, BlueprintFieldType, PolicyType>;                   \
+    typename new_component_type::input_type instance_input {var(component.W(0), current_row_index, false),  \
+                                                            var(component.W(1), current_row_index, false),  \
+                                                            var(component.W(2), current_row_index, false)}; \
+    macro_circuit(num_constant, ##__VA_ARGS__)
+            ///////////////////////////////////////////////////////////////////////////////
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
             typename plonk_fixedpoint_tester<BlueprintFieldType, ArithmetizationParams>::result_type generate_circuit(
@@ -929,161 +568,37 @@ namespace nil {
 
                     switch (test.component) {
                         case FixedPointComponents::ADD: {
-                            using new_component_type = addition<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false),
-                                var(component.W(1), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // layout component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list);
-                            vars = generate_circuit(component_instance, bp, assignment, instance_input,
-                                                    current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_circuit_2_inputs(addition, 0);
                             break;
                         }
                         case FixedPointComponents::ARGMAX: {
-                            using new_component_type = fix_argmax<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false),
-                                var(component.W(1), current_row_index, false),
-                                var(component.W(2), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 2);
-
-                            // layout component
                             bool select_last_index = constants[1] == 0 ? false : true;
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
-                                                                  m2, constants[0], select_last_index);
-                            vars = generate_circuit(component_instance, bp, assignment, instance_input,
-                                                    current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_circuit_3_inputs(fix_argmax, 2, m1, m2, constants[0], select_last_index);
                             break;
                         }
                         case FixedPointComponents::ARGMIN: {
-                            using new_component_type = fix_argmin<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false),
-                                var(component.W(1), current_row_index, false),
-                                var(component.W(2), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 2);
-
-                            // layout component
                             bool select_last_index = constants[1] == 0 ? false : true;
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
-                                                                  m2, constants[0], select_last_index);
-                            vars = generate_circuit(component_instance, bp, assignment, instance_input,
-                                                    current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_circuit_3_inputs(fix_argmin, 2, m1, m2, constants[0], select_last_index);
                             break;
                         }
                         case FixedPointComponents::CMP: {
-                            using new_component_type = fix_cmp<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false),
-                                var(component.W(1), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // layout component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
-                                                                  m2);
-                            vars = generate_circuit(component_instance, bp, assignment, instance_input,
-                                                    current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_circuit_2_inputs(fix_cmp, 0, m1, m2);
                             break;
                         }
                         case FixedPointComponents::CMP_EXTENDED: {
-                            using new_component_type =
-                                fix_cmp_extended<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false),
-                                var(component.W(1), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // layout component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
-                                                                  m2);
-                            vars = generate_circuit(component_instance, bp, assignment, instance_input,
-                                                    current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_circuit_2_inputs(fix_cmp_extended, 0, m1, m2);
                             break;
                         }
                         case FixedPointComponents::CMP_MIN_MAX: {
-                            using new_component_type =
-                                fix_cmp_min_max<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false),
-                                var(component.W(1), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // layout component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
-                                                                  m2);
-                            vars = generate_circuit(component_instance, bp, assignment, instance_input,
-                                                    current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_circuit_2_inputs(fix_cmp_min_max, 0, m1, m2);
                             break;
                         }
                         case FixedPointComponents::DIV_BY_POS: {
-                            using new_component_type =
-                                fix_div_by_pos<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false),
-                                var(component.W(1), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // layout component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
-                                                                  m2);
-                            vars = generate_circuit(component_instance, bp, assignment, instance_input,
-                                                    current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_circuit_2_inputs(fix_div_by_pos, 0, m1, m2);
                             break;
                         }
                         case FixedPointComponents::DIV: {
-                            using new_component_type = fix_div<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false),
-                                var(component.W(1), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // layout component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
-                                                                  m2);
-                            vars = generate_circuit(component_instance, bp, assignment, instance_input,
-                                                    current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_circuit_2_inputs(fix_div, 0, m1, m2);
                             break;
                         }
                         // case FixedPointComponents::DOT_RESCALE1: {
@@ -1093,334 +608,75 @@ namespace nil {
                         //     break;
                         // }
                         case FixedPointComponents::EXP: {
-                            using new_component_type = fix_exp<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // layout component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m2);
-                            vars = generate_circuit(component_instance, bp, assignment, instance_input,
-                                                    current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_circuit_1_input(fix_exp, 0, m2);
                             break;
                         }
                         case FixedPointComponents::EXP_RANGED: {
-                            using new_component_type =
-                                fix_exp_ranged<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // layout component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
-                                                                  m2);
-                            vars = generate_circuit(component_instance, bp, assignment, instance_input,
-                                                    current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_circuit_1_input(fix_exp_ranged, 0, m1, m2);
                             break;
                         }
                         case FixedPointComponents::GATHER_ACC: {
-                            using new_component_type =
-                                fix_gather_acc<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false),
-                                var(component.W(1), current_row_index, false),
-                                var(component.W(2), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 1);
-
-                            // layout component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list,
-                                                                  constants[0]);
-                            vars = generate_circuit(component_instance, bp, assignment, instance_input,
-                                                    current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_circuit_3_inputs(fix_gather_acc, 1, constants[0]);
                             break;
                         }
                         case FixedPointComponents::LOG: {
-                            using new_component_type = fix_log<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // layout component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
-                                                                  m2);
-                            vars = generate_circuit(component_instance, bp, assignment, instance_input,
-                                                    current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_circuit_1_input(fix_log, 0, m1, m2);
                             break;
                         }
                         case FixedPointComponents::MAX: {
-                            using new_component_type = fix_max<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false),
-                                var(component.W(1), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // layout component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
-                                                                  m2);
-                            vars = generate_circuit(component_instance, bp, assignment, instance_input,
-                                                    current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_circuit_2_inputs(fix_max, 0, m1, m2);
                             break;
                         }
                         case FixedPointComponents::MIN: {
-                            using new_component_type = fix_min<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false),
-                                var(component.W(1), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // layout component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
-                                                                  m2);
-                            vars = generate_circuit(component_instance, bp, assignment, instance_input,
-                                                    current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_circuit_2_inputs(fix_min, 0, m1, m2);
                             break;
                         }
                         case FixedPointComponents::MUL_RESCALE: {
-                            using new_component_type =
-                                fix_mul_rescale<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false),
-                                var(component.W(1), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // layout component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m2);
-                            vars = generate_circuit(component_instance, bp, assignment, instance_input,
-                                                    current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_circuit_2_inputs(fix_mul_rescale, 0, m2);
                             break;
                         }
                         case FixedPointComponents::MUL_RESCALE_CONST: {
-                            using new_component_type =
-                                fix_mul_rescale_const<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 1);
-
-                            // layout component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list,
-                                                                  constants[0], m2);
-                            vars = generate_circuit(component_instance, bp, assignment, instance_input,
-                                                    current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_circuit_1_input(fix_mul_rescale_const, 1, constants[0], m2);
                             break;
                         }
                         case FixedPointComponents::NEG: {
-                            using new_component_type = fix_neg<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // layout component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list);
-                            vars = generate_circuit(component_instance, bp, assignment, instance_input,
-                                                    current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_circuit_1_input(fix_neg, 0);
                             break;
                         }
                         case FixedPointComponents::RANGE: {
-                            using new_component_type = fix_range<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 2);
-
-                            // layout component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
-                                                                  m2, constants[0], constants[1]);
-                            vars = generate_circuit(component_instance, bp, assignment, instance_input,
-                                                    current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_circuit_1_input(fix_range, 2, m1, m2, constants[0], constants[1]);
                             break;
                         }
                         case FixedPointComponents::REM: {
-                            using new_component_type = fix_rem<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false),
-                                var(component.W(1), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // layout component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
-                                                                  m2);
-                            vars = generate_circuit(component_instance, bp, assignment, instance_input,
-                                                    current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_circuit_2_inputs(fix_rem, 0, m1, m2);
                             break;
                         }
                         case FixedPointComponents::RESCALE: {
-                            using new_component_type = fix_rescale<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // layout component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m2);
-                            vars = generate_circuit(component_instance, bp, assignment, instance_input,
-                                                    current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_circuit_1_input(fix_rescale, 0, m2);
                             break;
                         }
                         case FixedPointComponents::SELECT: {
-                            using new_component_type = fix_select<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false),
-                                var(component.W(1), current_row_index, false),
-                                var(component.W(2), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // layout component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list);
-                            vars = generate_circuit(component_instance, bp, assignment, instance_input,
-                                                    current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_circuit_3_inputs(fix_select, 0);
                             break;
                         }
                         case FixedPointComponents::SQRT: {
-                            using new_component_type = fix_sqrt<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // layout component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
-                                                                  m2);
-                            vars = generate_circuit(component_instance, bp, assignment, instance_input,
-                                                    current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_circuit_1_input(fix_sqrt, 0, m1, m2);
                             break;
                         }
                         case FixedPointComponents::SQRT_FLOOR: {
-                            using new_component_type =
-                                fix_sqrt_floor<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // layout component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
-                                                                  m2);
-                            vars = generate_circuit(component_instance, bp, assignment, instance_input,
-                                                    current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_circuit_1_input(fix_sqrt_floor, 0, m1, m2);
                             break;
                         }
                         case FixedPointComponents::SUB: {
-                            using new_component_type = subtraction<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false),
-                                var(component.W(1), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // layout component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list);
-                            vars = generate_circuit(component_instance, bp, assignment, instance_input,
-                                                    current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_circuit_2_inputs(subtraction, 0);
                             break;
                         }
                         case FixedPointComponents::TANH: {
-                            using new_component_type = fix_tanh<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // layout component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
-                                                                  m2);
-                            vars = generate_circuit(component_instance, bp, assignment, instance_input,
-                                                    current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_circuit_1_input(fix_tanh, 0, m1, m2);
                             break;
                         }
                         case FixedPointComponents::TO_FIXEDPOINT: {
-                            using new_component_type = int_to_fix<ArithmetizationType, BlueprintFieldType, PolicyType>;
-
-                            // Inputs
-                            typename new_component_type::input_type instance_input {
-                                var(component.W(0), current_row_index, false)};
-                            BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());
-                            BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
-
-                            // layout component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list, m2);
-                            vars = generate_circuit(component_instance, bp, assignment, instance_input,
-                                                    current_row_index + 1)
-                                       .all_vars();
-                            component_rows = component_instance.rows_amount;
+                            macro_circuit_1_input(int_to_fix, 0, m2);
                             break;
                         }
                         default:
@@ -1440,6 +696,10 @@ namespace nil {
                 return typename plonk_fixedpoint_tester<BlueprintFieldType, ArithmetizationParams>::result_type(
                     component, start_row_index);
             }
+#undef macro_circuit
+#undef macro_circuit_1_input
+#undef macro_circuit_2_inputs
+#undef macro_circuit_3_inputs
 
             template<typename BlueprintFieldType, typename ArithmetizationParams, typename ComponentType>
             struct is_component_tester : std::false_type { };
