@@ -99,6 +99,21 @@ void add_mul_rescale_const(ComponentType &component, FixedType input1, FixedType
 }
 
 template<typename FixedType, typename ComponentType>
+void add_div_by_pos(ComponentType &component, FixedType input1, FixedType input2) {
+    double expected_res_f = input1.to_double() / input2.to_double();
+    auto expected_res = input1 / input2;
+
+    BLUEPRINT_RELEASE_ASSERT(doubleEquals(expected_res_f, expected_res.to_double(), EPSILON));
+
+    std::vector<typename FixedType::value_type> inputs = {input1.get_value(), input2.get_value()};
+    std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};
+    std::vector<typename FixedType::value_type> constants = {};
+
+    component.add_testcase(blueprint::components::FixedPointComponents::DIV_BY_POS, inputs, outputs, constants,
+                           FixedType::M_1, FixedType::M_2);
+}
+
+template<typename FixedType, typename ComponentType>
 void add_div(ComponentType &component, FixedType input1, FixedType input2) {
 
     double expected_res_f = input1.to_double() / input2.to_double();
@@ -536,7 +551,20 @@ void test_components_unary_basic(ComponentType &component, int i) {
 
 template<typename FixedType, typename ComponentType>
 void test_components_unary_positive(ComponentType &component, int i) {
+    BLUEPRINT_RELEASE_ASSERT(i >= 0);
     FixedType x((int64_t)i);
+}
+
+template<typename FixedType, typename ComponentType>
+void test_components_binary_one_positive(ComponentType &component, int i, int j) {
+    BLUEPRINT_RELEASE_ASSERT(j >= 0);
+    FixedType x((int64_t)i);
+    FixedType y((int64_t)j);
+
+    // BASIC
+    if (y.geq_0()) {
+        add_div_by_pos<FixedType, ComponentType>(component, x, y);
+    }
 }
 
 template<typename FixedType, typename ComponentType>
@@ -555,9 +583,6 @@ void test_components_binary_basic(ComponentType &component, int i, int j) {
     if (y.get_value() != 0) {
         add_div<FixedType, ComponentType>(component, x, y);
         add_mod<FixedType, ComponentType>(component, x, y);
-        // if (y.geq_0()) {
-        // test_fixedpoint_div_by_pos<FixedType>(x, y);
-        // }
     }
 
     // CMP
@@ -601,9 +626,11 @@ void test_components_on_random_data(ComponentType &component, std::size_t i, Rng
     if (y.get_value() != 0) {
         add_div<FixedType, ComponentType>(component, x, y);
         add_mod<FixedType, ComponentType>(component, x, y);
-        // if (y.geq_0()) {
-        // test_fixedpoint_div_by_pos<FixedType>(x, y);
-        // }
+        if (y.geq_0()) {
+            add_div_by_pos<FixedType, ComponentType>(component, x, y);
+        } else {
+            add_div_by_pos<FixedType, ComponentType>(component, x, -y);
+        }
     }
 
     // CMP
@@ -630,9 +657,12 @@ void field_operations_test_inner(ComponentType &component) {
         }
     }
 
-    // for (int i = 0; i < 5; i++) {
-    //     test_components_unary_positive<FixedType, ComponentType>(component, i);
-    // }
+    for (int i = 0; i < 5; i++) {
+        // test_components_unary_positive<FixedType, ComponentType>(component, i);
+        for (int j = -2; j < 3; j++) {
+            test_components_binary_one_positive<FixedType, ComponentType>(component, j, i);
+        }
+    }
 
     boost::random::mt19937 seed_seq(0);
     for (std::size_t i = 0; i < RandomTestsAmount; i++) {
