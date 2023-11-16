@@ -250,7 +250,7 @@ void add_tanh(ComponentType &component, FixedType input) {
     double expected_res_f = tanh(input.to_double());
     auto expected_res = input.tanh();
 
-    BLUEPRINT_RELEASE_ASSERT(doubleEquals(expected_res_f, expected_res.to_double(), EPSILON));
+    BLUEPRINT_RELEASE_ASSERT(doubleEqualsExp(expected_res_f, expected_res.to_double(), EPSILON));
 
     std::vector<typename FixedType::value_type> inputs = {input.get_value()};
     std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};
@@ -258,6 +258,54 @@ void add_tanh(ComponentType &component, FixedType input) {
 
     component.add_testcase(blueprint::components::FixedPointComponents::TANH, inputs, outputs, constants,
                            FixedType::M_1, FixedType::M_2);
+}
+
+template<typename FixedType, typename ComponentType>
+void add_sqrt(ComponentType &component, FixedType input) {
+
+    double expected_res_f = sqrt(input.to_double());
+    auto expected_res = input.sqrt();
+
+    BLUEPRINT_RELEASE_ASSERT(doubleEquals(expected_res_f, expected_res.to_double(), EPSILON));
+
+    std::vector<typename FixedType::value_type> inputs = {input.get_value()};
+    std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};
+    std::vector<typename FixedType::value_type> constants = {};
+
+    component.add_testcase(blueprint::components::FixedPointComponents::SQRT, inputs, outputs, constants,
+                           FixedType::M_1, FixedType::M_2);
+}
+
+template<typename FixedType, typename ComponentType>
+void add_sqrt_floor(ComponentType &component, FixedType input) {
+
+    double expected_res_f = sqrt(input.to_double());
+    auto expected_res = input.sqrt(true);
+
+    BLUEPRINT_RELEASE_ASSERT(doubleEquals(expected_res_f, expected_res.to_double(), EPSILON));
+
+    std::vector<typename FixedType::value_type> inputs = {input.get_value()};
+    std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};
+    std::vector<typename FixedType::value_type> constants = {};
+
+    component.add_testcase(blueprint::components::FixedPointComponents::SQRT_FLOOR, inputs, outputs, constants,
+                           FixedType::M_1, FixedType::M_2);
+}
+
+template<typename FixedType, typename ComponentType>
+void add_log(ComponentType &component, FixedType input) {
+
+    double expected_res_f = log(input.to_double());
+    auto expected_res = input.log();
+
+    BLUEPRINT_RELEASE_ASSERT(doubleEquals(expected_res_f, expected_res.to_double(), EPSILON));
+
+    std::vector<typename FixedType::value_type> inputs = {input.get_value()};
+    std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};
+    std::vector<typename FixedType::value_type> constants = {};
+
+    component.add_testcase(blueprint::components::FixedPointComponents::LOG, inputs, outputs, constants, FixedType::M_1,
+                           FixedType::M_2);
 }
 
 template<typename FixedType, typename ComponentType>
@@ -622,6 +670,44 @@ typename FieldType::value_type generate_bounded_random_for_fixedpoint(uint8_t m2
     }
 }
 
+template<typename FieldType, typename RngType>
+FieldType generate_random_pre_comma(uint8_t m1, RngType &rng) {
+    using distribution = boost::random::uniform_int_distribution<uint64_t>;
+
+    BLUEPRINT_RELEASE_ASSERT(m1 > 0 && m1 < 3);
+
+    uint64_t max = (1ull << (16 * m1)) - 1;
+
+    distribution dist = distribution(0, max);
+    uint64_t x = dist(rng);
+    distribution dist_bool = distribution(0, 1);
+    bool sign = dist_bool(rng) == 1;
+    if (sign) {
+        return -FieldType(x);
+    } else {
+        return FieldType(x);
+    }
+}
+
+template<typename FieldType, typename RngType>
+FieldType generate_random_post_comma_for_fixedpoint(uint8_t m2, RngType &rng) {
+    using distribution = boost::random::uniform_int_distribution<uint64_t>;
+
+    BLUEPRINT_RELEASE_ASSERT(m2 > 0 && m2 < 3);
+
+    uint64_t max = (1ull << (16 * m2)) - 1;
+
+    distribution dist = distribution(0, max);
+    uint64_t x = dist(rng);
+    distribution dist_bool = distribution(0, 1);
+    bool sign = dist_bool(rng) == 1;
+    if (sign) {
+        return -FieldType(x);
+    } else {
+        return FieldType(x);
+    }
+}
+
 template<typename FixedType, typename ComponentType>
 void test_components_unary_basic(ComponentType &component, int i) {
     FixedType x((int64_t)i);
@@ -641,6 +727,13 @@ template<typename FixedType, typename ComponentType>
 void test_components_unary_positive(ComponentType &component, int i) {
     BLUEPRINT_RELEASE_ASSERT(i >= 0);
     FixedType x((int64_t)i);
+
+    // ADVANCED
+    add_sqrt<FixedType, ComponentType>(component, x);
+    add_sqrt_floor<FixedType, ComponentType>(component, x);
+    if (x.get_value() > 0) {
+        add_log<FixedType, ComponentType>(component, x);
+    }
 }
 
 template<typename FixedType, typename ComponentType>
@@ -700,12 +793,82 @@ void test_components_on_bounded_random_data(ComponentType &component, RngType &r
 }
 
 template<typename FixedType, typename ComponentType, typename RngType>
-void test_components_on_random_data(ComponentType &component, std::size_t i, RngType &rng) {
+void test_components_on_random_data(ComponentType &component, RngType &rng) {
     FixedType x(generate_random_for_fixedpoint<typename FixedType::value_type>(FixedType::M_1, FixedType::M_2, rng),
                 FixedType::SCALE);
     FixedType y(generate_random_for_fixedpoint<typename FixedType::value_type>(FixedType::M_1, FixedType::M_2, rng),
                 FixedType::SCALE);
     FixedType z(generate_random_for_fixedpoint<typename FixedType::value_type>(FixedType::M_1, FixedType::M_2, rng),
+                FixedType::SCALE);
+
+    typename FixedType::value_type integer =
+        generate_random_pre_comma<typename FixedType::value_type>(FixedType::M_1, rng);
+
+    auto index_a = generate_random_index<typename FixedType::value_type>(rng);
+    auto index_b = generate_random_index<typename FixedType::value_type>(rng);
+    while (index_a == index_b) {
+        index_b = generate_random_index<typename FixedType::value_type>(rng);
+    }
+
+    // BASIC
+    add_add<FixedType, ComponentType>(component, x, y);
+    add_sub<FixedType, ComponentType>(component, x, y);
+    add_rescale<FixedType, ComponentType>(component, FixedType(x.get_value() * FixedType::DELTA, FixedType::SCALE * 2));
+    add_mul_rescale<FixedType, ComponentType>(component, x, y);
+    add_mul_rescale_const<FixedType, ComponentType>(component, x, y);
+    add_neg<FixedType, ComponentType>(component, x);
+    add_int_to_fixedpoint<FixedType, ComponentType>(component, integer);
+    if (y.get_value() != 0) {
+        add_div<FixedType, ComponentType>(component, x, y);
+        add_mod<FixedType, ComponentType>(component, x, y);
+        if (y.geq_0()) {
+            add_div_by_pos<FixedType, ComponentType>(component, x, y);
+        } else {
+            add_div_by_pos<FixedType, ComponentType>(component, x, -y);
+        }
+    }
+
+    // ADVANCED
+    if (x.geq_0()) {
+        add_sqrt<FixedType, ComponentType>(component, x);
+        add_sqrt_floor<FixedType, ComponentType>(component, x);
+        if (x.get_value() != 0) {
+            add_log<FixedType, ComponentType>(component, x);
+        }
+    } else {
+        add_sqrt<FixedType, ComponentType>(component, -x);
+        add_sqrt_floor<FixedType, ComponentType>(component, -x);
+        if (x.get_value() != 0) {
+            add_log<FixedType, ComponentType>(component, -x);
+        }
+    }
+
+    // EXP
+    add_exp_ranged<FixedType, ComponentType>(component, x);
+    add_tanh<FixedType, ComponentType>(component, x);
+
+    // CMP
+    add_select<FixedType, ComponentType>(component, x, y);
+    add_cmp<FixedType, ComponentType>(component, x, y);
+    add_cmp_extended<FixedType, ComponentType>(component, x, y);
+    add_max<FixedType, ComponentType>(component, x, y);
+    add_min<FixedType, ComponentType>(component, x, y);
+    add_cmp_min_max<FixedType, ComponentType>(component, x, y);
+    add_range<FixedType, ComponentType>(component, x, y, z);
+
+    // ML
+    add_gather_acc<FixedType, ComponentType>(component, x, y, index_a, index_b);
+    add_argmax<FixedType, ComponentType>(component, x, y, index_a, index_b);
+    add_argmin<FixedType, ComponentType>(component, x, y, index_a, index_b);
+}
+
+template<typename FixedType, typename ComponentType, typename RngType>
+void test_components_on_post_comma_random_data(ComponentType &component, RngType &rng) {
+    FixedType x(generate_random_post_comma_for_fixedpoint<typename FixedType::value_type>(FixedType::M_2, rng),
+                FixedType::SCALE);
+    FixedType y(generate_random_post_comma_for_fixedpoint<typename FixedType::value_type>(FixedType::M_2, rng),
+                FixedType::SCALE);
+    FixedType z(generate_random_post_comma_for_fixedpoint<typename FixedType::value_type>(FixedType::M_2, rng),
                 FixedType::SCALE);
 
     auto index_a = generate_random_index<typename FixedType::value_type>(rng);
@@ -721,7 +884,6 @@ void test_components_on_random_data(ComponentType &component, std::size_t i, Rng
     add_mul_rescale<FixedType, ComponentType>(component, x, y);
     add_mul_rescale_const<FixedType, ComponentType>(component, x, y);
     add_neg<FixedType, ComponentType>(component, x);
-    add_int_to_fixedpoint<FixedType, ComponentType>(component, (int64_t)i);
     if (y.get_value() != 0) {
         add_div<FixedType, ComponentType>(component, x, y);
         add_mod<FixedType, ComponentType>(component, x, y);
@@ -732,7 +894,23 @@ void test_components_on_random_data(ComponentType &component, std::size_t i, Rng
         }
     }
 
+    // ADVANCED
+    if (x.geq_0()) {
+        add_sqrt<FixedType, ComponentType>(component, x);
+        add_sqrt_floor<FixedType, ComponentType>(component, x);
+        if (x.get_value() != 0) {
+            add_log<FixedType, ComponentType>(component, x);
+        }
+    } else {
+        add_sqrt<FixedType, ComponentType>(component, -x);
+        add_sqrt_floor<FixedType, ComponentType>(component, -x);
+        if (x.get_value() != 0) {
+            add_log<FixedType, ComponentType>(component, -x);
+        }
+    }
+
     // EXP
+    add_exp<FixedType, ComponentType>(component, x);
     add_exp_ranged<FixedType, ComponentType>(component, x);
     add_tanh<FixedType, ComponentType>(component, x);
 
@@ -761,7 +939,7 @@ void field_operations_test_inner(ComponentType &component) {
     }
 
     for (int i = 0; i < 5; i++) {
-        // test_components_unary_positive<FixedType, ComponentType>(component, i);
+        test_components_unary_positive<FixedType, ComponentType>(component, i);
         for (int j = -2; j < 3; j++) {
             test_components_binary_one_positive<FixedType, ComponentType>(component, j, i);
         }
@@ -770,7 +948,8 @@ void field_operations_test_inner(ComponentType &component) {
     boost::random::mt19937 seed_seq(0);
     for (std::size_t i = 0; i < RandomTestsAmount; i++) {
         test_components_on_bounded_random_data<FixedType, ComponentType>(component, seed_seq);
-        test_components_on_random_data<FixedType, ComponentType>(component, i, seed_seq);
+        test_components_on_random_data<FixedType, ComponentType>(component, seed_seq);
+        test_components_on_post_comma_random_data<FixedType, ComponentType>(component, seed_seq);
     }
 }
 
