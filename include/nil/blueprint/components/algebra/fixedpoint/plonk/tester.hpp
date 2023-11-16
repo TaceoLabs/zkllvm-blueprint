@@ -302,31 +302,64 @@ namespace nil {
                            BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
 ///////////////////////////////////////////////////////////////////////////////
-//  macro
-#define macro_assigner(num_constant, ...)                                                                          \
-    BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());                                   \
-    BLUEPRINT_RELEASE_ASSERT(constants.size() == num_constant);                                                    \
-    new_component_type component_instance(witness_list, constant_list, public_input_list, ##__VA_ARGS__);          \
-    vars = generate_assignments(component_instance, assignment, instance_input, current_row_index + 1).all_vars(); \
+//  macros for generating the circuit and the assignments
+#define macro_component(name, ...)                                                        \
+    using new_component_type = name<ArithmetizationType, BlueprintFieldType, PolicyType>; \
+    new_component_type component_instance(witness_list, constant_list, public_input_list, ##__VA_ARGS__);
+///////////////////////////////////////////////////////////////////////////////
+#define macro_func(num_constant, func)                                           \
+    BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size()); \
+    BLUEPRINT_RELEASE_ASSERT(constants.size() == num_constant);                  \
+    vars = func;                                                                 \
     component_rows = component_instance.rows_amount;
 ///////////////////////////////////////////////////////////////////////////////
-#define macro_assigner_1_input(name, num_constant, ...)                                                     \
-    using new_component_type = name<ArithmetizationType, BlueprintFieldType, PolicyType>;                   \
-    typename new_component_type::input_type instance_input {var(component.W(0), current_row_index, false)}; \
-    macro_assigner(num_constant, ##__VA_ARGS__)
+#define macro_assigner() \
+    generate_assignments(component_instance, assignment, instance_input, current_row_index + 1).all_vars()
 ///////////////////////////////////////////////////////////////////////////////
-#define macro_assigner_2_inputs(name, num_constant, ...)                                                    \
-    using new_component_type = name<ArithmetizationType, BlueprintFieldType, PolicyType>;                   \
-    typename new_component_type::input_type instance_input {var(component.W(0), current_row_index, false),  \
-                                                            var(component.W(1), current_row_index, false)}; \
-    macro_assigner(num_constant, ##__VA_ARGS__)
+#define macro_circuit() \
+    generate_circuit(component_instance, bp, assignment, instance_input, current_row_index + 1).all_vars()
 ///////////////////////////////////////////////////////////////////////////////
-#define macro_assigner_3_inputs(name, num_constant, ...)                                                    \
-    using new_component_type = name<ArithmetizationType, BlueprintFieldType, PolicyType>;                   \
+#define macro_1_input() \
+    typename new_component_type::input_type instance_input {var(component.W(0), current_row_index, false)};
+///////////////////////////////////////////////////////////////////////////////
+#define macro_2_inputs()                                                                                   \
+    typename new_component_type::input_type instance_input {var(component.W(0), current_row_index, false), \
+                                                            var(component.W(1), current_row_index, false)};
+///////////////////////////////////////////////////////////////////////////////
+#define macro_3_inputs()                                                                                    \
     typename new_component_type::input_type instance_input {var(component.W(0), current_row_index, false),  \
                                                             var(component.W(1), current_row_index, false),  \
                                                             var(component.W(2), current_row_index, false)}; \
-    macro_assigner(num_constant, ##__VA_ARGS__)
+///////////////////////////////////////////////////////////////////////////////
+#define macro_assigner_1_input(name, num_constant, ...) \
+    macro_component(name, ##__VA_ARGS__);               \
+    macro_1_input();                                    \
+    macro_func(num_constant, macro_assigner());
+///////////////////////////////////////////////////////////////////////////////
+#define macro_assigner_2_inputs(name, num_constant, ...) \
+    macro_component(name, ##__VA_ARGS__);                \
+    macro_2_inputs();                                    \
+    macro_func(num_constant, macro_assigner());
+///////////////////////////////////////////////////////////////////////////////
+#define macro_assigner_3_inputs(name, num_constant, ...) \
+    macro_component(name, ##__VA_ARGS__);                \
+    macro_3_inputs();                                    \
+    macro_func(num_constant, macro_assigner());
+///////////////////////////////////////////////////////////////////////////////
+#define macro_circuit_1_input(name, num_constant, ...) \
+    macro_component(name, ##__VA_ARGS__);              \
+    macro_1_input();                                   \
+    macro_func(num_constant, macro_circuit());
+///////////////////////////////////////////////////////////////////////////////
+#define macro_circuit_2_inputs(name, num_constant, ...) \
+    macro_component(name, ##__VA_ARGS__);               \
+    macro_2_inputs();                                   \
+    macro_func(num_constant, macro_circuit());
+///////////////////////////////////////////////////////////////////////////////
+#define macro_circuit_3_inputs(name, num_constant, ...) \
+    macro_component(name, ##__VA_ARGS__);               \
+    macro_3_inputs();                                   \
+    macro_func(num_constant, macro_circuit());
             ///////////////////////////////////////////////////////////////////////////////
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
@@ -500,38 +533,6 @@ namespace nil {
                 return typename plonk_fixedpoint_tester<BlueprintFieldType, ArithmetizationParams>::result_type(
                     component, start_row_index);
             }
-#undef macro_assigner
-#undef macro_assigner_1_input
-#undef macro_assigner_2_inputs
-#undef macro_assigner_3_inputs
-
-///////////////////////////////////////////////////////////////////////////////
-//  macro
-#define macro_circuit(num_constant, ...)                                                                           \
-    BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size());                                   \
-    BLUEPRINT_RELEASE_ASSERT(constants.size() == num_constant);                                                    \
-    new_component_type component_instance(witness_list, constant_list, public_input_list, ##__VA_ARGS__);          \
-    vars = generate_circuit(component_instance, bp, assignment, instance_input, current_row_index + 1).all_vars(); \
-    component_rows = component_instance.rows_amount;
-///////////////////////////////////////////////////////////////////////////////
-#define macro_circuit_1_input(name, num_constant, ...)                                                      \
-    using new_component_type = name<ArithmetizationType, BlueprintFieldType, PolicyType>;                   \
-    typename new_component_type::input_type instance_input {var(component.W(0), current_row_index, false)}; \
-    macro_circuit(num_constant, ##__VA_ARGS__)
-///////////////////////////////////////////////////////////////////////////////
-#define macro_circuit_2_inputs(name, num_constant, ...)                                                     \
-    using new_component_type = name<ArithmetizationType, BlueprintFieldType, PolicyType>;                   \
-    typename new_component_type::input_type instance_input {var(component.W(0), current_row_index, false),  \
-                                                            var(component.W(1), current_row_index, false)}; \
-    macro_circuit(num_constant, ##__VA_ARGS__)
-///////////////////////////////////////////////////////////////////////////////
-#define macro_circuit_3_inputs(name, num_constant, ...)                                                     \
-    using new_component_type = name<ArithmetizationType, BlueprintFieldType, PolicyType>;                   \
-    typename new_component_type::input_type instance_input {var(component.W(0), current_row_index, false),  \
-                                                            var(component.W(1), current_row_index, false),  \
-                                                            var(component.W(2), current_row_index, false)}; \
-    macro_circuit(num_constant, ##__VA_ARGS__)
-            ///////////////////////////////////////////////////////////////////////////////
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
             typename plonk_fixedpoint_tester<BlueprintFieldType, ArithmetizationParams>::result_type generate_circuit(
@@ -696,7 +697,16 @@ namespace nil {
                 return typename plonk_fixedpoint_tester<BlueprintFieldType, ArithmetizationParams>::result_type(
                     component, start_row_index);
             }
+#undef macro_component
+#undef macro_func
+#undef macro_assigner
 #undef macro_circuit
+#undef macro_1_input
+#undef macro_2_inputs
+#undef macro_3_inputs
+#undef macro_assigner_1_input
+#undef macro_assigner_2_inputs
+#undef macro_assigner_3_inputs
 #undef macro_circuit_1_input
 #undef macro_circuit_2_inputs
 #undef macro_circuit_3_inputs
