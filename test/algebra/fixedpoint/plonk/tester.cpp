@@ -1,7 +1,7 @@
 #define BOOST_TEST_MODULE blueprint_plonk_fixedpoint_tester_test
 
 // Enable for faster tests
-#define TEST_WITHOUT_LOOKUP_TABLES
+// #define TEST_WITHOUT_LOOKUP_TABLES
 
 #include <boost/test/unit_test.hpp>
 
@@ -1080,8 +1080,8 @@ template<typename BlueprintFieldType, std::size_t RandomTestsAmount>
 void field_operations_test() {
     constexpr std::size_t WitnessColumns = 15;
     constexpr std::size_t PublicInputColumns = 1;
-    constexpr std::size_t ConstantColumns = 15;
-    constexpr std::size_t SelectorColumns = 100;
+    constexpr std::size_t ConstantColumns = 50;
+    constexpr std::size_t SelectorColumns = 200;
     using ArithmetizationParams = crypto3::zk::snark::plonk_arithmetization_params<WitnessColumns, PublicInputColumns,
                                                                                    ConstantColumns, SelectorColumns>;
     using ArithmetizationType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>;
