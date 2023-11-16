@@ -441,7 +441,7 @@ namespace nil {
                         instance_input,
                     const std::uint32_t start_row_index) {
 
-                using var = typename plonk_fixedpoint_argmax<BlueprintFieldType, ArithmetizationParams>::var;
+                using var = typename plonk_fixedpoint_tester<BlueprintFieldType, ArithmetizationParams>::var;
                 using ArithmetizationType =
                     crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>;
                 using PolicyType = nil::blueprint::basic_non_native_policy<BlueprintFieldType>;
@@ -624,7 +624,7 @@ namespace nil {
                     &instance_input,
                 const std::size_t start_row_index) {
 
-                using var = typename plonk_fixedpoint_argmax<BlueprintFieldType, ArithmetizationParams>::var;
+                using var = typename plonk_fixedpoint_tester<BlueprintFieldType, ArithmetizationParams>::var;
                 using ArithmetizationType =
                     crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>;
                 using PolicyType = nil::blueprint::basic_non_native_policy<BlueprintFieldType>;
