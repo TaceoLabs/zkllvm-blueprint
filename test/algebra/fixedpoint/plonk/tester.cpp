@@ -34,6 +34,13 @@ bool doubleEquals(double a, double b, double epsilon) {
     return fabs(a - b) <= ((fabs(a) > fabs(b) ? fabs(b) : fabs(a)) * epsilon);
 }
 
+bool doubleEqualsExp(double a, double b, double epsilon) {
+    // Essentially equal from
+    // https://stackoverflow.com/questions/17333/how-do-you-compare-float-and-double-while-accounting-for-precision-loss
+    // or just smaller epsilon
+    return fabs(a - b) < epsilon || fabs(a - b) <= ((fabs(a) > fabs(b) ? fabs(b) : fabs(a)) * epsilon);
+}
+
 template<typename FixedType, typename ComponentType>
 void add_add(ComponentType &component, FixedType input1, FixedType input2) {
 
@@ -195,6 +202,61 @@ void add_int_to_fixedpoint(ComponentType &component, typename FixedType::value_t
     std::vector<typename FixedType::value_type> constants = {};
 
     component.add_testcase(blueprint::components::FixedPointComponents::TO_FIXEDPOINT, inputs, outputs, constants,
+                           FixedType::M_1, FixedType::M_2);
+}
+
+template<typename FixedType, typename ComponentType>
+void add_exp(ComponentType &component, FixedType input) {
+
+    double expected_res_f = exp(input.to_double());
+    auto expected_res = input.exp();
+
+    BLUEPRINT_RELEASE_ASSERT(doubleEqualsExp(expected_res_f, expected_res.to_double(), EPSILON));
+
+    std::vector<typename FixedType::value_type> inputs = {input.get_value()};
+    std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};
+    std::vector<typename FixedType::value_type> constants = {};
+
+    component.add_testcase(blueprint::components::FixedPointComponents::EXP, inputs, outputs, constants, FixedType::M_1,
+                           FixedType::M_2);
+}
+
+template<typename FixedType, typename ComponentType>
+void add_exp_ranged(ComponentType &component, FixedType input) {
+
+    auto max_exp = FixedType::max();
+    auto max_exp_f = max_exp.to_double();
+
+    double expected_res_f = exp(input.to_double());
+    if (expected_res_f > max_exp_f) {
+        expected_res_f = max_exp_f;
+    }
+    auto expected_res = input.exp(true);
+
+    BLUEPRINT_RELEASE_ASSERT(expected_res <= max_exp);
+    BLUEPRINT_RELEASE_ASSERT(doubleEqualsExp(expected_res_f, expected_res.to_double(), EPSILON));
+
+    std::vector<typename FixedType::value_type> inputs = {input.get_value()};
+    std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};
+    std::vector<typename FixedType::value_type> constants = {};
+
+    component.add_testcase(blueprint::components::FixedPointComponents::EXP_RANGED, inputs, outputs, constants,
+                           FixedType::M_1, FixedType::M_2);
+}
+
+template<typename FixedType, typename ComponentType>
+void add_tanh(ComponentType &component, FixedType input) {
+
+    double expected_res_f = tanh(input.to_double());
+    auto expected_res = input.tanh();
+
+    BLUEPRINT_RELEASE_ASSERT(doubleEquals(expected_res_f, expected_res.to_double(), EPSILON));
+
+    std::vector<typename FixedType::value_type> inputs = {input.get_value()};
+    std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};
+    std::vector<typename FixedType::value_type> constants = {};
+
+    component.add_testcase(blueprint::components::FixedPointComponents::TANH, inputs, outputs, constants,
                            FixedType::M_1, FixedType::M_2);
 }
 
@@ -539,6 +601,27 @@ FieldType generate_random_for_fixedpoint(uint8_t m1, uint8_t m2, RngType &rng) {
     }
 }
 
+constexpr static const std::size_t UPPER_BOUND = 6;
+
+template<typename FieldType, typename RngType>
+typename FieldType::value_type generate_bounded_random_for_fixedpoint(uint8_t m2, RngType &rng) {
+    using distribution = boost::random::uniform_int_distribution<uint64_t>;
+    using value_type = typename FieldType::value_type;
+
+    distribution dist = distribution(0, UPPER_BOUND);
+    uint64_t pre = dist(rng);
+    distribution dist_ = distribution(0, (1ULL << (16 * m2)) - 1);
+    uint64_t post = dist_(rng);
+    distribution dist_bool = distribution(0, 1);
+    bool sign = dist_bool(rng) == 1;
+
+    if (sign) {
+        return -value_type(pre << (16 * m2)) + post;
+    } else {
+        return value_type(pre << (16 * m2)) + post;
+    }
+}
+
 template<typename FixedType, typename ComponentType>
 void test_components_unary_basic(ComponentType &component, int i) {
     FixedType x((int64_t)i);
@@ -547,6 +630,11 @@ void test_components_unary_basic(ComponentType &component, int i) {
     add_rescale<FixedType, ComponentType>(component, FixedType(x.get_value() * FixedType::DELTA, FixedType::SCALE * 2));
     add_neg<FixedType, ComponentType>(component, x);
     add_int_to_fixedpoint<FixedType, ComponentType>(component, (int64_t)i);
+
+    // EXP
+    add_exp<FixedType, ComponentType>(component, x);
+    add_exp_ranged<FixedType, ComponentType>(component, x);
+    add_tanh<FixedType, ComponentType>(component, x);
 }
 
 template<typename FixedType, typename ComponentType>
@@ -562,7 +650,7 @@ void test_components_binary_one_positive(ComponentType &component, int i, int j)
     FixedType y((int64_t)j);
 
     // BASIC
-    if (y.geq_0()) {
+    if (y.get_value() != 0) {
         add_div_by_pos<FixedType, ComponentType>(component, x, y);
     }
 }
@@ -601,6 +689,17 @@ void test_components_binary_basic(ComponentType &component, int i, int j) {
 }
 
 template<typename FixedType, typename ComponentType, typename RngType>
+void test_components_on_bounded_random_data(ComponentType &component, RngType &rng) {
+    FixedType x(generate_bounded_random_for_fixedpoint<typename FixedType::field_type>(FixedType::M_2, rng),
+                FixedType::SCALE);
+
+    // EXP
+    add_exp<FixedType, ComponentType>(component, x);
+    add_exp_ranged<FixedType, ComponentType>(component, x);
+    add_tanh<FixedType, ComponentType>(component, x);
+}
+
+template<typename FixedType, typename ComponentType, typename RngType>
 void test_components_on_random_data(ComponentType &component, std::size_t i, RngType &rng) {
     FixedType x(generate_random_for_fixedpoint<typename FixedType::value_type>(FixedType::M_1, FixedType::M_2, rng),
                 FixedType::SCALE);
@@ -632,6 +731,10 @@ void test_components_on_random_data(ComponentType &component, std::size_t i, Rng
             add_div_by_pos<FixedType, ComponentType>(component, x, -y);
         }
     }
+
+    // EXP
+    add_exp_ranged<FixedType, ComponentType>(component, x);
+    add_tanh<FixedType, ComponentType>(component, x);
 
     // CMP
     add_select<FixedType, ComponentType>(component, x, y);
@@ -666,7 +769,7 @@ void field_operations_test_inner(ComponentType &component) {
 
     boost::random::mt19937 seed_seq(0);
     for (std::size_t i = 0; i < RandomTestsAmount; i++) {
-        //     test_components_on_bounded_random_data<FixedType, ComponentType>(component, seed_seq);
+        test_components_on_bounded_random_data<FixedType, ComponentType>(component, seed_seq);
         test_components_on_random_data<FixedType, ComponentType>(component, i, seed_seq);
     }
 }
