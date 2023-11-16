@@ -73,34 +73,14 @@ namespace nil {
                     std::vector<value_type> inputs;
                     std::vector<value_type> outputs;
                     std::vector<value_type> constants;
+                    uint8_t m1;
+                    uint8_t m2;
                 };
 
             private:
                 std::vector<testcase> testcases;
 
-                uint8_t m1;    // Pre-comma 16-bit limbs
-                uint8_t m2;    // Post-comma 16-bit limbs
-
-                static uint8_t M(uint8_t m) {
-                    if (m == 0 || m > 2) {
-                        BLUEPRINT_RELEASE_ASSERT(false);
-                    }
-                    return m;
-                }
-
             public:
-                uint8_t get_m() const {
-                    return m1 + m2;
-                }
-
-                uint8_t get_m1() const {
-                    return m1;
-                }
-
-                uint8_t get_m2() const {
-                    return m2;
-                }
-
                 const std::vector<testcase> &get_testcases() const {
                     return testcases;
                 }
@@ -198,12 +178,15 @@ namespace nil {
                 }
 
                 void add_testcase(FixedPointComponents component, std::vector<value_type> &inputs,
-                                  std::vector<value_type> &outputs, std::vector<value_type> &constants) {
+                                  std::vector<value_type> &outputs, std::vector<value_type> &constants, uint8_t m1,
+                                  uint8_t m2) {
                     testcase test;
                     test.component = component;
                     test.inputs = inputs;
                     test.outputs = outputs;
                     test.constants = constants;
+                    test.m1 = m1;
+                    test.m2 = m2;
                     testcases.push_back(test);
                     rows_amount += get_component_rows_amount(component, this->witness_amount(), 0, m1, m2) + 1;
                 }
@@ -274,23 +257,19 @@ namespace nil {
                     auto table = std::shared_ptr<lookup_table_definition>(new range_table());
                     result.push_back(table);
 
-                    // if (m2 == 1) {
-                    //     auto table_a = std::shared_ptr<lookup_table_definition>(
+                    //     auto table_a_16 = std::shared_ptr<lookup_table_definition>(
                     //         new fixedpoint_exp_a16_table<BlueprintFieldType>());
-                    //     auto table_b = std::shared_ptr<lookup_table_definition>(
+                    //     auto table_b_16 = std::shared_ptr<lookup_table_definition>(
                     //         new fixedpoint_exp_b16_table<BlueprintFieldType>());
-                    //     result.push_back(table_a);
-                    //     result.push_back(table_b);
-                    // } else if (m2 == 2) {
-                    //     auto table_a = std::shared_ptr<lookup_table_definition>(
+                    //     result.push_back(table_a_16);
+                    //     result.push_back(table_b_16);
+
+                    //     auto table_a_32 = std::shared_ptr<lookup_table_definition>(
                     //         new fixedpoint_exp_a32_table<BlueprintFieldType>());
-                    //     auto table_b = std::shared_ptr<lookup_table_definition>(
+                    //     auto table_b_32 = std::shared_ptr<lookup_table_definition>(
                     //         new fixedpoint_exp_b32_table<BlueprintFieldType>());
-                    //     result.push_back(table_a);
-                    //     result.push_back(table_b);
-                    // } else {
-                    //     BLUEPRINT_RELEASE_ASSERT(false);
-                    // }
+                    //     result.push_back(table_a_32);
+                    //     result.push_back(table_b_32);
 
                     return result;
                 }
@@ -299,19 +278,14 @@ namespace nil {
                     std::map<std::string, std::size_t> lookup_tables;
                     lookup_tables[range_table::FULL_TABLE_NAME] = 0;    // REQUIRED_TABLE
 
-                    // if (m2 == 1) {
                     //     lookup_tables[fixedpoint_exp_a16_table<BlueprintFieldType>::FULL_TABLE_NAME] =
                     //         0;    // REQUIRED_TABLE
                     //     lookup_tables[fixedpoint_exp_b16_table<BlueprintFieldType>::FULL_TABLE_NAME] =
                     //         0;    // REQUIRED_TABLE
-                    // } else if (m2 == 2) {
                     //     lookup_tables[fixedpoint_exp_a32_table<BlueprintFieldType>::FULL_TABLE_NAME] =
                     //         0;    // REQUIRED_TABLE
                     //     lookup_tables[fixedpoint_exp_b32_table<BlueprintFieldType>::FULL_TABLE_NAME] =
                     //         0;    // REQUIRED_TABLE
-                    // } else {
-                    //     BLUEPRINT_RELEASE_ASSERT(false);
-                    // }
 
                     return lookup_tables;
                 }
@@ -320,18 +294,15 @@ namespace nil {
                 template<typename WitnessContainerType, typename ConstantContainerType,
                          typename PublicInputContainerType>
                 fix_tester(WitnessContainerType witness, ConstantContainerType constant,
-                           PublicInputContainerType public_input, uint8_t m1, uint8_t m2) :
-                    component_type(witness, constant, public_input, get_manifest()),
-                    m1(M(m1)), m2(M(m2)) {};
+                           PublicInputContainerType public_input) :
+                    component_type(witness, constant, public_input, get_manifest()) {};
 
-                fix_tester(
-                    std::initializer_list<typename component_type::witness_container_type::value_type> witnesses,
-                    std::initializer_list<typename component_type::constant_container_type::value_type> constants,
-                    std::initializer_list<typename component_type::public_input_container_type::value_type>
-                        public_inputs,
-                    uint8_t m1, uint8_t m2, value_type index_y_, bool select_last_index) :
-                    component_type(witnesses, constants, public_inputs, get_manifest()),
-                    m1(M(m1)), m2(M(m2)) {};
+                fix_tester(std::initializer_list<typename component_type::witness_container_type::value_type> witnesses,
+                           std::initializer_list<typename component_type::constant_container_type::value_type>
+                               constants,
+                           std::initializer_list<typename component_type::public_input_container_type::value_type>
+                               public_inputs) :
+                    component_type(witnesses, constants, public_inputs, get_manifest()) {};
             };
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
@@ -364,6 +335,8 @@ namespace nil {
                     auto &inputs = test.inputs;
                     auto &outputs = test.outputs;
                     auto &constants = test.constants;
+                    auto m1 = test.m1;
+                    auto m2 = test.m2;
 
                     std::vector<var> vars;
                     auto component_rows = 0;
@@ -411,9 +384,8 @@ namespace nil {
 
                             // Assign component
                             bool select_last_index = constants[1] == 0 ? false : true;
-                            new_component_type component_instance(witness_list, constant_list, public_input_list,
-                                                                  component.get_m1(), component.get_m2(), constants[0],
-                                                                  select_last_index);
+                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
+                                                                  m2, constants[0], select_last_index);
                             vars = generate_assignments(component_instance, assignment, instance_input,
                                                         current_row_index + 1)
                                        .all_vars();
@@ -433,9 +405,8 @@ namespace nil {
 
                             // Assign component
                             bool select_last_index = constants[1] == 0 ? false : true;
-                            new_component_type component_instance(witness_list, constant_list, public_input_list,
-                                                                  component.get_m1(), component.get_m2(), constants[0],
-                                                                  select_last_index);
+                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
+                                                                  m2, constants[0], select_last_index);
                             vars = generate_assignments(component_instance, assignment, instance_input,
                                                         current_row_index + 1)
                                        .all_vars();
@@ -453,8 +424,8 @@ namespace nil {
                             BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
 
                             // Assign component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list,
-                                                                  component.get_m1(), component.get_m2());
+                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
+                                                                  m2);
                             vars = generate_assignments(component_instance, assignment, instance_input,
                                                         current_row_index + 1)
                                        .all_vars();
@@ -473,8 +444,8 @@ namespace nil {
                             BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
 
                             // Assign component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list,
-                                                                  component.get_m1(), component.get_m2());
+                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
+                                                                  m2);
                             vars = generate_assignments(component_instance, assignment, instance_input,
                                                         current_row_index + 1)
                                        .all_vars();
@@ -493,8 +464,8 @@ namespace nil {
                             BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
 
                             // Assign component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list,
-                                                                  component.get_m1(), component.get_m2());
+                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
+                                                                  m2);
                             vars = generate_assignments(component_instance, assignment, instance_input,
                                                         current_row_index + 1)
                                        .all_vars();
@@ -515,8 +486,8 @@ namespace nil {
                             BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
 
                             // Assign component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list,
-                                                                  component.get_m1(), component.get_m2());
+                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
+                                                                  m2);
                             vars = generate_assignments(component_instance, assignment, instance_input,
                                                         current_row_index + 1)
                                        .all_vars();
@@ -570,8 +541,8 @@ namespace nil {
                             BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
 
                             // Assign component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list,
-                                                                  component.get_m1(), component.get_m2());
+                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
+                                                                  m2);
                             vars = generate_assignments(component_instance, assignment, instance_input,
                                                         current_row_index + 1)
                                        .all_vars();
@@ -589,8 +560,8 @@ namespace nil {
                             BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
 
                             // Assign component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list,
-                                                                  component.get_m1(), component.get_m2());
+                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
+                                                                  m2);
                             vars = generate_assignments(component_instance, assignment, instance_input,
                                                         current_row_index + 1)
                                        .all_vars();
@@ -609,8 +580,7 @@ namespace nil {
                             BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
 
                             // Assign component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list,
-                                                                  component.get_m2());
+                            new_component_type component_instance(witness_list, constant_list, public_input_list, m2);
                             vars = generate_assignments(component_instance, assignment, instance_input,
                                                         current_row_index + 1)
                                        .all_vars();
@@ -629,7 +599,7 @@ namespace nil {
 
                             // Assign component
                             new_component_type component_instance(witness_list, constant_list, public_input_list,
-                                                                  constants[0], component.get_m2());
+                                                                  constants[0], m2);
                             vars = generate_assignments(component_instance, assignment, instance_input,
                                                         current_row_index + 1)
                                        .all_vars();
@@ -663,9 +633,8 @@ namespace nil {
                             BLUEPRINT_RELEASE_ASSERT(constants.size() == 2);
 
                             // Assign component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list,
-                                                                  component.get_m1(), component.get_m2(), constants[0],
-                                                                  constants[1]);
+                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
+                                                                  m2, constants[0], constants[1]);
                             vars = generate_assignments(component_instance, assignment, instance_input,
                                                         current_row_index + 1)
                                        .all_vars();
@@ -683,8 +652,8 @@ namespace nil {
                             BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
 
                             // Assign component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list,
-                                                                  component.get_m1(), component.get_m2());
+                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
+                                                                  m2);
                             vars = generate_assignments(component_instance, assignment, instance_input,
                                                         current_row_index + 1)
                                        .all_vars();
@@ -701,8 +670,7 @@ namespace nil {
                             BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
 
                             // Assign component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list,
-                                                                  component.get_m2());
+                            new_component_type component_instance(witness_list, constant_list, public_input_list, m2);
                             vars = generate_assignments(component_instance, assignment, instance_input,
                                                         current_row_index + 1)
                                        .all_vars();
@@ -765,8 +733,7 @@ namespace nil {
                             BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
 
                             // Assign component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list,
-                                                                  component.get_m2());
+                            new_component_type component_instance(witness_list, constant_list, public_input_list, m2);
                             vars = generate_assignments(component_instance, assignment, instance_input,
                                                         current_row_index + 1)
                                        .all_vars();
@@ -815,6 +782,8 @@ namespace nil {
                     auto &inputs = test.inputs;
                     auto &outputs = test.outputs;
                     auto &constants = test.constants;
+                    auto m1 = test.m1;
+                    auto m2 = test.m2;
 
                     BLUEPRINT_RELEASE_ASSERT(inputs.size() + outputs.size() <= witness_list.size());
 
@@ -853,9 +822,8 @@ namespace nil {
 
                             // layout component
                             bool select_last_index = constants[1] == 0 ? false : true;
-                            new_component_type component_instance(witness_list, constant_list, public_input_list,
-                                                                  component.get_m1(), component.get_m2(), constants[0],
-                                                                  select_last_index);
+                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
+                                                                  m2, constants[0], select_last_index);
                             vars = generate_circuit(component_instance, bp, assignment, instance_input,
                                                     current_row_index + 1)
                                        .all_vars();
@@ -875,9 +843,8 @@ namespace nil {
 
                             // layout component
                             bool select_last_index = constants[1] == 0 ? false : true;
-                            new_component_type component_instance(witness_list, constant_list, public_input_list,
-                                                                  component.get_m1(), component.get_m2(), constants[0],
-                                                                  select_last_index);
+                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
+                                                                  m2, constants[0], select_last_index);
                             vars = generate_circuit(component_instance, bp, assignment, instance_input,
                                                     current_row_index + 1)
                                        .all_vars();
@@ -895,8 +862,8 @@ namespace nil {
                             BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
 
                             // layout component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list,
-                                                                  component.get_m1(), component.get_m2());
+                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
+                                                                  m2);
                             vars = generate_circuit(component_instance, bp, assignment, instance_input,
                                                     current_row_index + 1)
                                        .all_vars();
@@ -915,8 +882,8 @@ namespace nil {
                             BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
 
                             // layout component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list,
-                                                                  component.get_m1(), component.get_m2());
+                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
+                                                                  m2);
                             vars = generate_circuit(component_instance, bp, assignment, instance_input,
                                                     current_row_index + 1)
                                        .all_vars();
@@ -935,8 +902,8 @@ namespace nil {
                             BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
 
                             // layout component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list,
-                                                                  component.get_m1(), component.get_m2());
+                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
+                                                                  m2);
                             vars = generate_circuit(component_instance, bp, assignment, instance_input,
                                                     current_row_index + 1)
                                        .all_vars();
@@ -957,8 +924,8 @@ namespace nil {
                             BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
 
                             // layout component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list,
-                                                                  component.get_m1(), component.get_m2());
+                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
+                                                                  m2);
                             vars = generate_circuit(component_instance, bp, assignment, instance_input,
                                                     current_row_index + 1)
                                        .all_vars();
@@ -1012,8 +979,8 @@ namespace nil {
                             BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
 
                             // layout component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list,
-                                                                  component.get_m1(), component.get_m2());
+                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
+                                                                  m2);
                             vars = generate_circuit(component_instance, bp, assignment, instance_input,
                                                     current_row_index + 1)
                                        .all_vars();
@@ -1031,8 +998,8 @@ namespace nil {
                             BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
 
                             // layout component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list,
-                                                                  component.get_m1(), component.get_m2());
+                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
+                                                                  m2);
                             vars = generate_circuit(component_instance, bp, assignment, instance_input,
                                                     current_row_index + 1)
                                        .all_vars();
@@ -1051,8 +1018,7 @@ namespace nil {
                             BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
 
                             // layout component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list,
-                                                                  component.get_m2());
+                            new_component_type component_instance(witness_list, constant_list, public_input_list, m2);
                             vars = generate_circuit(component_instance, bp, assignment, instance_input,
                                                     current_row_index + 1)
                                        .all_vars();
@@ -1071,7 +1037,7 @@ namespace nil {
 
                             // layout component
                             new_component_type component_instance(witness_list, constant_list, public_input_list,
-                                                                  constants[0], component.get_m2());
+                                                                  constants[0], m2);
                             vars = generate_circuit(component_instance, bp, assignment, instance_input,
                                                     current_row_index + 1)
                                        .all_vars();
@@ -1105,9 +1071,8 @@ namespace nil {
                             BLUEPRINT_RELEASE_ASSERT(constants.size() == 2);
 
                             // layout component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list,
-                                                                  component.get_m1(), component.get_m2(), constants[0],
-                                                                  constants[1]);
+                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
+                                                                  m2, constants[0], constants[1]);
                             vars = generate_circuit(component_instance, bp, assignment, instance_input,
                                                     current_row_index + 1)
                                        .all_vars();
@@ -1125,8 +1090,8 @@ namespace nil {
                             BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
 
                             // layout component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list,
-                                                                  component.get_m1(), component.get_m2());
+                            new_component_type component_instance(witness_list, constant_list, public_input_list, m1,
+                                                                  m2);
                             vars = generate_circuit(component_instance, bp, assignment, instance_input,
                                                     current_row_index + 1)
                                        .all_vars();
@@ -1143,8 +1108,7 @@ namespace nil {
                             BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
 
                             // layout component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list,
-                                                                  component.get_m2());
+                            new_component_type component_instance(witness_list, constant_list, public_input_list, m2);
                             vars = generate_circuit(component_instance, bp, assignment, instance_input,
                                                     current_row_index + 1)
                                        .all_vars();
@@ -1207,8 +1171,7 @@ namespace nil {
                             BLUEPRINT_RELEASE_ASSERT(constants.size() == 0);
 
                             // layout component
-                            new_component_type component_instance(witness_list, constant_list, public_input_list,
-                                                                  component.get_m2());
+                            new_component_type component_instance(witness_list, constant_list, public_input_list, m2);
                             vars = generate_circuit(component_instance, bp, assignment, instance_input,
                                                     current_row_index + 1)
                                        .all_vars();

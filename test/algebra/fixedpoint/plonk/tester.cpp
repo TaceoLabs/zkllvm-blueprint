@@ -24,8 +24,7 @@
 #include "../../../test_plonk_component.hpp"
 
 using namespace nil;
-using nil::blueprint::components::FixedPoint16_16;
-using nil::blueprint::components::FixedPoint32_32;
+using blueprint::components::FixedPoint;
 
 static constexpr double EPSILON = 0.001;
 
@@ -47,7 +46,8 @@ void add_add(ComponentType &component, FixedType input1, FixedType input2) {
     std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};
     std::vector<typename FixedType::value_type> constants = {};
 
-    component.add_testcase(blueprint::components::FixedPointComponents::ADD, inputs, outputs, constants);
+    component.add_testcase(blueprint::components::FixedPointComponents::ADD, inputs, outputs, constants, FixedType::M_1,
+                           FixedType::M_2);
 }
 
 template<typename FixedType, typename ComponentType>
@@ -62,7 +62,8 @@ void add_sub(ComponentType &component, FixedType input1, FixedType input2) {
     std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};
     std::vector<typename FixedType::value_type> constants = {};
 
-    component.add_testcase(blueprint::components::FixedPointComponents::SUB, inputs, outputs, constants);
+    component.add_testcase(blueprint::components::FixedPointComponents::SUB, inputs, outputs, constants, FixedType::M_1,
+                           FixedType::M_2);
 }
 
 template<typename FixedType, typename ComponentType>
@@ -77,7 +78,8 @@ void add_mul_rescale(ComponentType &component, FixedType input1, FixedType input
     std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};
     std::vector<typename FixedType::value_type> constants = {};
 
-    component.add_testcase(blueprint::components::FixedPointComponents::MUL_RESCALE, inputs, outputs, constants);
+    component.add_testcase(blueprint::components::FixedPointComponents::MUL_RESCALE, inputs, outputs, constants,
+                           FixedType::M_1, FixedType::M_2);
 }
 
 template<typename FixedType, typename ComponentType>
@@ -92,7 +94,8 @@ void add_mul_rescale_const(ComponentType &component, FixedType input1, FixedType
     std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};
     std::vector<typename FixedType::value_type> constants = {input2.get_value()};
 
-    component.add_testcase(blueprint::components::FixedPointComponents::MUL_RESCALE_CONST, inputs, outputs, constants);
+    component.add_testcase(blueprint::components::FixedPointComponents::MUL_RESCALE_CONST, inputs, outputs, constants,
+                           FixedType::M_1, FixedType::M_2);
 }
 
 template<typename FixedType, typename ComponentType>
@@ -107,7 +110,8 @@ void add_div(ComponentType &component, FixedType input1, FixedType input2) {
     std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};
     std::vector<typename FixedType::value_type> constants = {};
 
-    component.add_testcase(blueprint::components::FixedPointComponents::DIV, inputs, outputs, constants);
+    component.add_testcase(blueprint::components::FixedPointComponents::DIV, inputs, outputs, constants, FixedType::M_1,
+                           FixedType::M_2);
 }
 
 template<typename FixedType, typename ComponentType>
@@ -127,7 +131,8 @@ void add_mod(ComponentType &component, FixedType input1, FixedType input2) {
     std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};
     std::vector<typename FixedType::value_type> constants = {};
 
-    component.add_testcase(blueprint::components::FixedPointComponents::REM, inputs, outputs, constants);
+    component.add_testcase(blueprint::components::FixedPointComponents::REM, inputs, outputs, constants, FixedType::M_1,
+                           FixedType::M_2);
 }
 
 template<typename FixedType, typename ComponentType>
@@ -142,7 +147,8 @@ void add_rescale(ComponentType &component, FixedType input) {
     std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};
     std::vector<typename FixedType::value_type> constants = {};
 
-    component.add_testcase(blueprint::components::FixedPointComponents::RESCALE, inputs, outputs, constants);
+    component.add_testcase(blueprint::components::FixedPointComponents::RESCALE, inputs, outputs, constants,
+                           FixedType::M_1, FixedType::M_2);
 }
 
 template<typename FixedType, typename ComponentType>
@@ -157,7 +163,8 @@ void add_neg(ComponentType &component, FixedType input) {
     std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};
     std::vector<typename FixedType::value_type> constants = {};
 
-    component.add_testcase(blueprint::components::FixedPointComponents::NEG, inputs, outputs, constants);
+    component.add_testcase(blueprint::components::FixedPointComponents::NEG, inputs, outputs, constants, FixedType::M_1,
+                           FixedType::M_2);
 }
 
 template<typename FixedType, typename ComponentType>
@@ -172,7 +179,8 @@ void add_int_to_fixedpoint(ComponentType &component, typename FixedType::value_t
     std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};
     std::vector<typename FixedType::value_type> constants = {};
 
-    component.add_testcase(blueprint::components::FixedPointComponents::TO_FIXEDPOINT, inputs, outputs, constants);
+    component.add_testcase(blueprint::components::FixedPointComponents::TO_FIXEDPOINT, inputs, outputs, constants,
+                           FixedType::M_1, FixedType::M_2);
 }
 
 template<typename FixedType, typename ComponentType>
@@ -197,7 +205,8 @@ void add_cmp(ComponentType &component, FixedType input1, FixedType input2) {
                                                            expected_res_greater ? 1 : 0};
     std::vector<typename FixedType::value_type> constants = {};
 
-    component.add_testcase(blueprint::components::FixedPointComponents::CMP, inputs, outputs, constants);
+    component.add_testcase(blueprint::components::FixedPointComponents::CMP, inputs, outputs, constants, FixedType::M_1,
+                           FixedType::M_2);
 }
 
 template<typename FixedType, typename ComponentType>
@@ -235,7 +244,8 @@ void add_cmp_extended(ComponentType &component, FixedType input1, FixedType inpu
                                                            expected_res_leq ? 1 : 0,     expected_res_geq ? 1 : 0};
     std::vector<typename FixedType::value_type> constants = {};
 
-    component.add_testcase(blueprint::components::FixedPointComponents::CMP_EXTENDED, inputs, outputs, constants);
+    component.add_testcase(blueprint::components::FixedPointComponents::CMP_EXTENDED, inputs, outputs, constants,
+                           FixedType::M_1, FixedType::M_2);
 }
 
 template<typename FixedType, typename ComponentType>
@@ -251,7 +261,8 @@ void add_select_internal(ComponentType &component, FixedType input1, FixedType i
     std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};
     std::vector<typename FixedType::value_type> constants = {};
 
-    component.add_testcase(blueprint::components::FixedPointComponents::SELECT, inputs, outputs, constants);
+    component.add_testcase(blueprint::components::FixedPointComponents::SELECT, inputs, outputs, constants,
+                           FixedType::M_1, FixedType::M_2);
 }
 
 template<typename FixedType, typename ComponentType>
@@ -273,7 +284,8 @@ void add_max(ComponentType &component, FixedType input1, FixedType input2) {
     std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};
     std::vector<typename FixedType::value_type> constants = {};
 
-    component.add_testcase(blueprint::components::FixedPointComponents::MAX, inputs, outputs, constants);
+    component.add_testcase(blueprint::components::FixedPointComponents::MAX, inputs, outputs, constants, FixedType::M_1,
+                           FixedType::M_2);
 }
 
 template<typename FixedType, typename ComponentType>
@@ -289,7 +301,8 @@ void add_min(ComponentType &component, FixedType input1, FixedType input2) {
     std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};
     std::vector<typename FixedType::value_type> constants = {};
 
-    component.add_testcase(blueprint::components::FixedPointComponents::MIN, inputs, outputs, constants);
+    component.add_testcase(blueprint::components::FixedPointComponents::MIN, inputs, outputs, constants, FixedType::M_1,
+                           FixedType::M_2);
 }
 
 template<typename FixedType, typename ComponentType>
@@ -322,7 +335,8 @@ void add_cmp_min_max(ComponentType &component, FixedType input1, FixedType input
                                                            expected_res_max.get_value()};
     std::vector<typename FixedType::value_type> constants = {};
 
-    component.add_testcase(blueprint::components::FixedPointComponents::CMP_MIN_MAX, inputs, outputs, constants);
+    component.add_testcase(blueprint::components::FixedPointComponents::CMP_MIN_MAX, inputs, outputs, constants,
+                           FixedType::M_1, FixedType::M_2);
 }
 
 template<typename FixedType, typename ComponentType>
@@ -352,7 +366,8 @@ void add_range(ComponentType &component, FixedType input, FixedType x_lo, FixedT
                                                            expected_res_greater ? 1 : 0};
     std::vector<typename FixedType::value_type> constants = {x_lo.get_value(), x_hi.get_value()};
 
-    component.add_testcase(blueprint::components::FixedPointComponents::RANGE, inputs, outputs, constants);
+    component.add_testcase(blueprint::components::FixedPointComponents::RANGE, inputs, outputs, constants,
+                           FixedType::M_1, FixedType::M_2);
 }
 
 template<typename FixedType, typename ComponentType>
@@ -368,7 +383,8 @@ void add_gather_acc_inner(ComponentType &component, FixedType acc, FixedType dat
     std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};
     std::vector<typename FixedType::value_type> constants = {index_b};
 
-    component.add_testcase(blueprint::components::FixedPointComponents::GATHER_ACC, inputs, outputs, constants);
+    component.add_testcase(blueprint::components::FixedPointComponents::GATHER_ACC, inputs, outputs, constants,
+                           FixedType::M_1, FixedType::M_2);
 }
 
 template<typename FixedType, typename ComponentType>
@@ -411,7 +427,8 @@ void add_argmax_inner(ComponentType &component, FixedType x, FixedType y, typena
     std::vector<typename FixedType::value_type> outputs = {expected_res.get_value(), expected_index};
     std::vector<typename FixedType::value_type> constants = {index_y, select_last_index ? 1 : 0};
 
-    component.add_testcase(blueprint::components::FixedPointComponents::ARGMAX, inputs, outputs, constants);
+    component.add_testcase(blueprint::components::FixedPointComponents::ARGMAX, inputs, outputs, constants,
+                           FixedType::M_1, FixedType::M_2);
 }
 
 template<typename FixedType, typename ComponentType>
@@ -456,7 +473,8 @@ void add_argmin_inner(ComponentType &component, FixedType x, FixedType y, typena
     std::vector<typename FixedType::value_type> outputs = {expected_res.get_value(), expected_index};
     std::vector<typename FixedType::value_type> constants = {index_y, select_last_index ? 1 : 0};
 
-    component.add_testcase(blueprint::components::FixedPointComponents::ARGMIN, inputs, outputs, constants);
+    component.add_testcase(blueprint::components::FixedPointComponents::ARGMIN, inputs, outputs, constants,
+                           FixedType::M_1, FixedType::M_2);
 }
 
 template<typename FixedType, typename ComponentType>
@@ -623,9 +641,8 @@ void field_operations_test_inner(ComponentType &component) {
     }
 }
 
-template<typename FixedType, std::size_t RandomTestsAmount>
+template<typename BlueprintFieldType, std::size_t RandomTestsAmount>
 void field_operations_test() {
-    using BlueprintFieldType = typename FixedType::field_type;
     constexpr std::size_t WitnessColumns = 15;
     constexpr std::size_t PublicInputColumns = 1;
     constexpr std::size_t ConstantColumns = 15;
@@ -656,9 +673,17 @@ void field_operations_test() {
         constant_list[i] = i;
     }
 
-    component_type component_instance(witness_list, constant_list, public_list, FixedType::M_1, FixedType::M_2);
+    component_type component_instance(witness_list, constant_list, public_list);
 
-    field_operations_test_inner<FixedType, component_type, RandomTestsAmount>(component_instance);
+    // Add tests for all FixedTypes
+    field_operations_test_inner<FixedPoint<BlueprintFieldType, 1, 1>, component_type, RandomTestsAmount>(
+        component_instance);
+    field_operations_test_inner<FixedPoint<BlueprintFieldType, 1, 2>, component_type, RandomTestsAmount>(
+        component_instance);
+    field_operations_test_inner<FixedPoint<BlueprintFieldType, 2, 1>, component_type, RandomTestsAmount>(
+        component_instance);
+    field_operations_test_inner<FixedPoint<BlueprintFieldType, 2, 2>, component_type, RandomTestsAmount>(
+        component_instance);
 
     typename component_type::input_type instance_input = {};
     std::vector<typename BlueprintFieldType::value_type> public_input = {};
@@ -675,20 +700,17 @@ BOOST_AUTO_TEST_SUITE(blueprint_plonk_test_suite)
 
 BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_tester_test_vesta) {
     using field_type = typename crypto3::algebra::curves::vesta::base_field_type;
-    field_operations_test<FixedPoint16_16<field_type>, random_tests_amount>();
-    field_operations_test<FixedPoint32_32<field_type>, random_tests_amount>();
+    field_operations_test<field_type, random_tests_amount>();
 }
 
 BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_tester_test_pallas) {
     using field_type = typename crypto3::algebra::curves::pallas::base_field_type;
-    field_operations_test<FixedPoint16_16<field_type>, random_tests_amount>();
-    field_operations_test<FixedPoint32_32<field_type>, random_tests_amount>();
+    field_operations_test<field_type, random_tests_amount>();
 }
 
 BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_tester_test_bls12) {
     using field_type = typename crypto3::algebra::fields::bls12_fr<381>;
-    field_operations_test<FixedPoint16_16<field_type>, random_tests_amount>();
-    field_operations_test<FixedPoint32_32<field_type>, random_tests_amount>();
+    field_operations_test<field_type, random_tests_amount>();
 }
 
 BOOST_AUTO_TEST_SUITE_END()
