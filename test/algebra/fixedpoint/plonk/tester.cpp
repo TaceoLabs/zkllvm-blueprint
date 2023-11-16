@@ -41,6 +41,9 @@ bool doubleEqualsExp(double a, double b, double epsilon) {
     return fabs(a - b) < epsilon || fabs(a - b) <= ((fabs(a) > fabs(b) ? fabs(b) : fabs(a)) * epsilon);
 }
 
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
 template<typename FixedType, typename ComponentType>
 void add_add(ComponentType &component, FixedType input1, FixedType input2) {
 
@@ -612,6 +615,71 @@ void add_argmin(ComponentType &component, FixedType x, FixedType y, typename Fix
     add_argmin_inner<FixedType, ComponentType>(component, x, y, index_x, index_y, false);
 }
 
+template<typename FixedType, typename ComponentType>
+void add_dot_1_gate(ComponentType &component, std::vector<FixedType> &input1, std::vector<FixedType> &input2) {
+
+    auto dots = input1.size();
+    BLUEPRINT_RELEASE_ASSERT(dots == input2.size());
+
+    double expected_res_f = 0.;
+    for (auto i = 0; i < input1.size(); i++) {
+        expected_res_f += input1[i].to_double() * input2[i].to_double();
+    }
+    auto expected_res = FixedType::dot(input1, input2);
+
+    BLUEPRINT_RELEASE_ASSERT(doubleEquals(expected_res_f, expected_res.to_double(), EPSILON));
+
+    std::vector<typename FixedType::value_type> inputs;
+    inputs.reserve(2 * dots + 1);
+    for (auto i = 0; i < dots; i++) {
+        inputs.push_back(input1[i].get_value());
+    }
+    for (auto i = 0; i < dots; i++) {
+        inputs.push_back(input2[i].get_value());
+    }
+    inputs.push_back(0);
+
+    std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};
+    std::vector<typename FixedType::value_type> constants = {};
+
+    component.add_testcase(blueprint::components::FixedPointComponents::DOT_RESCALE1, inputs, outputs, constants,
+                           FixedType::M_1, FixedType::M_2, dots);
+}
+
+template<typename FixedType, typename ComponentType>
+void add_dot_2_gates(ComponentType &component, std::vector<FixedType> &input1, std::vector<FixedType> &input2) {
+
+    auto dots = input1.size();
+    BLUEPRINT_RELEASE_ASSERT(dots == input2.size());
+
+    double expected_res_f = 0.;
+    for (auto i = 0; i < input1.size(); i++) {
+        expected_res_f += input1[i].to_double() * input2[i].to_double();
+    }
+    auto expected_res = FixedType::dot(input1, input2);
+
+    BLUEPRINT_RELEASE_ASSERT(doubleEquals(expected_res_f, expected_res.to_double(), EPSILON));
+
+    std::vector<typename FixedType::value_type> inputs;
+    inputs.reserve(2 * dots + 1);
+    for (auto i = 0; i < dots; i++) {
+        inputs.push_back(input1[i].get_value());
+    }
+    for (auto i = 0; i < dots; i++) {
+        inputs.push_back(input2[i].get_value());
+    }
+    inputs.push_back(0);
+
+    std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};
+    std::vector<typename FixedType::value_type> constants = {};
+
+    component.add_testcase(blueprint::components::FixedPointComponents::DOT_RESCALE2, inputs, outputs, constants,
+                           FixedType::M_1, FixedType::M_2, dots);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
 static constexpr std::size_t INDEX_MAX = 1000;
 
 template<typename FieldType, typename RngType>
@@ -707,6 +775,9 @@ FieldType generate_random_post_comma_for_fixedpoint(uint8_t m2, RngType &rng) {
         return FieldType(x);
     }
 }
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 template<typename FixedType, typename ComponentType>
 void test_components_unary_basic(ComponentType &component, int i) {
@@ -929,6 +1000,49 @@ void test_components_on_post_comma_random_data(ComponentType &component, RngType
     add_argmin<FixedType, ComponentType>(component, x, y, index_a, index_b);
 }
 
+template<typename FixedType, typename ComponentType>
+void test_sized_components(ComponentType &component, std::size_t size) {
+    std::vector<FixedType> x;
+    std::vector<FixedType> y;
+    x.reserve(size);
+    y.reserve(size);
+
+    for (int i = 0; i < size; i++) {
+        x.push_back(FixedType((int64_t)i - 2));
+    }
+    for (int i = 0; i < size; i++) {
+        y.push_back(FixedType((int64_t)i - 4));
+    }
+
+    // DOT PRODUCTS
+    add_dot_1_gate<FixedType, ComponentType>(component, x, y);
+    add_dot_2_gates<FixedType, ComponentType>(component, x, y);
+}
+
+template<typename FixedType, typename ComponentType, typename RngType>
+void test_sized_components_on_random_data(ComponentType &component, RngType &rng, std::size_t size) {
+    std::vector<FixedType> x;
+    std::vector<FixedType> y;
+    x.reserve(size);
+    y.reserve(size);
+
+    for (auto i = 0; i < size; i++) {
+        x.push_back(FixedType(
+            generate_random_for_fixedpoint<typename FixedType::value_type>(FixedType::M_1, FixedType::M_2, rng),
+            FixedType::SCALE));
+        y.push_back(FixedType(
+            generate_random_for_fixedpoint<typename FixedType::value_type>(FixedType::M_1, FixedType::M_2, rng),
+            FixedType::SCALE));
+    }
+
+    // DOT PRODUCTS
+    add_dot_1_gate<FixedType, ComponentType>(component, x, y);
+    add_dot_2_gates<FixedType, ComponentType>(component, x, y);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
 template<typename FixedType, typename ComponentType, std::size_t RandomTestsAmount>
 void field_operations_test_inner(ComponentType &component) {
     for (int i = -2; i < 3; i++) {
@@ -951,7 +1065,16 @@ void field_operations_test_inner(ComponentType &component) {
         test_components_on_random_data<FixedType, ComponentType>(component, seed_seq);
         test_components_on_post_comma_random_data<FixedType, ComponentType>(component, seed_seq);
     }
+
+    std::vector<std::size_t> sizes = {1, 5, 15, 50, 123};
+    for (auto size : sizes) {
+        test_sized_components<FixedType, ComponentType>(component, size);
+        test_sized_components_on_random_data<FixedType, ComponentType>(component, seed_seq, size);
+    }
 }
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 template<typename BlueprintFieldType, std::size_t RandomTestsAmount>
 void field_operations_test() {
@@ -987,6 +1110,7 @@ void field_operations_test() {
 
     component_type component_instance(witness_list, constant_list, public_list);
 
+    ////////////////////////////////////////////////////////////////////////////
     // Add tests for all FixedTypes
     field_operations_test_inner<FixedPoint<BlueprintFieldType, 1, 1>, component_type, RandomTestsAmount>(
         component_instance);
@@ -996,6 +1120,7 @@ void field_operations_test() {
         component_instance);
     field_operations_test_inner<FixedPoint<BlueprintFieldType, 2, 2>, component_type, RandomTestsAmount>(
         component_instance);
+    ////////////////////////////////////////////////////////////////////////////
 
     typename component_type::input_type instance_input = {};
     std::vector<typename BlueprintFieldType::value_type> public_input = {};
@@ -1005,6 +1130,9 @@ void field_operations_test() {
         crypto3::detail::connectedness_check_type::WEAK);
     // We do not have inputs/outputs so the weak check is sufficient
 }
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 constexpr static const std::size_t random_tests_amount = 10;
 

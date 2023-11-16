@@ -84,6 +84,7 @@ namespace nil {
                     std::vector<value_type> constants;
                     uint8_t m1;
                     uint8_t m2;
+                    std::uint32_t size;
                 };
 
             private:
@@ -94,6 +95,20 @@ namespace nil {
                     return testcases;
                 }
 
+                static std::size_t io_rows_for_dot(std::size_t witness_amount, std::uint32_t dots) {
+                    auto inputs_outputs = 2 * dots + 2;
+                    auto rows = inputs_outputs / witness_amount;
+                    rows += inputs_outputs % witness_amount == 0 ? 0 : 1;
+                    return rows;
+                }
+
+                static std::tuple<std::size_t, std::size_t> split(std::size_t witness_amount,
+                                                                  std::size_t start_row_index, std::size_t index) {
+                    auto row = start_row_index + index / witness_amount;
+                    auto column = index % witness_amount;
+                    return std::make_tuple(column, row);
+                }
+
 ///////////////////////////////////////////////////////////////////////////////
 //  macro
 #define macro_rows_amount(name, ...)                                                     \
@@ -102,75 +117,111 @@ namespace nil {
                 ///////////////////////////////////////////////////////////////////////////////
 
                 static std::size_t get_component_rows_amount(FixedPointComponents component, std::size_t witness_amount,
-                                                             std::size_t lookup_column_amount, uint8_t m1, uint8_t m2) {
+                                                             std::size_t lookup_column_amount, uint8_t m1, uint8_t m2,
+                                                             std::uint32_t size = 0) {
                     using ArithmetizationType =
                         crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>;
 
+                    auto input_output_rows = 1;
+                    auto component_rows = 0;
+
                     switch (component) {
                         case FixedPointComponents::ADD:
-                            return macro_rows_amount(addition);
+                            component_rows = macro_rows_amount(addition);
+                            break;
                         case FixedPointComponents::ARGMAX:
-                            return macro_rows_amount(fix_argmax, m1, m2);
+                            component_rows = macro_rows_amount(fix_argmax, m1, m2);
+                            break;
                         case FixedPointComponents::ARGMIN:
-                            return macro_rows_amount(fix_argmin, m1, m2);
+                            component_rows = macro_rows_amount(fix_argmin, m1, m2);
+                            break;
                         case FixedPointComponents::CMP:
-                            return macro_rows_amount(fix_cmp);
+                            component_rows = macro_rows_amount(fix_cmp);
+                            break;
                         case FixedPointComponents::CMP_EXTENDED:
-                            return macro_rows_amount(fix_cmp_extended);
+                            component_rows = macro_rows_amount(fix_cmp_extended);
+                            break;
                         case FixedPointComponents::CMP_MIN_MAX:
-                            return macro_rows_amount(fix_cmp_min_max);
+                            component_rows = macro_rows_amount(fix_cmp_min_max);
+                            break;
                         case FixedPointComponents::DIV_BY_POS:
-                            return macro_rows_amount(fix_div_by_pos, m1, m2);
+                            component_rows = macro_rows_amount(fix_div_by_pos, m1, m2);
+                            break;
                         case FixedPointComponents::DIV:
-                            return macro_rows_amount(fix_div, m1, m2);
-                        // case FixedPointComponents::DOT_RESCALE1:
-                        // case FixedPointComponents::DOT_RESCALE2:
+                            component_rows = macro_rows_amount(fix_div, m1, m2);
+                            break;
+                        case FixedPointComponents::DOT_RESCALE1:
+                            input_output_rows = io_rows_for_dot(witness_amount, size);
+                            component_rows = macro_rows_amount(fix_dot_rescale_1_gate, size, m2);
+                            break;
+                        case FixedPointComponents::DOT_RESCALE2:
+                            input_output_rows = io_rows_for_dot(witness_amount, size);
+                            component_rows = macro_rows_amount(fix_dot_rescale_2_gates, size, m2);
+                            break;
                         case FixedPointComponents::EXP:
-                            return macro_rows_amount(fix_exp);
+                            component_rows = macro_rows_amount(fix_exp);
+                            break;
                         case FixedPointComponents::EXP_RANGED:
-                            return macro_rows_amount(fix_exp_ranged, m1, m2);
+                            component_rows = macro_rows_amount(fix_exp_ranged, m1, m2);
+                            break;
                         case FixedPointComponents::GATHER_ACC:
-                            return macro_rows_amount(fix_gather_acc);
+                            component_rows = macro_rows_amount(fix_gather_acc);
+                            break;
                         case FixedPointComponents::LOG:
-                            return macro_rows_amount(fix_log, m1, m2);
+                            component_rows = macro_rows_amount(fix_log, m1, m2);
+                            break;
                         case FixedPointComponents::MAX:
-                            return macro_rows_amount(fix_max);
+                            component_rows = macro_rows_amount(fix_max);
+                            break;
                         case FixedPointComponents::MIN:
-                            return macro_rows_amount(fix_min);
+                            component_rows = macro_rows_amount(fix_min);
+                            break;
                         case FixedPointComponents::MUL_RESCALE:
-                            return macro_rows_amount(fix_mul_rescale);
+                            component_rows = macro_rows_amount(fix_mul_rescale);
+                            break;
                         case FixedPointComponents::MUL_RESCALE_CONST:
-                            return macro_rows_amount(fix_mul_rescale_const);
+                            component_rows = macro_rows_amount(fix_mul_rescale_const);
+                            break;
                         case FixedPointComponents::NEG:
-                            return macro_rows_amount(fix_neg);
+                            component_rows = macro_rows_amount(fix_neg);
+                            break;
                         case FixedPointComponents::RANGE:
-                            return macro_rows_amount(fix_range, m1, m2);
+                            component_rows = macro_rows_amount(fix_range, m1, m2);
+                            break;
                         case FixedPointComponents::REM:
-                            return macro_rows_amount(fix_rem, m1, m2);
+                            component_rows = macro_rows_amount(fix_rem, m1, m2);
+                            break;
                         case FixedPointComponents::RESCALE:
-                            return macro_rows_amount(fix_rescale);
+                            component_rows = macro_rows_amount(fix_rescale);
+                            break;
                         case FixedPointComponents::SELECT:
-                            return macro_rows_amount(fix_select);
+                            component_rows = macro_rows_amount(fix_select);
+                            break;
                         case FixedPointComponents::SQRT:
-                            return macro_rows_amount(fix_sqrt, m1, m2);
+                            component_rows = macro_rows_amount(fix_sqrt, m1, m2);
+                            break;
                         case FixedPointComponents::SQRT_FLOOR:
-                            return macro_rows_amount(fix_sqrt_floor, m1, m2);
+                            component_rows = macro_rows_amount(fix_sqrt_floor, m1, m2);
+                            break;
                         case FixedPointComponents::SUB:
-                            return macro_rows_amount(subtraction);
+                            component_rows = macro_rows_amount(subtraction);
+                            break;
                         case FixedPointComponents::TANH:
-                            return macro_rows_amount(fix_tanh, m1, m2);
+                            component_rows = macro_rows_amount(fix_tanh, m1, m2);
+                            break;
                         case FixedPointComponents::TO_FIXEDPOINT:
-                            return macro_rows_amount(int_to_fix);
+                            component_rows = macro_rows_amount(int_to_fix);
+                            break;
                         default:
                             BLUEPRINT_RELEASE_ASSERT(false);
                     }
-                    return 0;
+                    return component_rows + input_output_rows;
                 }
 #undef macro_rows_amount
 
                 void add_testcase(FixedPointComponents component, std::vector<value_type> &inputs,
                                   std::vector<value_type> &outputs, std::vector<value_type> &constants, uint8_t m1,
-                                  uint8_t m2) {
+                                  uint8_t m2, std::uint32_t size = 0) {
                     testcase test;
                     test.component = component;
                     test.inputs = inputs;
@@ -178,8 +229,9 @@ namespace nil {
                     test.constants = constants;
                     test.m1 = m1;
                     test.m2 = m2;
+                    test.size = size;
                     testcases.push_back(test);
-                    rows_amount += get_component_rows_amount(component, this->witness_amount(), 0, m1, m2) + 1;
+                    rows_amount += get_component_rows_amount(component, this->witness_amount(), 0, m1, m2, size);
                 }
 
                 std::vector<std::uint32_t> get_witness_list() const {
@@ -313,11 +365,13 @@ namespace nil {
     vars = func;                                                                 \
     component_rows = component_instance.rows_amount;
 ///////////////////////////////////////////////////////////////////////////////
-#define macro_assigner() \
-    generate_assignments(component_instance, assignment, instance_input, current_row_index + 1).all_vars()
+#define macro_assigner()                                                                                        \
+    generate_assignments(component_instance, assignment, instance_input, current_row_index + input_output_rows) \
+        .all_vars()
 ///////////////////////////////////////////////////////////////////////////////
-#define macro_circuit() \
-    generate_circuit(component_instance, bp, assignment, instance_input, current_row_index + 1).all_vars()
+#define macro_circuit()                                                                                         \
+    generate_circuit(component_instance, bp, assignment, instance_input, current_row_index + input_output_rows) \
+        .all_vars()
 ///////////////////////////////////////////////////////////////////////////////
 #define macro_1_input() \
     typename new_component_type::input_type instance_input {var(component.W(0), current_row_index, false)};
@@ -330,6 +384,21 @@ namespace nil {
     typename new_component_type::input_type instance_input {var(component.W(0), current_row_index, false),  \
                                                             var(component.W(1), current_row_index, false),  \
                                                             var(component.W(2), current_row_index, false)}; \
+///////////////////////////////////////////////////////////////////////////////
+#define macro_dot_input()                                                                         \
+    std::vector<var> instance_input_x;                                                            \
+    std::vector<var> instance_input_y;                                                            \
+    instance_input_x.reserve(size);                                                               \
+    instance_input_y.reserve(size);                                                               \
+    for (std::size_t i = 0; i < size; ++i) {                                                      \
+        auto [column_x, row_x] = tester::split(witness_list.size(), current_row_index, i);        \
+        auto [column_y, row_y] = tester::split(witness_list.size(), current_row_index, i + size); \
+        instance_input_x.push_back(var(component.W(column_x), row_x, false));                     \
+        instance_input_y.push_back(var(component.W(column_y), row_y, false));                     \
+    }                                                                                             \
+    auto [column, row] = tester::split(witness_list.size(), current_row_index, 2 * size);         \
+    var zero = var(component.W(column), row, false);                                              \
+    typename new_component_type::input_type instance_input {instance_input_x, instance_input_y, zero};
 ///////////////////////////////////////////////////////////////////////////////
 #define macro_assigner_1_input(name, num_constant, ...) \
     macro_component(name, ##__VA_ARGS__);               \
@@ -376,6 +445,7 @@ namespace nil {
                 using ArithmetizationType =
                     crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>;
                 using PolicyType = nil::blueprint::basic_non_native_policy<BlueprintFieldType>;
+                using tester = plonk_fixedpoint_tester<BlueprintFieldType, ArithmetizationParams>;
 
                 auto witness_list = component.get_witness_list();
                 auto constant_list = component.get_constant_list();
@@ -389,19 +459,21 @@ namespace nil {
                     auto &constants = test.constants;
                     auto m1 = test.m1;
                     auto m2 = test.m2;
+                    auto size = test.size;
 
                     std::vector<var> vars;
+                    auto input_output_rows = 1;
                     auto component_rows = 0;
-
-                    BLUEPRINT_RELEASE_ASSERT(inputs.size() + outputs.size() <= witness_list.size());
 
                     // Put inputs and outputs in the witness columns in the current row and put gadget into the next, we
                     // will have coppy constraints to them later
                     for (std::size_t i = 0; i < inputs.size(); ++i) {
-                        assignment.witness(component.W(i), current_row_index) = inputs[i];
+                        auto [column, row] = tester::split(witness_list.size(), current_row_index, i);
+                        assignment.witness(component.W(column), row) = inputs[i];
                     }
                     for (std::size_t i = 0; i < outputs.size(); ++i) {
-                        assignment.witness(component.W(i + inputs.size()), current_row_index) = outputs[i];
+                        auto [column, row] = tester::split(witness_list.size(), current_row_index, i + inputs.size());
+                        assignment.witness(component.W(column), row) = outputs[i];
                     }
 
                     switch (test.component) {
@@ -439,12 +511,20 @@ namespace nil {
                             macro_assigner_2_inputs(fix_div, 0, m1, m2);
                             break;
                         }
-                        // case FixedPointComponents::DOT_RESCALE1: {
-                        //     break;
-                        // }
-                        // case FixedPointComponents::DOT_RESCALE2: {
-                        //     break;
-                        // }
+                        case FixedPointComponents::DOT_RESCALE1: {
+                            input_output_rows = tester::io_rows_for_dot(witness_list.size(), size);
+                            macro_component(fix_dot_rescale_1_gate, size, m2);
+                            macro_dot_input();
+                            macro_func(0, macro_assigner());
+                            break;
+                        }
+                        case FixedPointComponents::DOT_RESCALE2: {
+                            input_output_rows = tester::io_rows_for_dot(witness_list.size(), size);
+                            macro_component(fix_dot_rescale_2_gates, size, m2);
+                            macro_dot_input();
+                            macro_func(0, macro_assigner());
+                            break;
+                        }
                         case FixedPointComponents::EXP: {
                             macro_assigner_1_input(fix_exp, 0, m2);
                             break;
@@ -527,7 +607,7 @@ namespace nil {
                         BLUEPRINT_RELEASE_ASSERT(var_value(assignment, vars[i]) == outputs[i]);
                     }
 
-                    current_row_index += component_rows + 1;
+                    current_row_index += component_rows + input_output_rows;
                 }
 
                 return typename plonk_fixedpoint_tester<BlueprintFieldType, ArithmetizationParams>::result_type(
@@ -548,6 +628,7 @@ namespace nil {
                 using ArithmetizationType =
                     crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>;
                 using PolicyType = nil::blueprint::basic_non_native_policy<BlueprintFieldType>;
+                using tester = plonk_fixedpoint_tester<BlueprintFieldType, ArithmetizationParams>;
 
                 auto witness_list = component.get_witness_list();
                 auto constant_list = component.get_constant_list();
@@ -561,10 +642,10 @@ namespace nil {
                     auto &constants = test.constants;
                     auto m1 = test.m1;
                     auto m2 = test.m2;
-
-                    BLUEPRINT_RELEASE_ASSERT(inputs.size() + outputs.size() <= witness_list.size());
+                    auto size = test.size;
 
                     std::vector<var> vars;
+                    auto input_output_rows = 1;
                     auto component_rows = 0;
 
                     switch (test.component) {
@@ -602,12 +683,20 @@ namespace nil {
                             macro_circuit_2_inputs(fix_div, 0, m1, m2);
                             break;
                         }
-                        // case FixedPointComponents::DOT_RESCALE1: {
-                        //     break;
-                        // }
-                        // case FixedPointComponents::DOT_RESCALE2: {
-                        //     break;
-                        // }
+                        case FixedPointComponents::DOT_RESCALE1: {
+                            input_output_rows = tester::io_rows_for_dot(witness_list.size(), size);
+                            macro_component(fix_dot_rescale_1_gate, size, m2);
+                            macro_dot_input();
+                            macro_func(0, macro_circuit());
+                            break;
+                        }
+                        case FixedPointComponents::DOT_RESCALE2: {
+                            input_output_rows = tester::io_rows_for_dot(witness_list.size(), size);
+                            macro_component(fix_dot_rescale_2_gates, size, m2);
+                            macro_dot_input();
+                            macro_func(0, macro_circuit());
+                            break;
+                        }
                         case FixedPointComponents::EXP: {
                             macro_circuit_1_input(fix_exp, 0, m2);
                             break;
@@ -687,11 +776,11 @@ namespace nil {
                     // Copy constraints for outputs
                     BLUEPRINT_RELEASE_ASSERT(vars.size() == outputs.size());
                     for (auto i = 0; i < vars.size(); i++) {
-                        bp.add_copy_constraint(
-                            {var(component.W(i + inputs.size()), current_row_index, false), vars[i]});
+                        auto [column, row] = tester::split(witness_list.size(), current_row_index, i + inputs.size());
+                        bp.add_copy_constraint({var(component.W(column), row, false), vars[i]});
                     }
 
-                    current_row_index += component_rows + 1;
+                    current_row_index += component_rows + input_output_rows;
                 }
 
                 return typename plonk_fixedpoint_tester<BlueprintFieldType, ArithmetizationParams>::result_type(
@@ -704,6 +793,7 @@ namespace nil {
 #undef macro_1_input
 #undef macro_2_inputs
 #undef macro_3_inputs
+#undef macro_dot_input
 #undef macro_assigner_1_input
 #undef macro_assigner_2_inputs
 #undef macro_assigner_3_inputs
