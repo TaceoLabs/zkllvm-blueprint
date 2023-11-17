@@ -393,7 +393,7 @@ namespace nil {
                     typename plonk_fixedpoint_exp<BlueprintFieldType, ArithmetizationParams>::range_table;
 
                 std::vector<constraint_type> constraints;
-                constraints.reserve(2 + m2);
+                constraints.reserve(1 + 2 * m2);
 
                 auto range_table_id = lookup_tables_indices.at(range_table::FULL_TABLE_NAME);
                 auto exp_a_table_id =
@@ -419,6 +419,16 @@ namespace nil {
 
                 constraints.push_back(constraint_pre);
                 constraints.push_back(constraint_post);
+
+                if (m2 == 2) {
+                    // We need to range check the second limb of x_post which does not go into the lookup table
+                    constraint_type constraint;
+                    constraint.table_id = range_table_id;
+
+                    auto x_post1 = var(var_pos.x_post0.column() + 1, var_pos.x_post0.row());
+                    constraint.lookup_input = {x_post1};
+                    constraints.push_back(constraint);
+                }
 
                 // Rescale
                 for (auto i = 0; i < m2; i++) {
