@@ -340,12 +340,15 @@ namespace nil {
                                              FixedPointTables<BlueprintFieldType>::get_cos_b_32();
                 auto sin_c_table = FixedPointTables<BlueprintFieldType>::get_sin_c_32();
 
-                auto sin0_val = sin_a_table[x0_val[m2 - 0]];
-                auto sin1_val = sin_b_table[x0_val[m2 - 1]];
-                auto sin2_val = m2 == 1 ? zero : sin_c_table[x0_val[m2 - 2]];
-                auto cos0_val = cos_a_table[x0_val[m2 - 0]];
-                auto cos1_val = cos_b_table[x0_val[m2 - 1]];
-                auto cos2_val = delta;
+                // x0 .. smallest limb, x1 .. 2nd smallest limb, x2 .. 3rd smallest limb (2 or 3 limbs in total)
+                // sin0 holds the looked-up value of the one and only pre-comma limb, so sin(a) = sin0 where a is the
+                // largest limb of the input. a = x0_val[m2], ..
+                auto sin0_val = sin_a_table[x0_val[m2 - 0]];                     // 0 .. a
+                auto sin1_val = sin_b_table[x0_val[m2 - 1]];                     // 1 .. b
+                auto sin2_val = m2 == 1 ? zero : sin_c_table[x0_val[m2 - 2]];    // 2 .. c
+                auto cos0_val = cos_a_table[x0_val[m2 - 0]];                     // 0 .. a
+                auto cos1_val = cos_b_table[x0_val[m2 - 1]];                     // 1 .. b
+                auto cos2_val = delta;                                           // 2 .. c
 
                 assignment.witness(splat(var_pos.sin0)) = sin0_val;
                 assignment.witness(var_pos.sin0.column() + 1, var_pos.sin0.row()) = sin1_val;
@@ -360,6 +363,8 @@ namespace nil {
                 // sin(a+b+c) = sin(a+b)cos(c) + cos(a+b)sin(c)
                 //            = cos(c) * (sin(a)cos(b) + cos(a)sin(b))
                 //            + sin(c) * (cos(a)cos(b) - sin(a)sin(b))
+                // sin(a) .. sin0, sin(b) .. sin1, sin(c) .. sin2
+                // cos(a) .. cos0, cos(b) .. cos1, cos(c) .. cos2
                 value_type computation = m2 == 1 ? (cos0_val * cos1_val - sin0_val * sin1_val) :
                                                    (cos2_val * (cos0_val * cos1_val - sin0_val * sin1_val) -
                                                     sin2_val * (sin0_val * cos1_val + cos0_val * sin1_val));
@@ -423,12 +428,12 @@ namespace nil {
                 auto constraint_1 = (x_reduced - x0) * (x_reduced + x0);
 
                 auto y = var(splat(var_pos.y));
-                auto sin0 = var(splat(var_pos.sin0));
-                auto sin1 = var(var_pos.sin0.column() + 1, var_pos.sin0.row());
-                auto cos0 = var(splat(var_pos.cos0));
-                auto cos1 = var(splat(var_pos.cos1));
-                auto sin2 = var(var_pos.sin0.column() + 2, var_pos.sin0.row());
-                auto cos2 = delta;
+                auto sin0 = var(splat(var_pos.sin0));                              // 0 .. a
+                auto sin1 = var(var_pos.sin0.column() + 1, var_pos.sin0.row());    // 1 .. b
+                auto cos0 = var(splat(var_pos.cos0));                              // 0 .. a
+                auto cos1 = var(splat(var_pos.cos1));                              // 1 .. b
+                auto sin2 = var(var_pos.sin0.column() + 2, var_pos.sin0.row());    // 2 .. c
+                auto cos2 = delta;                                                 // 2 .. c
                 auto q = nil::crypto3::math::expression(var(splat(var_pos.q0)));
                 for (size_t i = 1; i < m2 * m2; i++) {
                     q += var(var_pos.q0.column() + i, var_pos.q0.row()) * (1ULL << (16 * i));
@@ -526,6 +531,9 @@ namespace nil {
                 }
 
                 // lookup sin, cos
+                // x0 .. smallest limb, x1 .. 2nd smallest limb, x2 .. 3rd smallest limb (2 or 3 limbs in total)
+                // sin0 holds the looked-up value of the one and only pre-comma limb, so sin(a) = sin0 where a is the
+                // largest limb of the input. a = x0_val[m2], ..
                 auto x0 = var(var_pos.x0.column() + m2 - 0, var_pos.x0.row());
                 auto x1 = var(var_pos.x0.column() + m2 - 1, var_pos.x0.row());
                 auto x2 = var(var_pos.x0.column() + m2 - 2, var_pos.x0.row());    // invalid if m2 == 1
