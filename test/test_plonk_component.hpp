@@ -51,6 +51,7 @@
 //#include <nil/blueprint/utils/table_profiling.hpp>
 #include <nil/blueprint/utils/satisfiability_check.hpp>
 #include <nil/blueprint/component_stretcher.hpp>
+#include <nil/blueprint/components/algebra/fixedpoint/lookup_tables/tester.hpp>
 #include <nil/blueprint/components/algebra/fixedpoint/plonk/tester.hpp>
 #include <nil/blueprint/utils/connectedness_check.hpp>
 
@@ -286,6 +287,7 @@ namespace nil {
             }
 
             if(nil::blueprint::use_lookups<component_type>()){
+                BLUEPRINT_RELEASE_ASSERT(nil::blueprint::check_lookup_tables(bp, assignment));
                 // Components with lookups may use constant columns.
                 // But now all constants are placed in the first column.
                 // So we reserve the first column for non-lookup constants. 
