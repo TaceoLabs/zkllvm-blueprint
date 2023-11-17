@@ -163,6 +163,10 @@ namespace nil {
             using FixedPoint16_16 = FixedPoint<BlueprintFieldType, 1, 1>;
             template<typename BlueprintFieldType>
             using FixedPoint32_32 = FixedPoint<BlueprintFieldType, 2, 2>;
+            template<typename BlueprintFieldType>
+            using FixedPoint16_32 = FixedPoint<BlueprintFieldType, 1, 2>;
+            template<typename BlueprintFieldType>
+            using FixedPoint32_16 = FixedPoint<BlueprintFieldType, 2, 1>;
 
             template<typename BlueprintFieldType>
             typename FixedPointHelper<BlueprintFieldType>::modular_backend
