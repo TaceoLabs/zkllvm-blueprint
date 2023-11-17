@@ -214,6 +214,9 @@ namespace nil {
                             break;
                         default:
                             BLUEPRINT_RELEASE_ASSERT(false);
+                            component_rows = 0;
+                            input_output_rows = 0;
+                            break;
                     }
                     return component_rows + input_output_rows;
                 }
@@ -230,8 +233,11 @@ namespace nil {
                     test.m1 = m1;
                     test.m2 = m2;
                     test.size = size;
-                    testcases.push_back(test);
+                    auto prev_rows = rows_amount;
                     rows_amount += get_component_rows_amount(component, this->witness_amount(), 0, m1, m2, size);
+                    // allows to test components by commenting others out
+                    if (prev_rows != rows_amount)
+                        testcases.push_back(test);
                 }
 
                 std::vector<std::uint32_t> get_witness_list() const {
@@ -355,9 +361,10 @@ namespace nil {
 
 ///////////////////////////////////////////////////////////////////////////////
 //  macros for generating the circuit and the assignments
-#define macro_component(name, ...)                                                        \
-    using new_component_type = name<ArithmetizationType, BlueprintFieldType, PolicyType>; \
-    new_component_type component_instance(witness_list, constant_list, public_input_list, ##__VA_ARGS__);
+#define macro_component(name, ...)                                                                        \
+    using new_component_type = name<ArithmetizationType, BlueprintFieldType, PolicyType>;                 \
+    new_component_type component_instance(witness_list, constant_list, public_input_list, ##__VA_ARGS__); \
+    component_name = #name;
 ///////////////////////////////////////////////////////////////////////////////
 #define macro_func(num_constant, func)                                           \
     BLUEPRINT_RELEASE_ASSERT(instance_input.all_vars().size() == inputs.size()); \
@@ -464,6 +471,7 @@ namespace nil {
                     std::vector<var> vars;
                     auto input_output_rows = 1;
                     auto component_rows = 0;
+                    std::string component_name = "";
 
                     // Put inputs and outputs in the witness columns in the current row and put gadget into the next, we
                     // will have coppy constraints to them later
@@ -607,6 +615,10 @@ namespace nil {
                         BLUEPRINT_RELEASE_ASSERT(var_value(assignment, vars[i]) == outputs[i]);
                     }
 
+                    // std::cout << "Component " << component_name << " (" << (int)m1 << ", " << (int)m2 << ") at row "
+                    //           << current_row_index << " with " << component_rows + input_output_rows << " rows"
+                    //           << std::endl;
+
                     current_row_index += component_rows + input_output_rows;
                 }
 
@@ -647,6 +659,7 @@ namespace nil {
                     std::vector<var> vars;
                     auto input_output_rows = 1;
                     auto component_rows = 0;
+                    std::string component_name = "";
 
                     switch (test.component) {
                         case FixedPointComponents::ADD: {

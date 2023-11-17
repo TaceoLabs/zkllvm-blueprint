@@ -26,12 +26,18 @@ namespace nil {
 
             // For each gate
             for (auto &gate : gates) {
-                auto tag = gate.tag_index;
                 auto &constraints = gate.constraints;
+                auto tag = bp.add_lookup_gate(constraints);
+                BLUEPRINT_RELEASE_ASSERT(tag < assignment.selectors_amount());
 
                 // Find rows in which the gate is active
                 for (auto row = 0; row < rows; row++) {
-                    auto selector = assignment.selector(tag, row);
+                    auto selector_col = assignment.selector(tag);
+                    if (row >= selector_col.size()) {
+                        break;
+                    }
+                    auto selector = selector_col[row];
+
                     if (selector == 1) {
                         // Get the constraints in the gate
                         for (auto &constraint : constraints) {
@@ -81,25 +87,26 @@ namespace nil {
                                 }
                             }
                             if (row_index == -1) {
-                                    std::cout << "Lookup gates error" << std::endl;
-                                    std::cout << "Table: " << name << std::endl;
-                                    std::cout << "Row: " << row << std::endl;
-                                    std::cout << "lookup(0): " << first_val << std::endl;
+                                std::cout << "Lookup gates error" << std::endl;
+                                std::cout << "Table: " << name << std::endl;
+                                std::cout << "Row: " << row << std::endl;
+                                std::cout << "lookup(0): " << first_val << std::endl;
                                 return false;
-                            }
-                            for (auto i = 0; i < subtable.column_indices.size(); i++) {
-                                auto col = subtable.column_indices.at(i);
-                                auto val = table_vals.at(col).at(row_index);
-                                auto lookup_val = lookup_values.at(i);
-                                if (val != lookup_val) {
-                                    std::cout << "Lookup gates error" << std::endl;
-                                    std::cout << "Table: " << name << std::endl;
-                                    std::cout << "Row: " << row << std::endl;
-                                    std::cout << "Index: " << i << std::endl;
-                                    std::cout << "Expected: " << lookup_val << std::endl;
-                                    std::cout << "Actual: " << val << std::endl;
-                                    std::cout << "lookup(0): " << first_val << std::endl;
-                                    return false;
+                            } else {
+                                for (auto i = 0; i < subtable.column_indices.size(); i++) {
+                                    auto col = subtable.column_indices.at(i);
+                                    auto val = table_vals.at(col).at(row_index);
+                                    auto lookup_val = lookup_values.at(i);
+                                    if (val != lookup_val) {
+                                        std::cout << "Lookup gates error" << std::endl;
+                                        std::cout << "Table: " << name << std::endl;
+                                        std::cout << "Row: " << row << std::endl;
+                                        std::cout << "Index: " << i << std::endl;
+                                        std::cout << "Expected: " << lookup_val << std::endl;
+                                        std::cout << "Actual: " << val << std::endl;
+                                        std::cout << "lookup(0): " << first_val << std::endl;
+                                        return false;
+                                    }
                                 }
                             }
                         }
