@@ -105,7 +105,7 @@ namespace nil {
                     }
 
                     std::uint32_t gates_amount() const override {
-                        return fix_dot_rescale_2_gates::gates_amount;
+                        return fix_dot_rescale_2_gates::gates_amount + 2;
                     }
                 };
 
