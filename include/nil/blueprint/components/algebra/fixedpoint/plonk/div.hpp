@@ -318,7 +318,6 @@ namespace nil {
                     constraint_a.table_id = table_id;
                     constraint_y.table_id = table_id;
 
-                    // We put row=0 here and enable the selector in the correct one
                     auto qi = var(var_pos.q0.column() + i, var_pos.q0.row());
                     auto ai = var(var_pos.a0.column() + i, var_pos.a0.row());
                     auto yi = var(var_pos.y0.column() + i, var_pos.y0.row());

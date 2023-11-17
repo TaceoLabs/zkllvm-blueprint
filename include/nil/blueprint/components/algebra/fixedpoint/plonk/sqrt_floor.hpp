@@ -333,10 +333,9 @@ namespace nil {
                     constraint_a.table_id = table_id;
                     constraint_b.table_id = table_id;
 
-                    // We put row=0 here and enable the selector in the correct one
-                    auto yi = var(var_pos.y0.column() + i, 0);
-                    auto ai = var(var_pos.a0.column() + i, 0);
-                    auto bi = var(var_pos.b0.column() + i, 0);
+                    auto yi = var(var_pos.y0.column() + i, var_pos.y0.row());
+                    auto ai = var(var_pos.a0.column() + i, var_pos.a0.row());
+                    auto bi = var(var_pos.b0.column() + i, var_pos.b0.row());
                     constraint_y.lookup_input = {yi};
                     constraint_a.lookup_input = {ai};
                     constraint_b.lookup_input = {bi};
