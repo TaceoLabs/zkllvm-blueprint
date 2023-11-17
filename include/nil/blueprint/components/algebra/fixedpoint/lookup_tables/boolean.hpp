@@ -32,14 +32,17 @@ namespace nil {
                 static constexpr const char *AND = "and";
                 static constexpr const char *OR = "or";
                 static constexpr const char *XOR = "xor";
+                static constexpr const char *INVERSE = "inverse";
                 static constexpr const char *FULL_AND = "fixedpoint_boolean_table/and";
                 static constexpr const char *FULL_OR = "fixedpoint_boolean_table/or";
                 static constexpr const char *FULL_XOR = "fixedpoint_boolean_table/xor";
+                static constexpr const char *FULL_INVERSE = "fixedpoint_boolean_table/inverse";
 
                 fixedpoint_boolean_table() : lookup_table_definition(TABLE_NAME) {
                     this->subtables[AND] = {{0, 1, 2}, 0, 3};
                     this->subtables[OR] = {{0, 1, 3}, 0, 3};
                     this->subtables[XOR] = {{0, 1, 4}, 0, 3};
+                    this->subtables[INVERSE] = {{1, 5}, 0, 1};
                 }
 
                 virtual void generate() {
@@ -48,11 +51,12 @@ namespace nil {
                     std::vector<value_type> and_ = {0, 0, 0, 1};
                     std::vector<value_type> or_ = {0, 1, 1, 1};
                     std::vector<value_type> xor_ = {0, 1, 1, 0};
-                    this->_table = {x, y, and_, or_, xor_};
+                    std::vector<value_type> inv_ = {1, 0};
+                    this->_table = {x, y, and_, or_, xor_, inv_};
                 }
 
                 virtual std::size_t get_columns_number() {
-                    return 5;
+                    return 6;
                 }
 
                 virtual std::size_t get_rows_number() {

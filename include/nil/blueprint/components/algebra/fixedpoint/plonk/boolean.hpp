@@ -58,7 +58,7 @@ namespace nil {
                 }
 
                 constexpr static std::size_t get_witness_columns(uint8_t m2) {
-                    return 5;
+                    return 7;
                 }
 
                 using component_type = plonk_component<BlueprintFieldType, ArithmetizationParams, 0, 0>;
@@ -109,20 +109,27 @@ namespace nil {
                     var and_ = var(0, 0, false);
                     var or_ = var(0, 0, false);
                     var xor_ = var(0, 0, false);
+                    var a_inv_ = var(0, 0, false);
+                    var b_inv_ = var(0, 0, false);
+
                     result_type(const fix_boolean &component, std::uint32_t start_row_index) {
                         and_ = var(component.W(2), start_row_index, false);
                         or_ = var(component.W(3), start_row_index, false);
                         xor_ = var(component.W(4), start_row_index, false);
+                        a_inv_ = var(component.W(5), start_row_index, false);
+                        b_inv_ = var(component.W(6), start_row_index, false);
                     }
 
                     result_type(const fix_boolean &component, std::size_t start_row_index) {
                         and_ = var(component.W(2), start_row_index, false);
                         or_ = var(component.W(3), start_row_index, false);
                         xor_ = var(component.W(4), start_row_index, false);
+                        a_inv_ = var(component.W(5), start_row_index, false);
+                        b_inv_ = var(component.W(6), start_row_index, false);
                     }
 
                     std::vector<var> all_vars() const {
-                        return {and_, or_, xor_};
+                        return {and_, or_, xor_, a_inv_, b_inv_};
                     }
                 };
 
@@ -142,6 +149,7 @@ namespace nil {
                     lookup_tables[fixedpoint_boolean_table<BlueprintFieldType>::FULL_AND] = 0;    // REQUIRED_TABLE
                     lookup_tables[fixedpoint_boolean_table<BlueprintFieldType>::FULL_OR] = 0;     // REQUIRED_TABLE
                     lookup_tables[fixedpoint_boolean_table<BlueprintFieldType>::FULL_XOR] = 0;    // REQUIRED_TABLE
+                    lookup_tables[fixedpoint_boolean_table<BlueprintFieldType>::FULL_INVERSE] = 0;    // REQUIRED_TABLE
 
                     return lookup_tables;
                 }
@@ -193,12 +201,16 @@ namespace nil {
                 auto and_val = x_val * y_val;
                 auto or_val = x_val == one ? x_val : y_val;
                 auto xor_val = x_val == y_val ? zero : one;
+                auto a_inv_val = x_val == one ? zero : one;
+                auto b_inv_val = y_val == one ? zero : one;
 
                 assignment.witness(component.W(0), start_row_index) = x_val;
                 assignment.witness(component.W(1), start_row_index) = y_val;
                 assignment.witness(component.W(2), start_row_index) = and_val;
                 assignment.witness(component.W(3), start_row_index) = or_val;
                 assignment.witness(component.W(4), start_row_index) = xor_val;
+                assignment.witness(component.W(5), start_row_index) = a_inv_val;
+                assignment.witness(component.W(6), start_row_index) = b_inv_val;
 
                 return typename plonk_fixedpoint_boolean<BlueprintFieldType, ArithmetizationParams>::result_type(
                     component, start_row_index);
@@ -271,12 +283,16 @@ namespace nil {
                     lookup_tables_indices.at(fixedpoint_boolean_table<BlueprintFieldType>::FULL_OR);
                 auto boolean_table_id_xor =
                     lookup_tables_indices.at(fixedpoint_boolean_table<BlueprintFieldType>::FULL_XOR);
+                auto boolean_table_id_inv =
+                    lookup_tables_indices.at(fixedpoint_boolean_table<BlueprintFieldType>::FULL_INVERSE);
 
                 auto x = var(component.W(0), start_row_index);
                 auto y = var(component.W(1), start_row_index);
                 auto and_ = var(component.W(2), start_row_index);
                 auto or_ = var(component.W(3), start_row_index);
                 auto xor_ = var(component.W(4), start_row_index);
+                auto a_inv_ = var(component.W(5), start_row_index);
+                auto b_inv_ = var(component.W(6), start_row_index);
 
                 std::vector<constraint_type> constraints;
                 {    // and
@@ -295,6 +311,18 @@ namespace nil {
                     constraint_type constraint;
                     constraint.table_id = boolean_table_id_xor;
                     constraint.lookup_input = {x, y, xor_};
+                    constraints.push_back(constraint);
+                }
+                {    // a_inv
+                    constraint_type constraint;
+                    constraint.table_id = boolean_table_id_inv;
+                    constraint.lookup_input = {x, a_inv_};
+                    constraints.push_back(constraint);
+                }
+                {    // b_inv
+                    constraint_type constraint;
+                    constraint.table_id = boolean_table_id_inv;
+                    constraint.lookup_input = {y, b_inv_};
                     constraints.push_back(constraint);
                 }
                 return bp.add_lookup_gate(constraints);

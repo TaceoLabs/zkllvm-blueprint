@@ -29,15 +29,19 @@ using nil::blueprint::components::FixedPoint32_32;
 
 static constexpr double EPSILON = 0.01;
 
-#define PRINT_FIXED_POINT_TEST(what)                                          \
-    std::cout << "fixed_point " << what << " test:\n";                        \
-    std::cout << "a                : " << a.get_value().data << "\n";         \
-    std::cout << "b                : " << b.get_value().data << "\n";         \
-    std::cout << "expected and     : " << and_.get_value().data << "\n";      \
-    std::cout << "real and         : " << real_and_.get_value().data << "\n"; \
-    std::cout << "expected or      : " << or_.get_value().data << "\n";       \
-    std::cout << "real or          : " << real_or_.get_value().data << "\n";  \
-    std::cout << "expected xor     : " << xor_.get_value().data << "\n";      \
+#define PRINT_FIXED_POINT_TEST(what)                                            \
+    std::cout << "fixed_point " << what << " test:\n";                          \
+    std::cout << "a                : " << a.get_value().data << "\n";           \
+    std::cout << "b                : " << b.get_value().data << "\n";           \
+    std::cout << "expected a_inv   : " << a_inv_.get_value().data << "\n";      \
+    std::cout << "real a_inv       : " << real_a_inv_.get_value().data << "\n"; \
+    std::cout << "expected b_inv   : " << b_inv_.get_value().data << "\n";      \
+    std::cout << "real b_inv       : " << real_b_inv_.get_value().data << "\n"; \
+    std::cout << "expected and     : " << and_.get_value().data << "\n";        \
+    std::cout << "real and         : " << real_and_.get_value().data << "\n";   \
+    std::cout << "expected or      : " << or_.get_value().data << "\n";         \
+    std::cout << "real or          : " << real_or_.get_value().data << "\n";    \
+    std::cout << "expected xor     : " << xor_.get_value().data << "\n";        \
     std::cout << "real xor         : " << real_xor_.get_value().data << "\n";
 
 bool doubleEquals(double a, double b, double epsilon) {
@@ -50,7 +54,7 @@ bool doubleEquals(double a, double b, double epsilon) {
 template<typename FixedType>
 void test_fixedpoint_boolean(FixedType a, FixedType b) {
     using BlueprintFieldType = typename FixedType::field_type;
-    constexpr std::size_t WitnessColumns = 5;
+    constexpr std::size_t WitnessColumns = 7;
     constexpr std::size_t PublicInputColumns = 1;
 #ifdef TEST_WITHOUT_LOOKUP_TABLES
     constexpr std::size_t ConstantColumns = 0;
@@ -83,17 +87,22 @@ void test_fixedpoint_boolean(FixedType a, FixedType b) {
     auto and_ = a == one && b == one ? one : zero;
     auto or_ = a == one ? a : b;
     auto xor_ = a == b ? zero : one;
+    auto a_inv_ = a == one ? zero : one;
+    auto b_inv_ = b == one ? zero : one;
     // the above is true for a, b in {0, 1}. Other values are caught by lookup tables
 
-    auto result_check = [&and_, &or_, &xor_, &a, &b](AssignmentType &assignment,
-                                                     typename component_type::result_type &real_res) {
+    auto result_check = [&and_, &or_, &xor_, &a_inv_, &b_inv_, &a, &b](AssignmentType &assignment,
+                                                                       typename component_type::result_type &real_res) {
         auto real_and_ = FixedType(var_value(assignment, real_res.and_), FixedType::SCALE);
         auto real_or_ = FixedType(var_value(assignment, real_res.or_), FixedType::SCALE);
         auto real_xor_ = FixedType(var_value(assignment, real_res.xor_), FixedType::SCALE);
+        auto real_a_inv_ = FixedType(var_value(assignment, real_res.a_inv_), FixedType::SCALE);
+        auto real_b_inv_ = FixedType(var_value(assignment, real_res.b_inv_), FixedType::SCALE);
 #ifdef BLUEPRINT_PLONK_PROFILING_ENABLED
         PRINT_FIXED_POINT_TEST("boolean")
 #endif
-        if (real_and_ != and_ || real_or_ != or_ || real_xor_ != xor_) {
+        if (real_and_ != and_ || real_or_ != or_ || real_xor_ != xor_ || real_a_inv_ != a_inv_ ||
+            real_b_inv_ != b_inv_) {
             PRINT_FIXED_POINT_TEST("boolean")
             abort();
         }
