@@ -285,7 +285,7 @@ namespace nil {
                 const typename plonk_fixedpoint_div_by_pos<BlueprintFieldType, ArithmetizationParams>::input_type
                     &instance_input) {
 
-                int64_t start_row_index = 1 - component.rows_amount;
+                int64_t start_row_index = 1 - static_cast<int64_t>(component.rows_amount);
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
 
                 using var = typename plonk_fixedpoint_div_by_pos<BlueprintFieldType, ArithmetizationParams>::var;

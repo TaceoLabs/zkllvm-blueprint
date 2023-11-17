@@ -385,7 +385,7 @@ namespace nil {
                     &assignment,
                 const typename plonk_fixedpoint_log<BlueprintFieldType, ArithmetizationParams>::input_type
                     &instance_input) {
-                int64_t start_row_index = 1 - component.rows_amount;
+                int64_t start_row_index = 1 - static_cast<int64_t>(component.rows_amount);
                 const auto var_pos = component.get_var_pos(start_row_index);
                 auto m = component.get_m();
 
