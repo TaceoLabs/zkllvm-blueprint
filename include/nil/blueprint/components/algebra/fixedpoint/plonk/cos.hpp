@@ -529,9 +529,9 @@ namespace nil {
                 auto x0 = var(var_pos.x0.column() + m2 - 0, var_pos.x0.row());
                 auto x1 = var(var_pos.x0.column() + m2 - 1, var_pos.x0.row());
                 auto x2 = var(var_pos.x0.column() + m2 - 2, var_pos.x0.row());    // invalid if m2 == 1
-                auto sin0 = var(var_pos.sin0.column() + m2 - 0, var_pos.sin0.row());
-                auto sin1 = var(var_pos.sin0.column() + m2 - 1, var_pos.sin0.row());
-                auto sin2 = var(var_pos.sin0.column() + m2 - 2, var_pos.sin0.row());    // invalid if m2 == 1
+                auto sin0 = var(var_pos.sin0.column() + 0, var_pos.sin0.row());
+                auto sin1 = var(var_pos.sin0.column() + 1, var_pos.sin0.row());
+                auto sin2 = var(var_pos.sin0.column() + 2, var_pos.sin0.row());    // invalid if m2 == 1
                 {
                     constraint_type constraint;
                     constraint.table_id = sin_a_table_id;
