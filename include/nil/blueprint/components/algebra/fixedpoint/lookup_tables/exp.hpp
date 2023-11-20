@@ -40,9 +40,9 @@ namespace nil {
                 virtual void generate() {
                     BLUEPRINT_RELEASE_ASSERT(fixedpoint_tables::RangeLen == fixedpoint_tables::ExpBLen);
                     auto input = fixedpoint_tables::get_range_table();
-                    auto output_b = fixedpoint_tables::get_exp_b_16();
                     auto output_a = fixedpoint_tables::get_exp_a_16();
-                    this->_table = {input, output_b, output_a};
+                    auto output_b = fixedpoint_tables::get_exp_b_16();
+                    this->_table = {input, output_a, output_b};
                 }
 
                 virtual std::size_t get_columns_number() {
@@ -83,9 +83,9 @@ namespace nil {
                 virtual void generate() {
                     BLUEPRINT_RELEASE_ASSERT(fixedpoint_tables::RangeLen == fixedpoint_tables::ExpBLen);
                     auto input = fixedpoint_tables::get_range_table();
-                    auto output_b = fixedpoint_tables::get_exp_b_32();
                     auto output_a = fixedpoint_tables::get_exp_a_32();
-                    this->_table = {input, output_b, output_a};
+                    auto output_b = fixedpoint_tables::get_exp_b_32();
+                    this->_table = {input, output_a, output_b};
                 }
 
                 virtual std::size_t get_columns_number() {
