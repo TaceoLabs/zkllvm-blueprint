@@ -51,7 +51,7 @@ namespace nil {
                 struct var_positions {
                     CellPosition x, y, x0, q0, sin0, cos0, cos1, two_pi;
                     typename rem_component::var_positions rem_pos;
-                    int64_t start_row, rem_row, sin_row;
+                    int64_t start_row, rem_row, cos_row;
                 };
 
                 var_positions get_var_pos(const int64_t start_row_index) const {
@@ -68,7 +68,7 @@ namespace nil {
                     //  r\c| 0 | 1 | 2  | .. | 2+m2|3+m2|..|3+m2+t| 4+m2+t| .. |4+2*m2+t | 5+2*m2+t | 6+2*m2+t |
                     // +---+---+---+----+----+-----+----+--+------+-------+----+---------+----------+----------+
                     // |rem| <rem_witness>                                                                     |
-                    // |sin| x | y | x0 | .. | xm2 | q0 |..|  qt  | sin0  | .. |  sinm2  |   cos0   |   cos1   |
+                    // |cos| x | y | x0 | .. | xm2 | q0 |..|  qt  | sin0  | .. |  sinm2  |   cos0   |   cos1   |
                     //
                     //     | constant |
                     //  r\c|    0     |
@@ -82,21 +82,21 @@ namespace nil {
 
                     pos.start_row = start_row_index;
                     pos.rem_row = pos.start_row;
-                    pos.sin_row = pos.rem_row;
+                    pos.cos_row = pos.rem_row;
 
                     if (m1 == 2) {
-                        pos.sin_row += rem.rows_amount;
+                        pos.cos_row += rem.rows_amount;
                         pos.rem_pos = rem.get_var_pos(pos.rem_row);
                         pos.two_pi = CellPosition(this->C(0), pos.rem_row);
                     }
 
-                    pos.x = CellPosition(this->W(0), pos.sin_row);
-                    pos.y = CellPosition(this->W(1), pos.sin_row);
-                    pos.x0 = CellPosition(this->W(2 + 0 * (m2 + 1)), pos.sin_row);    // occupies m2 + 1 cells
-                    pos.q0 = CellPosition(this->W(2 + 1 * (m2 + 1)), pos.sin_row);    // occupies t+1 cells
-                    pos.sin0 = CellPosition(this->W(4 + m2 + t), pos.sin_row);        // occupies m2 + 1 cells
-                    pos.cos0 = CellPosition(this->W(5 + 2 * m2 + t), pos.sin_row);
-                    pos.cos1 = CellPosition(this->W(6 + 2 * m2 + t), pos.sin_row);
+                    pos.x = CellPosition(this->W(0), pos.cos_row);
+                    pos.y = CellPosition(this->W(1), pos.cos_row);
+                    pos.x0 = CellPosition(this->W(2 + 0 * (m2 + 1)), pos.cos_row);    // occupies m2 + 1 cells
+                    pos.q0 = CellPosition(this->W(2 + 1 * (m2 + 1)), pos.cos_row);    // occupies t+1 cells
+                    pos.sin0 = CellPosition(this->W(4 + m2 + t), pos.cos_row);        // occupies m2 + 1 cells
+                    pos.cos0 = CellPosition(this->W(5 + 2 * m2 + t), pos.cos_row);
+                    pos.cos1 = CellPosition(this->W(6 + 2 * m2 + t), pos.cos_row);
                     return pos;
                 }
 
@@ -513,6 +513,7 @@ namespace nil {
                 std::vector<constraint_type> constraints;
 
                 // lookup decomposition of x
+                // TODO not required, as this is covered by the sin/cos lookup tables
                 for (size_t i = 0; i < m2 + 1; i++) {
                     constraint_type constraint;
                     constraint.table_id = range_table_id;

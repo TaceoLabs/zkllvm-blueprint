@@ -522,6 +522,7 @@ namespace nil {
                 std::vector<constraint_type> constraints;
 
                 // lookup decomposition of x
+                // TODO not required, as this is covered by the sin/cos lookup tables
                 for (size_t i = 0; i < m2 + 1; i++) {
                     constraint_type constraint;
                     constraint.table_id = range_table_id;

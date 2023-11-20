@@ -78,6 +78,13 @@ namespace nil {
                     return div_by_pos.get_delta();
                 }
 
+                constexpr static std::size_t get_witness_columns(std::size_t witness_amount,
+                                                                 std::size_t lookup_column_amount, uint8_t m1,
+                                                                 uint8_t m2) {
+                    return get_rows_amount(witness_amount, lookup_column_amount, m1, m2) == 1 ? 5 + 3 * (m1 + m2) :
+                                                                                                4 + (m1 + m2);
+                }
+
                 using component_type = plonk_component<BlueprintFieldType, ArithmetizationParams, 0, 0>;
 
                 using var = typename component_type::var;
