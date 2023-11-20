@@ -181,19 +181,13 @@ namespace nil {
                         rescale.component_custom_lookup_tables();
 
                     if (m2 == 1) {
-                        auto table_a = std::shared_ptr<lookup_table_definition>(
-                            new fixedpoint_exp_a16_table<BlueprintFieldType>());
-                        auto table_b = std::shared_ptr<lookup_table_definition>(
-                            new fixedpoint_exp_b16_table<BlueprintFieldType>());
-                        result.push_back(table_a);
-                        result.push_back(table_b);
+                        auto table =
+                            std::shared_ptr<lookup_table_definition>(new fixedpoint_exp_16_table<BlueprintFieldType>());
+                        result.push_back(table);
                     } else if (m2 == 2) {
-                        auto table_a = std::shared_ptr<lookup_table_definition>(
-                            new fixedpoint_exp_a32_table<BlueprintFieldType>());
-                        auto table_b = std::shared_ptr<lookup_table_definition>(
-                            new fixedpoint_exp_b32_table<BlueprintFieldType>());
-                        result.push_back(table_a);
-                        result.push_back(table_b);
+                        auto table =
+                            std::shared_ptr<lookup_table_definition>(new fixedpoint_exp_32_table<BlueprintFieldType>());
+                        result.push_back(table);
                     } else {
                         BLUEPRINT_RELEASE_ASSERT(false);
                     }
@@ -205,14 +199,14 @@ namespace nil {
                     std::map<std::string, std::size_t> lookup_tables = rescale.component_lookup_tables();
 
                     if (m2 == 1) {
-                        lookup_tables[fixedpoint_exp_a16_table<BlueprintFieldType>::FULL_TABLE_NAME] =
+                        lookup_tables[fixedpoint_exp_16_table<BlueprintFieldType>::A_TABLE_NAME] =
                             0;    // REQUIRED_TABLE
-                        lookup_tables[fixedpoint_exp_b16_table<BlueprintFieldType>::FULL_TABLE_NAME] =
+                        lookup_tables[fixedpoint_exp_16_table<BlueprintFieldType>::B_TABLE_NAME] =
                             0;    // REQUIRED_TABLE
                     } else if (m2 == 2) {
-                        lookup_tables[fixedpoint_exp_a32_table<BlueprintFieldType>::FULL_TABLE_NAME] =
+                        lookup_tables[fixedpoint_exp_32_table<BlueprintFieldType>::A_TABLE_NAME] =
                             0;    // REQUIRED_TABLE
-                        lookup_tables[fixedpoint_exp_b32_table<BlueprintFieldType>::FULL_TABLE_NAME] =
+                        lookup_tables[fixedpoint_exp_32_table<BlueprintFieldType>::B_TABLE_NAME] =
                             0;    // REQUIRED_TABLE
                     } else {
                         BLUEPRINT_RELEASE_ASSERT(false);
@@ -397,12 +391,12 @@ namespace nil {
 
                 auto range_table_id = lookup_tables_indices.at(range_table::FULL_TABLE_NAME);
                 auto exp_a_table_id =
-                    m2 == 1 ? lookup_tables_indices.at(fixedpoint_exp_a16_table<BlueprintFieldType>::FULL_TABLE_NAME) :
-                              lookup_tables_indices.at(fixedpoint_exp_a32_table<BlueprintFieldType>::FULL_TABLE_NAME);
+                    m2 == 1 ? lookup_tables_indices.at(fixedpoint_exp_16_table<BlueprintFieldType>::A_TABLE_NAME) :
+                              lookup_tables_indices.at(fixedpoint_exp_32_table<BlueprintFieldType>::A_TABLE_NAME);
 
                 auto exp_b_table_id =
-                    m2 == 1 ? lookup_tables_indices.at(fixedpoint_exp_b16_table<BlueprintFieldType>::FULL_TABLE_NAME) :
-                              lookup_tables_indices.at(fixedpoint_exp_b32_table<BlueprintFieldType>::FULL_TABLE_NAME);
+                    m2 == 1 ? lookup_tables_indices.at(fixedpoint_exp_16_table<BlueprintFieldType>::B_TABLE_NAME) :
+                              lookup_tables_indices.at(fixedpoint_exp_32_table<BlueprintFieldType>::B_TABLE_NAME);
 
                 constraint_type constraint_pre, constraint_post;
                 constraint_pre.table_id = exp_a_table_id;

@@ -12,11 +12,11 @@ namespace nil {
         namespace components {
 
             ////////////////////////////////////////////////////////////////////
-            //////// EXP A 16
+            //////// EXP 16
             ////////////////////////////////////////////////////////////////////
 
             template<typename BlueprintFieldType>
-            class fixedpoint_exp_a16_table
+            class fixedpoint_exp_16_table
                 : public nil::crypto3::zk::snark::detail::lookup_table_definition<BlueprintFieldType> {
 
                 using lookup_table_definition =
@@ -24,98 +24,29 @@ namespace nil {
                 using fixedpoint_tables = FixedPointTables<BlueprintFieldType>;
 
             public:
-                static constexpr const char *TABLE_NAME = "fixedpoint_exp_a16_table";
-                static constexpr const char *SUBTABLE_NAME = "full";
-                static constexpr const char *FULL_TABLE_NAME = "fixedpoint_exp_a16_table/full";
+                static constexpr const char *TABLE_NAME = "fixedpoint_exp_16_table";
 
-                // TACEO_TODO this hardcoded 0/1 is probably wrong
-                fixedpoint_exp_a16_table() : lookup_table_definition(TABLE_NAME) {
-                    this->subtables[SUBTABLE_NAME] = {{0, 1}, 0, fixedpoint_tables::ExpALen - 1};
-                }
+                static constexpr const char *A_SUBTABLE_NAME = "a";
+                static constexpr const char *A_TABLE_NAME = "fixedpoint_exp_16_table/a";
 
-                virtual void generate() {
-                    auto input = fixedpoint_tables::get_exp_a_input();
-                    auto output = fixedpoint_tables::get_exp_a_16();
-                    this->_table = {input, output};
-                }
+                static constexpr const char *B_SUBTABLE_NAME = "b";
+                static constexpr const char *B_TABLE_NAME = "fixedpoint_exp_16_table/b";
 
-                virtual std::size_t get_columns_number() {
-                    return 2;
-                }
-
-                virtual std::size_t get_rows_number() {
-                    return fixedpoint_tables::ExpALen;
-                }
-            };
-
-            ////////////////////////////////////////////////////////////////////
-            //////// EXP A 32
-            ////////////////////////////////////////////////////////////////////
-
-            template<typename BlueprintFieldType>
-            class fixedpoint_exp_a32_table
-                : public nil::crypto3::zk::snark::detail::lookup_table_definition<BlueprintFieldType> {
-
-                using lookup_table_definition =
-                    typename nil::crypto3::zk::snark::detail::lookup_table_definition<BlueprintFieldType>;
-                using fixedpoint_tables = FixedPointTables<BlueprintFieldType>;
-
-            public:
-                static constexpr const char *TABLE_NAME = "fixedpoint_exp_a32_table";
-                static constexpr const char *SUBTABLE_NAME = "full";
-                static constexpr const char *FULL_TABLE_NAME = "fixedpoint_exp_a32_table/full";
-
-                // TACEO_TODO this hardcoded 0/1 is probably wrong
-                fixedpoint_exp_a32_table() : lookup_table_definition(TABLE_NAME) {
-                    this->subtables[SUBTABLE_NAME] = {{0, 1}, 0, fixedpoint_tables::ExpALen - 1};
-                }
-
-                virtual void generate() {
-                    auto input = fixedpoint_tables::get_exp_a_input();
-                    auto output = fixedpoint_tables::get_exp_a_32();
-                    this->_table = {input, output};
-                }
-
-                virtual std::size_t get_columns_number() {
-                    return 2;
-                }
-
-                virtual std::size_t get_rows_number() {
-                    return fixedpoint_tables::ExpALen;
-                }
-            };
-
-            ////////////////////////////////////////////////////////////////////
-            //////// EXP B 16
-            ////////////////////////////////////////////////////////////////////
-
-            template<typename BlueprintFieldType>
-            class fixedpoint_exp_b16_table
-                : public nil::crypto3::zk::snark::detail::lookup_table_definition<BlueprintFieldType> {
-
-                using lookup_table_definition =
-                    typename nil::crypto3::zk::snark::detail::lookup_table_definition<BlueprintFieldType>;
-                using fixedpoint_tables = FixedPointTables<BlueprintFieldType>;
-
-            public:
-                static constexpr const char *TABLE_NAME = "fixedpoint_exp_b16_table";
-                static constexpr const char *SUBTABLE_NAME = "full";
-                static constexpr const char *FULL_TABLE_NAME = "fixedpoint_exp_b16_table/full";
-
-                // TACEO_TODO this hardcoded 0/1 is probably wrong
-                fixedpoint_exp_b16_table() : lookup_table_definition(TABLE_NAME) {
-                    this->subtables[SUBTABLE_NAME] = {{0, 1}, 0, fixedpoint_tables::ExpBLen - 1};
+                fixedpoint_exp_16_table() : lookup_table_definition(TABLE_NAME) {
+                    this->subtables[B_SUBTABLE_NAME] = {{0, 2}, 0, fixedpoint_tables::ExpBLen - 1};
+                    this->subtables[A_SUBTABLE_NAME] = {{0, 1}, 0, fixedpoint_tables::ExpALen - 1};
                 }
 
                 virtual void generate() {
                     BLUEPRINT_RELEASE_ASSERT(fixedpoint_tables::RangeLen == fixedpoint_tables::ExpBLen);
                     auto input = fixedpoint_tables::get_range_table();
-                    auto output = fixedpoint_tables::get_exp_b_16();
-                    this->_table = {input, output};
+                    auto output_b = fixedpoint_tables::get_exp_b_16();
+                    auto output_a = fixedpoint_tables::get_exp_a_16();
+                    this->_table = {input, output_b, output_a};
                 }
 
                 virtual std::size_t get_columns_number() {
-                    return 2;
+                    return 3;
                 }
 
                 virtual std::size_t get_rows_number() {
@@ -124,11 +55,11 @@ namespace nil {
             };
 
             ////////////////////////////////////////////////////////////////////
-            //////// EXP B 32
+            //////// EXP 32
             ////////////////////////////////////////////////////////////////////
 
             template<typename BlueprintFieldType>
-            class fixedpoint_exp_b32_table
+            class fixedpoint_exp_32_table
                 : public nil::crypto3::zk::snark::detail::lookup_table_definition<BlueprintFieldType> {
 
                 using lookup_table_definition =
@@ -136,24 +67,29 @@ namespace nil {
                 using fixedpoint_tables = FixedPointTables<BlueprintFieldType>;
 
             public:
-                static constexpr const char *TABLE_NAME = "fixedpoint_exp_b32_table";
-                static constexpr const char *SUBTABLE_NAME = "full";
-                static constexpr const char *FULL_TABLE_NAME = "fixedpoint_exp_b32_table/full";
+                static constexpr const char *TABLE_NAME = "fixedpoint_exp_32_table";
 
-                // TACEO_TODO this hardcoded 0/1 is probably wrong
-                fixedpoint_exp_b32_table() : lookup_table_definition(TABLE_NAME) {
-                    this->subtables[SUBTABLE_NAME] = {{0, 1}, 0, fixedpoint_tables::ExpBLen - 1};
+                static constexpr const char *A_SUBTABLE_NAME = "a";
+                static constexpr const char *A_TABLE_NAME = "fixedpoint_exp_32_table/a";
+
+                static constexpr const char *B_SUBTABLE_NAME = "b";
+                static constexpr const char *B_TABLE_NAME = "fixedpoint_exp_32_table/b";
+
+                fixedpoint_exp_32_table() : lookup_table_definition(TABLE_NAME) {
+                    this->subtables[B_SUBTABLE_NAME] = {{0, 2}, 0, fixedpoint_tables::ExpBLen - 1};
+                    this->subtables[A_SUBTABLE_NAME] = {{0, 1}, 0, fixedpoint_tables::ExpALen - 1};
                 }
 
                 virtual void generate() {
                     BLUEPRINT_RELEASE_ASSERT(fixedpoint_tables::RangeLen == fixedpoint_tables::ExpBLen);
                     auto input = fixedpoint_tables::get_range_table();
-                    auto output = fixedpoint_tables::get_exp_b_32();
-                    this->_table = {input, output};
+                    auto output_b = fixedpoint_tables::get_exp_b_32();
+                    auto output_a = fixedpoint_tables::get_exp_a_32();
+                    this->_table = {input, output_b, output_a};
                 }
 
                 virtual std::size_t get_columns_number() {
-                    return 2;
+                    return 3;
                 }
 
                 virtual std::size_t get_rows_number() {

@@ -306,19 +306,13 @@ namespace nil {
                     auto table = std::shared_ptr<lookup_table_definition>(new range_table());
                     result.push_back(table);
 
-                    auto table_a_16 =
-                        std::shared_ptr<lookup_table_definition>(new fixedpoint_exp_a16_table<BlueprintFieldType>());
-                    auto table_b_16 =
-                        std::shared_ptr<lookup_table_definition>(new fixedpoint_exp_b16_table<BlueprintFieldType>());
-                    result.push_back(table_a_16);
-                    result.push_back(table_b_16);
+                    auto table_16 =
+                        std::shared_ptr<lookup_table_definition>(new fixedpoint_exp_16_table<BlueprintFieldType>());
+                    result.push_back(table_16);
 
-                    auto table_a_32 =
-                        std::shared_ptr<lookup_table_definition>(new fixedpoint_exp_a32_table<BlueprintFieldType>());
-                    auto table_b_32 =
-                        std::shared_ptr<lookup_table_definition>(new fixedpoint_exp_b32_table<BlueprintFieldType>());
-                    result.push_back(table_a_32);
-                    result.push_back(table_b_32);
+                    auto table_32 =
+                        std::shared_ptr<lookup_table_definition>(new fixedpoint_exp_32_table<BlueprintFieldType>());
+                    result.push_back(table_32);
 
                     return result;
                 }
@@ -327,14 +321,10 @@ namespace nil {
                     std::map<std::string, std::size_t> lookup_tables;
                     lookup_tables[range_table::FULL_TABLE_NAME] = 0;    // REQUIRED_TABLE
 
-                    lookup_tables[fixedpoint_exp_a16_table<BlueprintFieldType>::FULL_TABLE_NAME] =
-                        0;    // REQUIRED_TABLE
-                    lookup_tables[fixedpoint_exp_b16_table<BlueprintFieldType>::FULL_TABLE_NAME] =
-                        0;    // REQUIRED_TABLE
-                    lookup_tables[fixedpoint_exp_a32_table<BlueprintFieldType>::FULL_TABLE_NAME] =
-                        0;    // REQUIRED_TABLE
-                    lookup_tables[fixedpoint_exp_b32_table<BlueprintFieldType>::FULL_TABLE_NAME] =
-                        0;    // REQUIRED_TABLE
+                    lookup_tables[fixedpoint_exp_16_table<BlueprintFieldType>::A_TABLE_NAME] = 0;    // REQUIRED_TABLE
+                    lookup_tables[fixedpoint_exp_16_table<BlueprintFieldType>::B_TABLE_NAME] = 0;    // REQUIRED_TABLE
+                    lookup_tables[fixedpoint_exp_32_table<BlueprintFieldType>::A_TABLE_NAME] = 0;    // REQUIRED_TABLE
+                    lookup_tables[fixedpoint_exp_32_table<BlueprintFieldType>::B_TABLE_NAME] = 0;    // REQUIRED_TABLE
 
                     return lookup_tables;
                 }

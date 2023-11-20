@@ -17,7 +17,6 @@ namespace nil {
 
                 static std::vector<value_type> fill_range_table();
 
-                static std::vector<value_type> fill_exp_a_input();
                 static std::vector<value_type> fill_exp_a_table(uint8_t m2);
                 static std::vector<value_type> fill_exp_b_table(uint8_t m2);
 
@@ -33,7 +32,6 @@ namespace nil {
 
                 static const std::vector<value_type> &get_range_table();
 
-                static const std::vector<value_type> &get_exp_a_input();
                 static const std::vector<value_type> &get_exp_a_16();
                 static const std::vector<value_type> &get_exp_a_32();
                 static const std::vector<value_type> &get_exp_b_16();
@@ -52,13 +50,6 @@ namespace nil {
                 FixedPointTables<BlueprintFieldType>::get_range_table() {
                 static std::vector<value_type> range = fill_range_table();
                 return range;
-            }
-
-            template<typename BlueprintFieldType>
-            const std::vector<typename FixedPointTables<BlueprintFieldType>::value_type> &
-                FixedPointTables<BlueprintFieldType>::get_exp_a_input() {
-                static std::vector<value_type> exp_a_inp = fill_exp_a_input();
-                return exp_a_inp;
             }
 
             template<typename BlueprintFieldType>
@@ -98,17 +89,6 @@ namespace nil {
                     range.push_back(value_type(i));
                 }
                 return range;
-            }
-
-            template<typename BlueprintFieldType>
-            std::vector<typename FixedPointTables<BlueprintFieldType>::value_type>
-                FixedPointTables<BlueprintFieldType>::fill_exp_a_input() {
-                std::vector<value_type> exp_a_inp;
-                exp_a_inp.reserve(ExpALen);
-                for (auto i = 0; i < ExpALen; ++i) {
-                    exp_a_inp.push_back(value_type(i));
-                }
-                return exp_a_inp;
             }
 
             template<typename BlueprintFieldType>
