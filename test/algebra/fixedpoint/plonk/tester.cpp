@@ -677,6 +677,38 @@ void add_dot_2_gates(ComponentType &component, std::vector<FixedType> &input1, s
                            FixedType::M_1, FixedType::M_2, dots);
 }
 
+template<typename FixedType, typename ComponentType>
+void add_sin(ComponentType &component, FixedType input) {
+
+    double expected_res_f = sin(input.to_double());
+    auto expected_res = input.sin();
+
+    BLUEPRINT_RELEASE_ASSERT(doubleEqualsExp(expected_res_f, expected_res.to_double(), EPSILON));
+
+    std::vector<typename FixedType::value_type> inputs = {input.get_value()};
+    std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};
+    std::vector<typename FixedType::value_type> constants = {};
+
+    component.add_testcase(blueprint::components::FixedPointComponents::SIN, inputs, outputs, constants, FixedType::M_1,
+                           FixedType::M_2);
+}
+
+template<typename FixedType, typename ComponentType>
+void add_cos(ComponentType &component, FixedType input) {
+
+    double expected_res_f = sin(input.to_double());
+    auto expected_res = input.sin();
+
+    BLUEPRINT_RELEASE_ASSERT(doubleEqualsExp(expected_res_f, expected_res.to_double(), EPSILON));
+
+    std::vector<typename FixedType::value_type> inputs = {input.get_value()};
+    std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};
+    std::vector<typename FixedType::value_type> constants = {};
+
+    component.add_testcase(blueprint::components::FixedPointComponents::SIN, inputs, outputs, constants, FixedType::M_1,
+                           FixedType::M_2);
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -783,6 +815,10 @@ template<typename FixedType, typename ComponentType>
 void test_components_unary_basic(ComponentType &component, int i) {
     FixedType x((int64_t)i);
 
+    constexpr double pi_half = 1.5707963267948966;
+    constexpr double pi = 3.141592653589793;
+    constexpr double pi_two = 6.283185307179586;
+
     // BASIC
     add_rescale<FixedType, ComponentType>(component, FixedType(x.get_value() * FixedType::DELTA, FixedType::SCALE * 2));
     add_neg<FixedType, ComponentType>(component, x);
@@ -792,6 +828,18 @@ void test_components_unary_basic(ComponentType &component, int i) {
     add_exp<FixedType, ComponentType>(component, x);
     add_exp_ranged<FixedType, ComponentType>(component, x);
     add_tanh<FixedType, ComponentType>(component, x);
+
+    // TRIGON
+    for (int i = -2; i < 3; i++) {
+        auto i_dbl = static_cast<double>(i);
+        for (int quadrant = 0; quadrant < 4; quadrant++) {
+            auto q_dbl = static_cast<double>(quadrant);
+            FixedType a(i_dbl * pi_two + pi_half * q_dbl);
+            FixedType b(i_dbl * pi_two + pi_half * q_dbl + pi_half / 2.);
+            add_sin<FixedType, ComponentType>(component, a);
+            add_cos<FixedType, ComponentType>(component, b);
+        }
+    }
 }
 
 template<typename FixedType, typename ComponentType>
@@ -931,6 +979,10 @@ void test_components_on_random_data(ComponentType &component, RngType &rng) {
     add_gather_acc<FixedType, ComponentType>(component, x, y, index_a, index_b);
     add_argmax<FixedType, ComponentType>(component, x, y, index_a, index_b);
     add_argmin<FixedType, ComponentType>(component, x, y, index_a, index_b);
+
+    // TRIGON
+    add_sin<FixedType, ComponentType>(component, x);
+    add_cos<FixedType, ComponentType>(component, x);
 }
 
 template<typename FixedType, typename ComponentType, typename RngType>
