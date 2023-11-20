@@ -167,7 +167,6 @@ namespace nil {
                     return manifest;
                 }
 
-                // TACEO_TODO Update to lookup tables
                 static manifest_type get_manifest(uint8_t m2) {
                     static manifest_type manifest = manifest_type(
                         std::shared_ptr<manifest_param>(new manifest_single_value_param(get_witness_columns(m2))),
@@ -175,7 +174,8 @@ namespace nil {
                     return manifest;
                 }
 
-                constexpr static std::size_t get_rows_amount(uint8_t m1, uint8_t m2) {
+                constexpr static std::size_t get_rows_amount(std::size_t witness_amount,
+                                                             std::size_t lookup_column_amount, uint8_t m1, uint8_t m2) {
                     return M(m1) == 2 ? 1 + rem_component::get_rows_amount(get_witness_columns(m2), 0, m1, m2) : 1;
                 }
 
@@ -184,7 +184,7 @@ namespace nil {
                 }
 
                 constexpr static const std::size_t gates_amount = 2;
-                const std::size_t rows_amount = get_rows_amount(this->m1, this->m2);
+                const std::size_t rows_amount = get_rows_amount(this->witness_amount(), 0, this->m1, this->m2);
 
                 struct input_type {
                     var x = var(0, 0, false);
@@ -454,7 +454,6 @@ namespace nil {
 
                 auto constraint_3 = 2 * (computation - y * actual_delta - q) + actual_delta;    // "custom" rescale
 
-                // TACEO_TODO extend for lookup constraint for x0, q0, sin0, cos0
                 return {constraint_1, constraint_2, constraint_3};
             }
 
@@ -608,7 +607,6 @@ namespace nil {
                     generate_circuit(component.get_rem_component(), bp, assignment, rem_input, var_pos.rem_row);
                 }
 
-                // TACEO_TODO extend for lookup?
                 std::size_t selector_index = generate_gates(component, bp, assignment, instance_input);
 
                 assignment.enable_selector(selector_index, start_row_index + component.rows_amount - 1);

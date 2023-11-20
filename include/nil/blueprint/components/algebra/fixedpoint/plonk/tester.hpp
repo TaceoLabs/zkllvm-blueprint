@@ -29,6 +29,8 @@
 #include "nil/blueprint/components/algebra/fixedpoint/plonk/sqrt.hpp"
 #include "nil/blueprint/components/algebra/fixedpoint/plonk/sqrt_floor.hpp"
 #include "nil/blueprint/components/algebra/fixedpoint/plonk/tanh.hpp"
+#include "nil/blueprint/components/algebra/fixedpoint/plonk/sin.hpp"
+#include "nil/blueprint/components/algebra/fixedpoint/plonk/cos.hpp"
 
 namespace nil {
     namespace blueprint {
@@ -41,6 +43,7 @@ namespace nil {
                 CMP,
                 CMP_EXTENDED,
                 CMP_MIN_MAX,
+                COS,
                 DIV_BY_POS,
                 DIV,
                 DOT_RESCALE1,
@@ -58,6 +61,7 @@ namespace nil {
                 REM,
                 RESCALE,
                 SELECT,
+                SIN,
                 SQRT,
                 SQRT_FLOOR,
                 SUB,
@@ -144,6 +148,9 @@ namespace nil {
                         case FixedPointComponents::CMP_MIN_MAX:
                             component_rows = macro_rows_amount(fix_cmp_min_max);
                             break;
+                        case FixedPointComponents::COS:
+                            component_rows = macro_rows_amount(fix_cos, m1, m2);
+                            break;
                         case FixedPointComponents::DIV_BY_POS:
                             component_rows = macro_rows_amount(fix_div_by_pos, m1, m2);
                             break;
@@ -196,6 +203,9 @@ namespace nil {
                             break;
                         case FixedPointComponents::SELECT:
                             component_rows = macro_rows_amount(fix_select);
+                            break;
+                        case FixedPointComponents::SIN:
+                            component_rows = macro_rows_amount(fix_sin, m1, m2);
                             break;
                         case FixedPointComponents::SQRT:
                             component_rows = macro_rows_amount(fix_sqrt, m1, m2);
@@ -303,28 +313,54 @@ namespace nil {
 #ifndef TEST_WITHOUT_LOOKUP_TABLES
                 std::vector<std::shared_ptr<lookup_table_definition>> component_custom_lookup_tables() {
                     std::vector<std::shared_ptr<lookup_table_definition>> result = {};
-                    auto table = std::shared_ptr<lookup_table_definition>(new range_table());
-                    result.push_back(table);
+                    // RANGE
+                    auto range_table_ = std::shared_ptr<lookup_table_definition>(new range_table());
+                    result.push_back(range_table_);
 
-                    auto table_16 =
+                    // EXP 16
+                    auto exp_table_16 =
                         std::shared_ptr<lookup_table_definition>(new fixedpoint_exp_16_table<BlueprintFieldType>());
-                    result.push_back(table_16);
+                    result.push_back(exp_table_16);
 
-                    auto table_32 =
+                    // EXP 32
+                    auto exp_table_32 =
                         std::shared_ptr<lookup_table_definition>(new fixedpoint_exp_32_table<BlueprintFieldType>());
-                    result.push_back(table_32);
+                    result.push_back(exp_table_32);
+
+                    // TRIGON 16
+                    auto trigon_table_16 =
+                        std::shared_ptr<lookup_table_definition>(new fixedpoint_trigon_16_table<BlueprintFieldType>());
+                    result.push_back(trigon_table_16);
+
+                    // TRIGON 32
+                    auto trigon_table_32 =
+                        std::shared_ptr<lookup_table_definition>(new fixedpoint_trigon_32_table<BlueprintFieldType>());
+                    result.push_back(trigon_table_32);
 
                     return result;
                 }
 
                 std::map<std::string, std::size_t> component_lookup_tables() {
                     std::map<std::string, std::size_t> lookup_tables;
+                    // RANGE
                     lookup_tables[range_table::FULL_TABLE_NAME] = 0;    // REQUIRED_TABLE
 
+                    // EXP
                     lookup_tables[fixedpoint_exp_16_table<BlueprintFieldType>::A_TABLE_NAME] = 0;    // REQUIRED_TABLE
                     lookup_tables[fixedpoint_exp_16_table<BlueprintFieldType>::B_TABLE_NAME] = 0;    // REQUIRED_TABLE
                     lookup_tables[fixedpoint_exp_32_table<BlueprintFieldType>::A_TABLE_NAME] = 0;    // REQUIRED_TABLE
                     lookup_tables[fixedpoint_exp_32_table<BlueprintFieldType>::B_TABLE_NAME] = 0;    // REQUIRED_TABLE
+
+                    // TRIGON
+                    lookup_tables[fixedpoint_trigon_16_table<BlueprintFieldType>::FULL_SIN_A] = 0;    // REQUIRED_TABLE
+                    lookup_tables[fixedpoint_trigon_16_table<BlueprintFieldType>::FULL_SIN_B] = 0;    // REQUIRED_TABLE
+                    lookup_tables[fixedpoint_trigon_16_table<BlueprintFieldType>::FULL_COS_A] = 0;    // REQUIRED_TABLE
+                    lookup_tables[fixedpoint_trigon_16_table<BlueprintFieldType>::FULL_COS_B] = 0;    // REQUIRED_TABLE
+                    lookup_tables[fixedpoint_trigon_32_table<BlueprintFieldType>::FULL_SIN_A] = 0;    // REQUIRED_TABLE
+                    lookup_tables[fixedpoint_trigon_32_table<BlueprintFieldType>::FULL_SIN_B] = 0;    // REQUIRED_TABLE
+                    lookup_tables[fixedpoint_trigon_32_table<BlueprintFieldType>::FULL_SIN_C] = 0;    // REQUIRED_TABLE
+                    lookup_tables[fixedpoint_trigon_32_table<BlueprintFieldType>::FULL_COS_A] = 0;    // REQUIRED_TABLE
+                    lookup_tables[fixedpoint_trigon_32_table<BlueprintFieldType>::FULL_COS_B] = 0;    // REQUIRED_TABLE
 
                     return lookup_tables;
                 }
@@ -501,6 +537,10 @@ namespace nil {
                             macro_assigner_2_inputs(fix_cmp_min_max, 0, m1, m2);
                             break;
                         }
+                        case FixedPointComponents::COS: {
+                            macro_assigner_1_input(fix_cos, 0, m1, m2);
+                            break;
+                        }
                         case FixedPointComponents::DIV_BY_POS: {
                             macro_assigner_2_inputs(fix_div_by_pos, 0, m1, m2);
                             break;
@@ -573,6 +613,10 @@ namespace nil {
                         }
                         case FixedPointComponents::SELECT: {
                             macro_assigner_3_inputs(fix_select, 0);
+                            break;
+                        }
+                        case FixedPointComponents::SIN: {
+                            macro_assigner_1_input(fix_sin, 0, m1, m2);
                             break;
                         }
                         case FixedPointComponents::SQRT: {
@@ -678,6 +722,10 @@ namespace nil {
                             macro_circuit_2_inputs(fix_cmp_min_max, 0, m1, m2);
                             break;
                         }
+                        case FixedPointComponents::COS: {
+                            macro_circuit_1_input(fix_cos, 0, m1, m2);
+                            break;
+                        }
                         case FixedPointComponents::DIV_BY_POS: {
                             macro_circuit_2_inputs(fix_div_by_pos, 0, m1, m2);
                             break;
@@ -750,6 +798,10 @@ namespace nil {
                         }
                         case FixedPointComponents::SELECT: {
                             macro_circuit_3_inputs(fix_select, 0);
+                            break;
+                        }
+                        case FixedPointComponents::SIN: {
+                            macro_circuit_1_input(fix_sin, 0, m1, m2);
                             break;
                         }
                         case FixedPointComponents::SQRT: {
