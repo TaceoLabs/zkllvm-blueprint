@@ -309,58 +309,169 @@ namespace nil {
                     }
                 };
 
+                bool requires_range_table(FixedPointComponents component) {
+                    switch (component) {
+                        case FixedPointComponents::ARGMAX:
+                        case FixedPointComponents::ARGMIN:
+                        case FixedPointComponents::CMP:
+                        case FixedPointComponents::CMP_EXTENDED:
+                        case FixedPointComponents::CMP_MIN_MAX:
+                        case FixedPointComponents::COS:
+                        case FixedPointComponents::DIV_BY_POS:
+                        case FixedPointComponents::DIV:
+                        case FixedPointComponents::DOT_RESCALE1:
+                        case FixedPointComponents::DOT_RESCALE2:
+                        case FixedPointComponents::EXP:
+                        case FixedPointComponents::EXP_RANGED:
+                        case FixedPointComponents::LOG:
+                        case FixedPointComponents::MAX:
+                        case FixedPointComponents::MIN:
+                        case FixedPointComponents::MUL_RESCALE:
+                        case FixedPointComponents::MUL_RESCALE_CONST:
+                        case FixedPointComponents::RANGE:
+                        case FixedPointComponents::REM:
+                        case FixedPointComponents::RESCALE:
+                        case FixedPointComponents::SIN:
+                        case FixedPointComponents::SQRT:
+                        case FixedPointComponents::SQRT_FLOOR:
+                        case FixedPointComponents::SUB:
+                        case FixedPointComponents::TANH:
+                            return true;
+                        default:
+                            return false;
+                    }
+                }
+
+                bool requires_exp_table(FixedPointComponents component) {
+                    switch (component) {
+                        case FixedPointComponents::EXP:
+                        case FixedPointComponents::EXP_RANGED:
+                        case FixedPointComponents::LOG:
+                        case FixedPointComponents::TANH:
+                            return true;
+                        default:
+                            return false;
+                    }
+                }
+
+                bool requires_trig_table(FixedPointComponents component) {
+                    switch (component) {
+                        case FixedPointComponents::SIN:
+                        case FixedPointComponents::COS:
+                            return true;
+                        default:
+                            return false;
+                    }
+                }
+
 // Allows disabling the lookup tables for faster testing
 #ifndef TEST_WITHOUT_LOOKUP_TABLES
                 std::vector<std::shared_ptr<lookup_table_definition>> component_custom_lookup_tables() {
                     std::vector<std::shared_ptr<lookup_table_definition>> result = {};
+
                     // RANGE
-                    auto range_table_ = std::shared_ptr<lookup_table_definition>(new range_table());
-                    result.push_back(range_table_);
+                    for (auto &test : testcases) {
+                        if (requires_range_table(test.component)) {
+                            auto table = std::shared_ptr<lookup_table_definition>(new range_table());
+                            result.push_back(table);
+                            break;
+                        }
+                    }
 
                     // EXP 16
-                    auto exp_table_16 =
-                        std::shared_ptr<lookup_table_definition>(new fixedpoint_exp_16_table<BlueprintFieldType>());
-                    result.push_back(exp_table_16);
+                    for (auto &test : testcases) {
+                        if (requires_exp_table(test.component) && test.m2 == 1) {
+                            auto table = std::shared_ptr<lookup_table_definition>(
+                                new fixedpoint_exp_16_table<BlueprintFieldType>());
+                            result.push_back(table);
+                            break;
+                        }
+                    }
 
                     // EXP 32
-                    auto exp_table_32 =
-                        std::shared_ptr<lookup_table_definition>(new fixedpoint_exp_32_table<BlueprintFieldType>());
-                    result.push_back(exp_table_32);
+                    for (auto &test : testcases) {
+                        if (requires_exp_table(test.component) && test.m2 == 2) {
+                            auto table = std::shared_ptr<lookup_table_definition>(
+                                new fixedpoint_exp_32_table<BlueprintFieldType>());
+                            result.push_back(table);
+                            break;
+                        }
+                    }
 
                     // TRIGON 16
-                    auto trigon_table_16 =
-                        std::shared_ptr<lookup_table_definition>(new fixedpoint_trigon_16_table<BlueprintFieldType>());
-                    result.push_back(trigon_table_16);
+                    for (auto &test : testcases) {
+                        if (requires_trig_table(test.component) && test.m2 == 1) {
+                            auto table = std::shared_ptr<lookup_table_definition>(
+                                new fixedpoint_trigon_16_table<BlueprintFieldType>());
+                            result.push_back(table);
+                            break;
+                        }
+                    }
 
                     // TRIGON 32
-                    auto trigon_table_32 =
-                        std::shared_ptr<lookup_table_definition>(new fixedpoint_trigon_32_table<BlueprintFieldType>());
-                    result.push_back(trigon_table_32);
+                    for (auto &test : testcases) {
+                        if (requires_trig_table(test.component) && test.m2 == 2) {
+                            auto table = std::shared_ptr<lookup_table_definition>(
+                                new fixedpoint_trigon_32_table<BlueprintFieldType>());
+                            result.push_back(table);
+                            break;
+                        }
+                    }
 
                     return result;
                 }
 
                 std::map<std::string, std::size_t> component_lookup_tables() {
                     std::map<std::string, std::size_t> lookup_tables;
-                    // RANGE
-                    lookup_tables[range_table::FULL_TABLE_NAME] = 0;    // REQUIRED_TABLE
+                    for (auto &test : testcases) {
+                        // RANGE
+                        if (requires_range_table(test.component)) {
+                            lookup_tables[range_table::FULL_TABLE_NAME] = 0;    // REQUIRED_TABLE}
+                        }
 
-                    // EXP
-                    lookup_tables[fixedpoint_exp_16_table<BlueprintFieldType>::A_TABLE_NAME] = 0;    // REQUIRED_TABLE
-                    lookup_tables[fixedpoint_exp_16_table<BlueprintFieldType>::B_TABLE_NAME] = 0;    // REQUIRED_TABLE
-                    lookup_tables[fixedpoint_exp_32_table<BlueprintFieldType>::A_TABLE_NAME] = 0;    // REQUIRED_TABLE
-                    lookup_tables[fixedpoint_exp_32_table<BlueprintFieldType>::B_TABLE_NAME] = 0;    // REQUIRED_TABLE
+                        // EXP 16
+                        if (requires_exp_table(test.component) && test.m2 == 1) {
+                            lookup_tables[fixedpoint_exp_16_table<BlueprintFieldType>::A_TABLE_NAME] =
+                                0;    // REQUIRED_TABLE
+                            lookup_tables[fixedpoint_exp_16_table<BlueprintFieldType>::B_TABLE_NAME] =
+                                0;    // REQUIRED_TABLE
+                        }
 
-                    // TRIGON
-                    lookup_tables[fixedpoint_trigon_16_table<BlueprintFieldType>::FULL_SIN_A] = 0;    // REQUIRED_TABLE
-                    lookup_tables[fixedpoint_trigon_16_table<BlueprintFieldType>::FULL_SIN_B] = 0;    // REQUIRED_TABLE
-                    lookup_tables[fixedpoint_trigon_16_table<BlueprintFieldType>::FULL_COS_A] = 0;    // REQUIRED_TABLE
-                    lookup_tables[fixedpoint_trigon_16_table<BlueprintFieldType>::FULL_COS_B] = 0;    // REQUIRED_TABLE
-                    lookup_tables[fixedpoint_trigon_32_table<BlueprintFieldType>::FULL_SIN_A] = 0;    // REQUIRED_TABLE
-                    lookup_tables[fixedpoint_trigon_32_table<BlueprintFieldType>::FULL_SIN_B] = 0;    // REQUIRED_TABLE
-                    lookup_tables[fixedpoint_trigon_32_table<BlueprintFieldType>::FULL_SIN_C] = 0;    // REQUIRED_TABLE
-                    lookup_tables[fixedpoint_trigon_32_table<BlueprintFieldType>::FULL_COS_A] = 0;    // REQUIRED_TABLE
-                    lookup_tables[fixedpoint_trigon_32_table<BlueprintFieldType>::FULL_COS_B] = 0;    // REQUIRED_TABLE
+                        // EXP 32
+                        if (requires_exp_table(test.component) && test.m2 == 2) {
+
+                            lookup_tables[fixedpoint_exp_32_table<BlueprintFieldType>::A_TABLE_NAME] =
+                                0;    // REQUIRED_TABLE
+                            lookup_tables[fixedpoint_exp_32_table<BlueprintFieldType>::B_TABLE_NAME] =
+                                0;    // REQUIRED_TABLE
+                        }
+
+                        // TRIGON 16
+                        if (requires_trig_table(test.component) && test.m2 == 1) {
+                            lookup_tables[fixedpoint_trigon_16_table<BlueprintFieldType>::FULL_SIN_A] =
+                                0;    // REQUIRED_TABLE
+                            lookup_tables[fixedpoint_trigon_16_table<BlueprintFieldType>::FULL_SIN_B] =
+                                0;    // REQUIRED_TABLE
+                            lookup_tables[fixedpoint_trigon_16_table<BlueprintFieldType>::FULL_COS_A] =
+                                0;    // REQUIRED_TABLE
+                            lookup_tables[fixedpoint_trigon_16_table<BlueprintFieldType>::FULL_COS_B] =
+                                0;    // REQUIRED_TABLE
+                        }
+
+                        // TRIGON 32
+                        if (requires_trig_table(test.component) && test.m2 == 1) {
+                            lookup_tables[fixedpoint_trigon_32_table<BlueprintFieldType>::FULL_SIN_A] =
+                                0;    // REQUIRED_TABLE
+                            lookup_tables[fixedpoint_trigon_32_table<BlueprintFieldType>::FULL_SIN_B] =
+                                0;    // REQUIRED_TABLE
+                            lookup_tables[fixedpoint_trigon_32_table<BlueprintFieldType>::FULL_SIN_C] =
+                                0;    // REQUIRED_TABLE
+                            lookup_tables[fixedpoint_trigon_32_table<BlueprintFieldType>::FULL_COS_A] =
+                                0;    // REQUIRED_TABLE
+                            lookup_tables[fixedpoint_trigon_32_table<BlueprintFieldType>::FULL_COS_B] =
+                                0;    // REQUIRED_TABLE
+                        }
+                    }
 
                     return lookup_tables;
                 }
@@ -499,8 +610,8 @@ namespace nil {
                     auto component_rows = 0;
                     std::string component_name = "";
 
-                    // Put inputs and outputs in the witness columns in the current row and put gadget into the next, we
-                    // will have coppy constraints to them later
+                    // Put inputs and outputs in the witness columns in the current row and put gadget into the
+                    // next, we will have copy constraints to them later
                     for (std::size_t i = 0; i < inputs.size(); ++i) {
                         auto [column, row] = tester::split(witness_list.size(), current_row_index, i);
                         assignment.witness(component.W(column), row) = inputs[i];
@@ -649,8 +760,10 @@ namespace nil {
                         BLUEPRINT_RELEASE_ASSERT(var_value(assignment, vars[i]) == outputs[i]);
                     }
 
-                    // std::cout << "Component " << component_name << " (" << (int)m1 << ", " << (int)m2 << ") at row "
-                    //           << current_row_index << " with " << component_rows + input_output_rows << " rows"
+                    // std::cout << "Component " << component_name << " (" << (int)m1 << ", " << (int)m2 << ")
+                    // at row "
+                    //           << current_row_index << " with " << component_rows + input_output_rows << "
+                    //           rows"
                     //           << std::endl;
 
                     current_row_index += component_rows + input_output_rows;

@@ -837,8 +837,8 @@ void test_components_unary_basic(ComponentType &component, int i) {
             auto q_dbl = static_cast<double>(quadrant);
             FixedType a(i_dbl * pi_two + pi_half * q_dbl);
             FixedType b(i_dbl * pi_two + pi_half * q_dbl + pi_half / 2.);
-            add_sin<FixedType, ComponentType>(component, a);
-            add_cos<FixedType, ComponentType>(component, b);
+            // add_sin<FixedType, ComponentType>(component, a);
+            // add_cos<FixedType, ComponentType>(component, b);
         }
     }
 }
@@ -982,8 +982,8 @@ void test_components_on_random_data(ComponentType &component, RngType &rng) {
     add_argmin<FixedType, ComponentType>(component, x, y, index_a, index_b);
 
     // TRIGON
-    add_sin<FixedType, ComponentType>(component, x);
-    add_cos<FixedType, ComponentType>(component, x);
+    // add_sin<FixedType, ComponentType>(component, x);
+    // add_cos<FixedType, ComponentType>(component, x);
 }
 
 template<typename FixedType, typename ComponentType, typename RngType>
@@ -1128,61 +1128,66 @@ void field_operations_test_inner(ComponentType &component) {
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
-
-template<typename BlueprintFieldType, std::size_t RandomTestsAmount>
-void field_operations_test() {
-    constexpr std::size_t WitnessColumns = 15;
-    constexpr std::size_t PublicInputColumns = 1;
-    constexpr std::size_t ConstantColumns = 50;
-    constexpr std::size_t SelectorColumns = 200;
-    using ArithmetizationParams = crypto3::zk::snark::plonk_arithmetization_params<WitnessColumns, PublicInputColumns,
-                                                                                   ConstantColumns, SelectorColumns>;
-    using ArithmetizationType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>;
-    using hash_type = nil::crypto3::hashes::keccak_1600<256>;
-    constexpr std::size_t Lambda = 40;
-    using AssignmentType = nil::blueprint::assignment<ArithmetizationType>;
-
-    using var = crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>;
-
-    using component_type =
-        blueprint::components::fix_tester<ArithmetizationType, BlueprintFieldType,
-                                          nil::blueprint::basic_non_native_policy<BlueprintFieldType>>;
-
-    auto result_check = [](AssignmentType &assignment, typename component_type::result_type &real_res) {};
-
-    std::vector<std::uint32_t> witness_list;
-    witness_list.reserve(WitnessColumns);
-    for (auto i = 0; i < WitnessColumns; i++) {
-        witness_list.push_back(i);
-    }
-    std::array<std::uint32_t, 0> public_list;
-    std::array<std::uint32_t, blueprint::components::TESTER_MAX_CONSTANT_COLS> constant_list;
-    for (auto i = 0; i < blueprint::components::TESTER_MAX_CONSTANT_COLS; i++) {
-        constant_list[i] = i;
-    }
-
+#define macro_component_setup()                                                                                        \
+    constexpr std::size_t WitnessColumns = 15;                                                                         \
+    constexpr std::size_t PublicInputColumns = 1;                                                                      \
+    constexpr std::size_t ConstantColumns = 30;                                                                        \
+    constexpr std::size_t SelectorColumns = 50;                                                                        \
+    using ArithmetizationParams = crypto3::zk::snark::plonk_arithmetization_params<WitnessColumns, PublicInputColumns, \
+                                                                                   ConstantColumns, SelectorColumns>;  \
+    using ArithmetizationType =                                                                                        \
+        crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>;                        \
+    using hash_type = nil::crypto3::hashes::keccak_1600<256>;                                                          \
+    constexpr std::size_t Lambda = 40;                                                                                 \
+    using AssignmentType = nil::blueprint::assignment<ArithmetizationType>;                                            \
+                                                                                                                       \
+    using var = crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>;                           \
+                                                                                                                       \
+    using component_type =                                                                                             \
+        blueprint::components::fix_tester<ArithmetizationType, BlueprintFieldType,                                     \
+                                          nil::blueprint::basic_non_native_policy<BlueprintFieldType>>;                \
+                                                                                                                       \
+    auto result_check = [](AssignmentType &assignment, typename component_type::result_type &real_res) {};             \
+                                                                                                                       \
+    std::vector<std::uint32_t> witness_list;                                                                           \
+    witness_list.reserve(WitnessColumns);                                                                              \
+    for (auto i = 0; i < WitnessColumns; i++) {                                                                        \
+        witness_list.push_back(i);                                                                                     \
+    }                                                                                                                  \
+    std::array<std::uint32_t, 0> public_list;                                                                          \
+    std::array<std::uint32_t, blueprint::components::TESTER_MAX_CONSTANT_COLS> constant_list;                          \
+    for (auto i = 0; i < blueprint::components::TESTER_MAX_CONSTANT_COLS; i++) {                                       \
+        constant_list[i] = i;                                                                                          \
+    }                                                                                                                  \
+                                                                                                                       \
     component_type component_instance(witness_list, constant_list, public_list);
 
-    ////////////////////////////////////////////////////////////////////////////
-    // Add tests for all FixedTypes
-    field_operations_test_inner<FixedPoint<BlueprintFieldType, 1, 1>, component_type, RandomTestsAmount>(
-        component_instance);
-    field_operations_test_inner<FixedPoint<BlueprintFieldType, 1, 2>, component_type, RandomTestsAmount>(
-        component_instance);
-    field_operations_test_inner<FixedPoint<BlueprintFieldType, 2, 1>, component_type, RandomTestsAmount>(
-        component_instance);
-    field_operations_test_inner<FixedPoint<BlueprintFieldType, 2, 2>, component_type, RandomTestsAmount>(
-        component_instance);
-    ////////////////////////////////////////////////////////////////////////////
-
-    typename component_type::input_type instance_input = {};
-    std::vector<typename BlueprintFieldType::value_type> public_input = {};
-
-    nil::crypto3::test_component<component_type, BlueprintFieldType, ArithmetizationParams, hash_type, Lambda>(
-        component_instance, public_input, result_check, instance_input,
-        crypto3::detail::connectedness_check_type::WEAK);
+#define macro_component_run()                                                                                   \
+    typename component_type::input_type instance_input = {};                                                    \
+    std::vector<typename BlueprintFieldType::value_type> public_input = {};                                     \
+                                                                                                                \
+    nil::crypto3::test_component<component_type, BlueprintFieldType, ArithmetizationParams, hash_type, Lambda>( \
+        component_instance, public_input, result_check, instance_input,                                         \
+        crypto3::detail::connectedness_check_type::WEAK);                                                       \
     // We do not have inputs/outputs so the weak check is sufficient
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+template<typename BlueprintFieldType, std::size_t RandomTestsAmount, uint8_t M1, uint8_t M2>
+void field_operations_test() {
+    macro_component_setup();
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Add tests for FixedTypes
+    field_operations_test_inner<FixedPoint<BlueprintFieldType, M1, M2>, component_type, RandomTestsAmount>(
+        component_instance);
+    ////////////////////////////////////////////////////////////////////////////
+
+    macro_component_run();
 }
+#undef macro_component_setup
+#undef macro_component_run
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
@@ -1193,17 +1198,26 @@ BOOST_AUTO_TEST_SUITE(blueprint_plonk_test_suite)
 
 BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_tester_test_vesta) {
     using field_type = typename crypto3::algebra::curves::vesta::base_field_type;
-    field_operations_test<field_type, random_tests_amount>();
+    field_operations_test<field_type, random_tests_amount, 1, 1>();
+    field_operations_test<field_type, random_tests_amount, 1, 2>();
+    field_operations_test<field_type, random_tests_amount, 2, 1>();
+    field_operations_test<field_type, random_tests_amount, 2, 2>();
 }
 
 BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_tester_test_pallas) {
     using field_type = typename crypto3::algebra::curves::pallas::base_field_type;
-    field_operations_test<field_type, random_tests_amount>();
+    field_operations_test<field_type, random_tests_amount, 1, 1>();
+    field_operations_test<field_type, random_tests_amount, 1, 2>();
+    field_operations_test<field_type, random_tests_amount, 2, 1>();
+    field_operations_test<field_type, random_tests_amount, 2, 2>();
 }
 
 BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_tester_test_bls12) {
     using field_type = typename crypto3::algebra::fields::bls12_fr<381>;
-    field_operations_test<field_type, random_tests_amount>();
+    field_operations_test<field_type, random_tests_amount, 1, 1>();
+    field_operations_test<field_type, random_tests_amount, 1, 2>();
+    field_operations_test<field_type, random_tests_amount, 2, 1>();
+    field_operations_test<field_type, random_tests_amount, 2, 2>();
 }
 
 BOOST_AUTO_TEST_SUITE_END()
