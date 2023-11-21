@@ -59,6 +59,7 @@ namespace nil {
 
                     // trace layout (7 + m2 * (2 + m2) col(s), 1 + rem_rows row(s))
                     //              (10 if m2=1, 15 if m2=2 col(s))
+                    //              (11 col(s), 3 row(s) for 32.16 fixed point because rem requires m2=2)
                     //
                     // rem only exists if m1=2; rem_rows = 0 if m1=1
                     // two_pi only exists if rem exists
@@ -74,7 +75,7 @@ namespace nil {
                     //     | constant |
                     //  r\c|    0     |
                     // +---+----------+
-                    // |rem|  two_pi  |
+                    // |sin|  two_pi  |
 
                     auto m1 = this->m1;
                     auto m2 = this->m2;
@@ -88,7 +89,7 @@ namespace nil {
                     if (m1 == 2) {
                         pos.sin_row += rem.rows_amount;
                         pos.rem_pos = rem.get_var_pos(pos.rem_row);
-                        pos.two_pi = CellPosition(this->C(0), pos.rem_row);
+                        pos.two_pi = CellPosition(this->C(0), pos.sin_row);
                     }
 
                     pos.x = CellPosition(this->W(0), pos.sin_row);
@@ -106,16 +107,20 @@ namespace nil {
                 rem_component instantiate_rem() const {
                     auto m1 = this->m1;
                     auto m2 = this->m2;
+                    value_type scaler = 1;
+                    if (is_32_16()) {
+                        scaler = value_type(1ULL << 16);
+                    }
                     std::vector<std::uint32_t> witness_list;
-                    auto witness_columns = rem_component::get_witness_columns(this->witness_amount(), m1, m2);
+                    auto witness_columns = rem_component::get_witness_columns(this->witness_amount(), m1, 2);
                     BLUEPRINT_RELEASE_ASSERT(this->witness_amount() >= witness_columns);
                     witness_list.reserve(witness_columns);
                     for (auto i = 0; i < witness_columns; i++) {
                         witness_list.push_back(this->W(i));
                     }
+                    std::vector<std::uint32_t> constant_list = {this->C(0)};
                     // if m1=1: a rem_component is constructed but never used.
-                    return rem_component(witness_list, std::array<std::uint32_t, 0>(), std::array<std::uint32_t, 0>(),
-                                         m1, m2);
+                    return rem_component(witness_list, constant_list, std::array<std::uint32_t, 0>(), m1, 2, scaler);
                 }
 
             public:
@@ -128,7 +133,6 @@ namespace nil {
                 }
 
                 uint8_t get_m2() const {
-                    BLUEPRINT_RELEASE_ASSERT(this->m2 == rem.get_m2());
                     return this->m2;
                 }
 
@@ -140,7 +144,10 @@ namespace nil {
                     return this->m1 + this->m2;
                 }
 
-                constexpr static std::size_t get_witness_columns(uint8_t m2) {
+                constexpr static std::size_t get_witness_columns(uint8_t m1, uint8_t m2) {
+                    if (m1 == 2 && m2 == 1) {
+                        return 11;
+                    }
                     return M(m2) == 1 ? 10 : 15;
                 }
 
@@ -167,20 +174,33 @@ namespace nil {
                     return manifest;
                 }
 
-                static manifest_type get_manifest(uint8_t m2) {
+                static manifest_type get_manifest(uint8_t m1, uint8_t m2) {
                     static manifest_type manifest = manifest_type(
-                        std::shared_ptr<manifest_param>(new manifest_single_value_param(get_witness_columns(m2))),
+                        std::shared_ptr<manifest_param>(new manifest_single_value_param(get_witness_columns(m1, m2))),
                         true);
                     return manifest;
                 }
 
                 constexpr static std::size_t get_rows_amount(std::size_t witness_amount,
                                                              std::size_t lookup_column_amount, uint8_t m1, uint8_t m2) {
-                    return M(m1) == 2 ? 1 + rem_component::get_rows_amount(get_witness_columns(m2), 0, m1, m2) : 1;
+                    if (M(m1) == 2 && M(m2) == 1) {
+                        return 1 +
+                               rem_component::get_rows_amount(get_witness_columns(m1, m2), lookup_column_amount, m1, 2);
+                    }
+                    return M(m1) == 2 ? 1 + rem_component::get_rows_amount(get_witness_columns(m1, m2),
+                                                                           lookup_column_amount, m1, m2) :
+                                        1;
                 }
 
-                constexpr static value_type get_two_pi(uint8_t m2) {
-                    return M(m2) == 1 ? value_type(411775ULL) : value_type(26986075409ULL);
+                constexpr static value_type get_two_pi() {
+                    return value_type(26986075409ULL);
+                }
+
+                /**
+                 * Returns true if the component uses the 32.16 fixed point data type.
+                 */
+                bool is_32_16() const {
+                    return this->m1 == 2 && this->m2 == 1;
                 }
 
                 constexpr static const std::size_t gates_amount = 2;
@@ -264,23 +284,23 @@ namespace nil {
 
                 template<typename ContainerType>
                 explicit fix_sin(ContainerType witness, uint8_t m1, uint8_t m2) :
-                    component_type(witness, {}, {}, get_manifest(m2)), m1(M(m1)), m2(M(m2)), rem(instantiate_rem()),
-                    two_pi(get_two_pi(m2)) {};
+                    component_type(witness, {}, {}, get_manifest(m1, m2)), m1(M(m1)), m2(M(m2)), rem(instantiate_rem()),
+                    two_pi(get_two_pi()) {};
 
                 template<typename WitnessContainerType, typename ConstantContainerType,
                          typename PublicInputContainerType>
                 fix_sin(WitnessContainerType witness, ConstantContainerType constant,
                         PublicInputContainerType public_input, uint8_t m1, uint8_t m2) :
-                    component_type(witness, constant, public_input, get_manifest(m2)),
-                    m1(M(m1)), m2(M(m2)), rem(instantiate_rem()), two_pi(get_two_pi(m2)) {};
+                    component_type(witness, constant, public_input, get_manifest(m1, m2)),
+                    m1(M(m1)), m2(M(m2)), rem(instantiate_rem()), two_pi(get_two_pi()) {};
 
                 fix_sin(std::initializer_list<typename component_type::witness_container_type::value_type> witnesses,
                         std::initializer_list<typename component_type::constant_container_type::value_type> constants,
                         std::initializer_list<typename component_type::public_input_container_type::value_type>
                             public_inputs,
                         uint8_t m1, uint8_t m2) :
-                    component_type(witnesses, constants, public_inputs, get_manifest(m2)),
-                    m1(M(m1)), m2(M(m2)), rem(instantiate_rem()), two_pi(get_two_pi(m2)) {};
+                    component_type(witnesses, constants, public_inputs, get_manifest(m1, m2)),
+                    m1(M(m1)), m2(M(m2)), rem(instantiate_rem()), two_pi(get_two_pi()) {};
             };
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
@@ -311,23 +331,34 @@ namespace nil {
 
                 auto x_val = var_value(assignment, instance_input.x);
                 assignment.witness(splat(var_pos.x)) = x_val;
+
                 std::vector<uint16_t> x0_val;
-                auto x_reduced_val = x_val;    // x_reduced guarantees the use of only one pre-comma limb
-                if (m1 == 2) {                 // if two pre-comma limbs are used, x is reduced mod 2*pi
+                value_type s_x_val;
+                // if two pre-comma limbs are used, x is reduced mod 2*pi
+                if (m1 == 2) {
                     assignment.constant(splat(var_pos.two_pi)) = component.two_pi;
                     auto rem_component = component.get_rem_component();
                     typename plonk_fixedpoint_sin<BlueprintFieldType, ArithmetizationParams>::rem_component::input_type
                         rem_input;
                     rem_input.x = var(splat(var_pos.x));
                     rem_input.y = var(splat(var_pos.two_pi), true, var::column_type::constant);
-                    auto rem_result = generate_assignments(rem_component, assignment, rem_input, var_pos.rem_row);
-                    x_reduced_val = var_value(assignment, rem_result.output);
+                    generate_assignments(rem_component, assignment, rem_input, var_pos.rem_row);
+                    int64_t z_offset = m2 == 1 ? 1 : 0;
+                    for (int64_t i = 0; i < m2 + 1; i++) {    // copy decomposition of z to sin
+                        auto rem_zi_val = var_value(
+                            assignment, var(var_pos.rem_pos.z0.column() + z_offset + i, var_pos.rem_pos.z0.row()));
+                        // we know the value of rem_z_val is in [0, 2^16) because of the decomposition step
+                        auto rem_zi_val_uint16 =
+                            static_cast<uint16_t>(FixedPointHelper<BlueprintFieldType>::field_to_double(rem_zi_val));
+                        x0_val.push_back(rem_zi_val_uint16);
+                    }
+                    // sign of y is sign of z in rem
+                    s_x_val = var_value(assignment, var(splat(var_pos.rem_pos.s_y)));
+                } else {    // if one pre-comma limb is used, x gets decomposed into up to three limbs
+                    bool sign = FixedPointHelper<BlueprintFieldType>::decompose(x_val, x0_val);
+                    s_x_val = sign ? -one : one;
                 }
-                bool sign = FixedPointHelper<BlueprintFieldType>::decompose(x_reduced_val, x0_val);
-                if (m1 == 2) {
-                    BLUEPRINT_RELEASE_ASSERT(!sign);
-                }
-                auto s_x_val = sign ? -one : one;
+
                 BLUEPRINT_RELEASE_ASSERT(x0_val.size() >= (m2 + 1));
                 assignment.witness(splat(var_pos.s_x)) = s_x_val;
                 for (size_t i = 0; i < m2 + 1; i++) {
@@ -422,15 +453,11 @@ namespace nil {
                 for (size_t i = 1; i < m2 + 1; i++) {
                     x0 += var(var_pos.x0.column() + i, var_pos.x0.row()) * (1ULL << (16 * i));
                 }
-                auto x_reduced = x;
-                if (m1 == 2) {
-                    typename plonk_fixedpoint_sin<BlueprintFieldType, ArithmetizationParams>::rem_component::result_type
-                        rem_out(component.get_rem_component(), static_cast<uint32_t>(var_pos.rem_row));
-                    x_reduced = var(rem_out.output);
-                }
-                auto constraint_1 = x_reduced - s_x * x0;
 
-                // sign of x
+                // decomposition constraint for x, only applies if m1=1 (decomp of x mod 2*pi is constrained in rem)
+                auto constraint_1 = x - s_x * x0;
+
+                // sign of x, only applies if m1=1 as mentioned above
                 auto constraint_2 = (s_x - 1) * (s_x + 1);
 
                 auto y = var(splat(var_pos.y));
@@ -454,7 +481,11 @@ namespace nil {
 
                 auto constraint_3 = 2 * (computation - y * actual_delta - q) + actual_delta;    // "custom" rescale
 
-                return {constraint_1, constraint_2, constraint_3};
+                if (m1 == 1) {
+                    return {constraint_1, constraint_2, constraint_3};
+                } else {    // m1 == 2
+                    return {constraint_3};
+                }
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
@@ -481,8 +512,25 @@ namespace nil {
                 const std::size_t start_row_index) {
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
                 using var = typename plonk_fixedpoint_sin<BlueprintFieldType, ArithmetizationParams>::var;
-                var x = var(splat(var_pos.x), false);
+                auto m1 = component.get_m1();
+                auto m2 = component.get_m2();
+
+                auto x = var(splat(var_pos.x), false);
                 bp.add_copy_constraint({instance_input.x, x});
+                if (m1 == 1) {
+                    return;
+                }
+                // if m1==2: copy decomposition of x mod 2*pi from rem to sin
+                int64_t z_offset = m2 == 1 ? 1 : 0;
+                for (int64_t i = 0; i < m2 + 1; i++) {    // copy decomposition of z to sin
+                    auto rem_zi = var(var_pos.rem_pos.z0.column() + z_offset + i, var_pos.rem_pos.z0.row(), false);
+                    auto sin_xi = var(var_pos.x0.column() + i, var_pos.x0.row(), false);
+                    bp.add_copy_constraint({rem_zi, sin_xi});
+                }
+                // sign of y is sign of z in rem
+                auto rem_s_z = var(splat(var_pos.rem_pos.s_y), false);
+                auto sin_s_x = var(splat(var_pos.s_x), false);
+                bp.add_copy_constraint({rem_s_z, sin_s_x});
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
@@ -519,16 +567,6 @@ namespace nil {
                               lookup_tables_indices.at(fixedpoint_trigon_32_table<BlueprintFieldType>::FULL_COS_B);
 
                 std::vector<constraint_type> constraints;
-
-                // lookup decomposition of x
-                // TODO not required, as this is covered by the sin/cos lookup tables
-                for (size_t i = 0; i < m2 + 1; i++) {
-                    constraint_type constraint;
-                    constraint.table_id = range_table_id;
-                    auto xi = var(var_pos.x0.column() + i, var_pos.x0.row());
-                    constraint.lookup_input = {xi};
-                    constraints.push_back(constraint);
-                }
 
                 // lookup decomposition of q
                 for (size_t i = 0; i < m2 * m2; i++) {

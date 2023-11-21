@@ -35,7 +35,7 @@ namespace nil {
             template<typename BlueprintFieldType, typename ArithmetizationParams, typename NonNativePolicyType>
             class fix_rem<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                           BlueprintFieldType, NonNativePolicyType>
-                : public plonk_component<BlueprintFieldType, ArithmetizationParams, 0, 0> {
+                : public plonk_component<BlueprintFieldType, ArithmetizationParams, 1, 0> {
 
             private:
                 uint8_t m1;    // Pre-comma 16-bit limbs
@@ -66,13 +66,16 @@ namespace nil {
                                                                                    3 + 2 * (m1 + m2);
                 }
 
-                using component_type = plonk_component<BlueprintFieldType, ArithmetizationParams, 0, 0>;
+                using component_type = plonk_component<BlueprintFieldType, ArithmetizationParams, 1, 0>;
 
                 using var = typename component_type::var;
+                using value_type = typename BlueprintFieldType::value_type;
                 using manifest_type = plonk_component_manifest;
                 using lookup_table_definition =
                     typename nil::crypto3::zk::snark::detail::lookup_table_definition<BlueprintFieldType>;
                 using range_table = fixedpoint_range_table<BlueprintFieldType>;
+
+                value_type x_scaler;
 
                 class gate_manifest_type : public component_gate_manifest {
                 public:
@@ -117,7 +120,7 @@ namespace nil {
                 };
 
                 struct var_positions {
-                    CellPosition x, y, z, s_y, s_a, y0, z0, a0, d0;
+                    CellPosition x, y, z, s_y, s_a, y0, z0, a0, d0, x_scaler;
                 };
 
                 var_positions get_var_pos(const int64_t start_row_index) const {
@@ -127,11 +130,12 @@ namespace nil {
                     switch (this->rows_amount) {
                         case 1:
 
-                            // trace layout (5 + 4*m col(s), 1 row(s))
+                            // trace layout (5 + 4*m col(s), 1 constant col, 1 row(s))
                             //
-                            //  r\c|0|1|2| 3 | 4 | 5 |..| 5+m-1| 5+m|..|5+2m-1|5+2m|..|5+3m-1|5+3m|..|5+4m-1|
-                            // +---+-+-+-+---+---+---+--+------+----+--+------+----+--+------+----+--+------+
-                            // | 0 |x|y|z|s_y|s_a|y0 |..| ym-1 | z0 |..| zm-1 | a0 |..| am-1 | d_0|..| dm-1 |
+                            //     |                               witness                                  | constant |
+                            //  r\c|0|1|2| 3 | 4 | 5 |..| 5+m-1| 5+m|..|5+2m-1|5+2m|..|5+3m-1|5+3m|..|5+4m-1|     0    |
+                            // +---+-+-+-+---+---+---+--+------+----+--+------+----+--+------+----+--+------+----------+
+                            // | 0 |x|y|z|s_y|s_a|y0 |..| ym-1 | z0 |..| zm-1 | a0 |..| am-1 | d_0|..| dm-1 | x_scaler |
 
                             pos.x = CellPosition(this->W(0), start_row_index);
                             pos.y = CellPosition(this->W(1), start_row_index);
@@ -142,15 +146,19 @@ namespace nil {
                             pos.z0 = CellPosition(this->W(5 + 1 * m), start_row_index);    // occupies m cells
                             pos.a0 = CellPosition(this->W(5 + 2 * m), start_row_index);    // occupies m cells
                             pos.d0 = CellPosition(this->W(5 + 3 * m), start_row_index);    // occupies m cells
+
+                            pos.x_scaler = CellPosition(this->C(0), start_row_index);
                             break;
                         case 2:
 
-                            // trace layout (3 + 2*m col(s), 2 row(s))
+                            // trace layout (3 + 2*m col(s), 1 constant col, 2 row(s))
+                            // sign of y == sign of z
                             //
-                            //  r\c|  0  |  1  | 2 | 3  | .. | 3+m-1 | 3+m | .. | 3+2m-1 |
-                            // +---+-----+-----+---+----+----+-------+-----+----+--------+
-                            // | 0 | s_y | s_a | - | a0 | .. | am-1  | d0  | .. | dm-1   |
-                            // | 1 | x   | y   | z | y0 | .. | ym-1  | z0  | .. | zm-1   |
+                            //     |                    witness                          | constant |
+                            //  r\c|  0  |  1  | 2 | 3  | .. | 3+m-1 | 3+m | .. | 3+2m-1 |     0    |
+                            // +---+-----+-----+---+----+----+-------+-----+----+--------+----------+
+                            // | 0 | s_y | s_a | - | a0 | .. | am-1  | d0  | .. | dm-1   |     -    |
+                            // | 1 | x   | y   | z | y0 | .. | ym-1  | z0  | .. | zm-1   | x_scaler |
 
                             pos.s_y = CellPosition(this->W(0), start_row_index);
                             pos.s_a = CellPosition(this->W(1), start_row_index);
@@ -161,6 +169,8 @@ namespace nil {
                             pos.z = CellPosition(this->W(2), start_row_index + 1);
                             pos.y0 = CellPosition(this->W(3 + 0 * m), start_row_index + 1);    // occupies m cells
                             pos.z0 = CellPosition(this->W(3 + 1 * m), start_row_index + 1);    // occupies m cells
+
+                            pos.x_scaler = CellPosition(this->C(0), start_row_index + 1);
                             break;
                         default:
                             BLUEPRINT_RELEASE_ASSERT(false && "rows_amount must be 1 or 2");
@@ -201,24 +211,20 @@ namespace nil {
                 }
 #endif
 
-                template<typename ContainerType>
-                explicit fix_rem(ContainerType witness, uint8_t m1, uint8_t m2) :
-                    component_type(witness, {}, {}, get_manifest(m1, m2)), m1(M(m1)), m2(M(m2)) {};
-
                 template<typename WitnessContainerType, typename ConstantContainerType,
                          typename PublicInputContainerType>
                 fix_rem(WitnessContainerType witness, ConstantContainerType constant,
-                        PublicInputContainerType public_input, uint8_t m1, uint8_t m2) :
+                        PublicInputContainerType public_input, uint8_t m1, uint8_t m2, value_type x_scaler = 1) :
                     component_type(witness, constant, public_input, get_manifest(m1, m2)),
-                    m1(M(m1)), m2(M(m2)) {};
+                    m1(M(m1)), m2(M(m2)), x_scaler(x_scaler) {};
 
                 fix_rem(std::initializer_list<typename component_type::witness_container_type::value_type> witnesses,
                         std::initializer_list<typename component_type::constant_container_type::value_type> constants,
                         std::initializer_list<typename component_type::public_input_container_type::value_type>
                             public_inputs,
-                        uint8_t m1, uint8_t m2) :
+                        uint8_t m1, uint8_t m2, value_type x_scaler = 1) :
                     component_type(witnesses, constants, public_inputs, get_manifest(m1, m2)),
-                    m1(M(m1)), m2(M(m2)) {};
+                    m1(M(m1)), m2(M(m2)), x_scaler(x_scaler) {};
             };
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
@@ -236,7 +242,7 @@ namespace nil {
                 const std::uint32_t start_row_index) {
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
 
-                auto x_val = var_value(assignment, instance_input.x);
+                auto x_val = var_value(assignment, instance_input.x) * component.x_scaler;
                 auto y_val = var_value(assignment, instance_input.y);
 
                 DivMod<BlueprintFieldType> tmp = FixedPointHelper<BlueprintFieldType>::div_mod(x_val, y_val);
@@ -322,12 +328,13 @@ namespace nil {
                 }
 
                 auto x = var(splat(var_pos.x));
+                auto x_scaler = var(splat(var_pos.x_scaler), true, var::column_type::constant);
                 auto y = var(splat(var_pos.y));
                 auto z = var(splat(var_pos.z));
                 auto s_a = var(splat(var_pos.s_a));
                 auto s_y = var(splat(var_pos.s_y));
 
-                auto constraint_1 = x - s_a * a0 * y - z;
+                auto constraint_1 = x * x_scaler - s_a * a0 * y - z;
                 auto constraint_2 = y - s_y * y0;
                 auto constraint_3 = z - s_y * z0;
                 auto constraint_4 = y0 - z0 - d0 - 1;
@@ -449,9 +456,24 @@ namespace nil {
 #endif
 
                 generate_copy_constraints(component, bp, assignment, instance_input, start_row_index);
+                generate_assignments_constant(component, assignment, instance_input, start_row_index);
 
                 return typename plonk_fixedpoint_rem<BlueprintFieldType, ArithmetizationParams>::result_type(
                     component, start_row_index);
+            }
+
+            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            void generate_assignments_constant(
+                const plonk_fixedpoint_rem<BlueprintFieldType, ArithmetizationParams> &component,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                    &assignment,
+                const typename plonk_fixedpoint_rem<BlueprintFieldType, ArithmetizationParams>::input_type
+                    &instance_input,
+                const std::size_t start_row_index) {
+
+                const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
+
+                assignment.constant(splat(var_pos.x_scaler)) = component.x_scaler;
             }
 
         }    // namespace components

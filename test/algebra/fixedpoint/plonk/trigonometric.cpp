@@ -49,7 +49,7 @@ bool doubleEquals(double a, double b, double epsilon) {
 template<typename FixedType>
 void test_fixedpoint_sin(FixedType input) {
     using BlueprintFieldType = typename FixedType::field_type;
-    constexpr std::size_t WitnessColumns = FixedType::M_2 == 1 ? 10 : 15;
+    constexpr std::size_t WitnessColumns = FixedType::M_2 == 2 ? 15 : FixedType::M_1 == 2 ? 11 : 10;
     constexpr std::size_t PublicInputColumns = 1;
 #ifdef TEST_WITHOUT_LOOKUP_TABLES
     constexpr std::size_t ConstantColumns = 1;
@@ -110,7 +110,7 @@ void test_fixedpoint_sin(FixedType input) {
 template<typename FixedType>
 void test_fixedpoint_cos(FixedType input) {
     using BlueprintFieldType = typename FixedType::field_type;
-    constexpr std::size_t WitnessColumns = FixedType::M_2 == 1 ? 9 : 14;
+    constexpr std::size_t WitnessColumns = FixedType::M_2 == 2 ? 14 : FixedType::M_1 == 2 ? 11 : 9;
     constexpr std::size_t PublicInputColumns = 1;
 #ifdef TEST_WITHOUT_LOOKUP_TABLES
     constexpr std::size_t ConstantColumns = 1;
