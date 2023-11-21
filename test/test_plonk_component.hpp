@@ -254,7 +254,7 @@ namespace nil {
                 // blueprint::detail::export_connectedness_zones(
                 //      zones, assignment, instance_input.all_vars(), start_row, component_instance.rows_amount, std::cout);
 
-                BOOST_ASSERT_MSG(is_connected,
+                BLUEPRINT_RELEASE_ASSERT(is_connected &&
                     "Component disconnected! See comment above this assert for a way to output a visual representation of the connectedness graph.");
             }
 
@@ -262,7 +262,7 @@ namespace nil {
             desc.usable_rows_amount = assignment.rows_amount();
 
             if (start_row + component_instance.rows_amount >= public_input.size()) {
-                BOOST_ASSERT_MSG(assignment.rows_amount() - start_row == component_instance.rows_amount,
+                BLUEPRINT_RELEASE_ASSERT(assignment.rows_amount() - start_row == component_instance.rows_amount &&
                                 "Component rows amount does not match actual rows amount.");
                 // Stretched components do not have a manifest, as they are dynamically generated.
                 if constexpr (!blueprint::components::is_component_stretcher<
@@ -316,7 +316,7 @@ namespace nil {
             profiling(assignment);
 #endif
 
-            assert(blueprint::is_satisfied(bp, assignment) == expected_to_pass);
+            BLUEPRINT_RELEASE_ASSERT(blueprint::is_satisfied(bp, assignment) == expected_to_pass);
 
             return std::make_tuple(desc, bp, assignment);
         }

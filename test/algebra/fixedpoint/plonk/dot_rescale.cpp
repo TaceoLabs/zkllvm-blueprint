@@ -46,8 +46,8 @@ void test_fixedpoint_dot_1_gate(std::vector<FixedType> &input1, std::vector<Fixe
     constexpr std::size_t PublicInputColumns = 1;
     constexpr std::size_t ConstantColumns = 2;
     constexpr std::size_t SelectorColumns = 4;
-    using ArithmetizationParams = crypto3::zk::snark::
-        plonk_arithmetization_params<WitnessColumns, PublicInputColumns, ConstantColumns, SelectorColumns>;
+    using ArithmetizationParams = crypto3::zk::snark::plonk_arithmetization_params<WitnessColumns, PublicInputColumns,
+                                                                                   ConstantColumns, SelectorColumns>;
     using ArithmetizationType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>;
     using hash_type = nil::crypto3::hashes::keccak_1600<256>;
     constexpr std::size_t Lambda = 40;
@@ -56,8 +56,7 @@ void test_fixedpoint_dot_1_gate(std::vector<FixedType> &input1, std::vector<Fixe
     using var = crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>;
 
     using component_type =
-        blueprint::components::fix_dot_rescale_1_gate<ArithmetizationType,
-                                                      BlueprintFieldType,
+        blueprint::components::fix_dot_rescale_1_gate<ArithmetizationType, BlueprintFieldType,
                                                       nil::blueprint::basic_non_native_policy<BlueprintFieldType>>;
 
     std::vector<var> instance_input_x;
@@ -83,8 +82,8 @@ void test_fixedpoint_dot_1_gate(std::vector<FixedType> &input1, std::vector<Fixe
     }
     auto expected_res = FixedType::dot(input1, input2);
 
-    auto result_check = [&expected_res, &expected_res_f, input1, input2](
-                            AssignmentType &assignment, typename component_type::result_type &real_res) {
+    auto result_check = [&expected_res, &expected_res_f, input1,
+                         input2](AssignmentType &assignment, typename component_type::result_type &real_res) {
         auto real_res_ = FixedType(var_value(assignment, real_res.output), FixedType::SCALE);
         double real_res_f = real_res_.to_double();
 #ifdef BLUEPRINT_PLONK_PROFILING_ENABLED
@@ -109,11 +108,16 @@ void test_fixedpoint_dot_1_gate(std::vector<FixedType> &input1, std::vector<Fixe
         witness_list.push_back(i);
     }
     // Is done by the manifest in a real circuit
-    component_type component_instance(
-        witness_list, std::array<std::uint32_t, 0>(), std::array<std::uint32_t, 0>(), dots, FixedType::M_2);
+    component_type component_instance(witness_list, std::array<std::uint32_t, 0>(), std::array<std::uint32_t, 0>(),
+                                      dots, FixedType::M_2);
 
     nil::crypto3::test_component<component_type, BlueprintFieldType, ArithmetizationParams, hash_type, Lambda>(
-        component_instance, public_input, result_check, instance_input);
+        component_instance,
+        public_input,
+        result_check,
+        instance_input,
+        crypto3::detail::connectedness_check_type::NONE);
+    // The zero is sometimes not connected
 }
 
 template<typename FixedType>
@@ -125,8 +129,8 @@ void test_fixedpoint_dot_2_gates(std::vector<FixedType> &input1, std::vector<Fix
     constexpr std::size_t PublicInputColumns = 1;
     constexpr std::size_t ConstantColumns = 2;
     constexpr std::size_t SelectorColumns = 5;
-    using ArithmetizationParams = crypto3::zk::snark::
-        plonk_arithmetization_params<WitnessColumns, PublicInputColumns, ConstantColumns, SelectorColumns>;
+    using ArithmetizationParams = crypto3::zk::snark::plonk_arithmetization_params<WitnessColumns, PublicInputColumns,
+                                                                                   ConstantColumns, SelectorColumns>;
     using ArithmetizationType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>;
     using hash_type = nil::crypto3::hashes::keccak_1600<256>;
     constexpr std::size_t Lambda = 40;
@@ -135,8 +139,7 @@ void test_fixedpoint_dot_2_gates(std::vector<FixedType> &input1, std::vector<Fix
     using var = crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>;
 
     using component_type =
-        blueprint::components::fix_dot_rescale_2_gates<ArithmetizationType,
-                                                       BlueprintFieldType,
+        blueprint::components::fix_dot_rescale_2_gates<ArithmetizationType, BlueprintFieldType,
                                                        nil::blueprint::basic_non_native_policy<BlueprintFieldType>>;
 
     std::vector<var> instance_input_x;
@@ -162,8 +165,8 @@ void test_fixedpoint_dot_2_gates(std::vector<FixedType> &input1, std::vector<Fix
     }
     auto expected_res = FixedType::dot(input1, input2);
 
-    auto result_check = [&expected_res, &expected_res_f, input1, input2](
-                            AssignmentType &assignment, typename component_type::result_type &real_res) {
+    auto result_check = [&expected_res, &expected_res_f, input1,
+                         input2](AssignmentType &assignment, typename component_type::result_type &real_res) {
         auto real_res_ = FixedType(var_value(assignment, real_res.output), FixedType::SCALE);
         double real_res_f = real_res_.to_double();
 #ifdef BLUEPRINT_PLONK_PROFILING_ENABLED
@@ -188,11 +191,16 @@ void test_fixedpoint_dot_2_gates(std::vector<FixedType> &input1, std::vector<Fix
         witness_list.push_back(i);
     }
     // Is done by the manifest in a real circuit
-    component_type component_instance(
-        witness_list, std::array<std::uint32_t, 0>(), std::array<std::uint32_t, 0>(), dots, FixedType::M_2);
+    component_type component_instance(witness_list, std::array<std::uint32_t, 0>(), std::array<std::uint32_t, 0>(),
+                                      dots, FixedType::M_2);
 
     nil::crypto3::test_component<component_type, BlueprintFieldType, ArithmetizationParams, hash_type, Lambda>(
-        component_instance, public_input, result_check, instance_input);
+        component_instance,
+        public_input,
+        result_check,
+        instance_input,
+        crypto3::detail::connectedness_check_type::NONE);
+    // The zero is sometimes not connected
 }
 
 template<typename FieldType, typename RngType>
