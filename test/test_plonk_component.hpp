@@ -262,7 +262,7 @@ namespace nil {
             desc.usable_rows_amount = assignment.rows_amount();
 
             if (start_row + component_instance.rows_amount >= public_input.size()) {
-                BLUEPRINT_RELEASE_ASSERT(assignment.rows_amount() - start_row == component_instance.rows_amount &&
+                BLUEPRINT_RELEASE_ASSERT((assignment.rows_amount() - start_row == component_instance.rows_amount) &&
                                 "Component rows amount does not match actual rows amount.");
                 // Stretched components do not have a manifest, as they are dynamically generated.
                 if constexpr (!blueprint::components::is_component_stretcher<
