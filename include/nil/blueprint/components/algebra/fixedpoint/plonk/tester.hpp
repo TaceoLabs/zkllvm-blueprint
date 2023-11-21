@@ -459,7 +459,7 @@ namespace nil {
                         }
 
                         // TRIGON 32
-                        if (requires_trig_table(test.component) && test.m2 == 1) {
+                        if (requires_trig_table(test.component) && test.m2 == 2) {
                             lookup_tables[fixedpoint_trigon_32_table<BlueprintFieldType>::FULL_SIN_A] =
                                 0;    // REQUIRED_TABLE
                             lookup_tables[fixedpoint_trigon_32_table<BlueprintFieldType>::FULL_SIN_B] =
@@ -760,11 +760,7 @@ namespace nil {
                         BLUEPRINT_RELEASE_ASSERT(var_value(assignment, vars[i]) == outputs[i]);
                     }
 
-                    // std::cout << "Component " << component_name << " (" << (int)m1 << ", " << (int)m2 << ")
-                    // at row "
-                    //           << current_row_index << " with " << component_rows + input_output_rows << "
-                    //           rows"
-                    //           << std::endl;
+                    // std::cout << "Component " << component_name << " (" << (int)m1 << ", " << (int)m2 << ") at row " << current_row_index << " with " << component_rows + input_output_rows << " rows"   << std::endl;
 
                     current_row_index += component_rows + input_output_rows;
                 }

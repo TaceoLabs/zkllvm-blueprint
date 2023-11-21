@@ -242,10 +242,10 @@ namespace nil {
                 const std::uint32_t start_row_index) {
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
 
-                auto x_val = var_value(assignment, instance_input.x) * component.x_scaler;
+                auto x_val = var_value(assignment, instance_input.x);
                 auto y_val = var_value(assignment, instance_input.y);
 
-                DivMod<BlueprintFieldType> tmp = FixedPointHelper<BlueprintFieldType>::div_mod(x_val, y_val);
+                DivMod<BlueprintFieldType> tmp = FixedPointHelper<BlueprintFieldType>::div_mod(x_val * component.x_scaler, y_val);
                 if (y_val > FixedPointHelper<BlueprintFieldType>::P_HALF && tmp.remainder != 0) {
                     // sign(other.value) == sign(divmod_remainder)
                     tmp.remainder += y_val;

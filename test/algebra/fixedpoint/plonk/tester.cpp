@@ -837,8 +837,8 @@ void test_components_unary_basic(ComponentType &component, int i) {
             auto q_dbl = static_cast<double>(quadrant);
             FixedType a(i_dbl * pi_two + pi_half * q_dbl);
             FixedType b(i_dbl * pi_two + pi_half * q_dbl + pi_half / 2.);
-            // add_sin<FixedType, ComponentType>(component, a);
-            // add_cos<FixedType, ComponentType>(component, b);
+            add_sin<FixedType, ComponentType>(component, a);
+            add_cos<FixedType, ComponentType>(component, b);
         }
     }
 }
@@ -982,8 +982,8 @@ void test_components_on_random_data(ComponentType &component, RngType &rng) {
     add_argmin<FixedType, ComponentType>(component, x, y, index_a, index_b);
 
     // TRIGON
-    // add_sin<FixedType, ComponentType>(component, x);
-    // add_cos<FixedType, ComponentType>(component, x);
+    add_sin<FixedType, ComponentType>(component, x);
+    add_cos<FixedType, ComponentType>(component, x);
 }
 
 template<typename FixedType, typename ComponentType, typename RngType>
