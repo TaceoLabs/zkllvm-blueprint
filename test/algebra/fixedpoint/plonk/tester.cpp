@@ -27,7 +27,6 @@ using namespace nil;
 using blueprint::components::FixedPoint;
 
 static constexpr double EPSILON = 0.001;
-static constexpr double EPSILON_SMALL = 0.01;
 
 bool doubleEquals(double a, double b, double epsilon) {
     // Essentially equal from
@@ -684,7 +683,7 @@ void add_sin(ComponentType &component, FixedType input) {
     double expected_res_f = sin(input.to_double());
     auto expected_res = input.sin();
 
-    BLUEPRINT_RELEASE_ASSERT(doubleEqualsExp(expected_res_f, expected_res.to_double(), EPSILON_SMALL));
+    BLUEPRINT_RELEASE_ASSERT(doubleEqualsExp(expected_res_f, expected_res.to_double(), EPSILON));
 
     std::vector<typename FixedType::value_type> inputs = {input.get_value()};
     std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};
@@ -700,7 +699,7 @@ void add_cos(ComponentType &component, FixedType input) {
     double expected_res_f = cos(input.to_double());
     auto expected_res = input.cos();
 
-    BLUEPRINT_RELEASE_ASSERT(doubleEqualsExp(expected_res_f, expected_res.to_double(), EPSILON_SMALL));
+    BLUEPRINT_RELEASE_ASSERT(doubleEqualsExp(expected_res_f, expected_res.to_double(), EPSILON));
 
     std::vector<typename FixedType::value_type> inputs = {input.get_value()};
     std::vector<typename FixedType::value_type> outputs = {expected_res.get_value()};

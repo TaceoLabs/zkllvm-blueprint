@@ -184,9 +184,12 @@ namespace nil {
                 constexpr static std::size_t get_rows_amount(std::size_t witness_amount,
                                                              std::size_t lookup_column_amount, uint8_t m1, uint8_t m2) {
                     if (M(m1) == 2 && M(m2) == 1) {
-                        return 1 + rem_component::get_rows_amount(get_witness_columns(m1, m2), 0, m1, 2);
+                        return 1 +
+                               rem_component::get_rows_amount(get_witness_columns(m1, m2), lookup_column_amount, m1, 2);
                     }
-                    return M(m1) == 2 ? 1 + rem_component::get_rows_amount(get_witness_columns(m1, m2), 0, m1, m2) : 1;
+                    return M(m1) == 2 ? 1 + rem_component::get_rows_amount(get_witness_columns(m1, m2),
+                                                                           lookup_column_amount, m1, m2) :
+                                        1;
                 }
 
                 constexpr static value_type get_two_pi() {
