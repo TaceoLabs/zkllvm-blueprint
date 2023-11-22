@@ -1166,7 +1166,7 @@ void field_operations_test_inner(ComponentType &component) {
 #define macro_component_setup()                                                                                        \
     constexpr std::size_t WitnessColumns = 15;                                                                         \
     constexpr std::size_t PublicInputColumns = 1;                                                                      \
-    constexpr std::size_t ConstantColumns = 30;                                                                        \
+    constexpr std::size_t ConstantColumns = 50;                                                                        \
     constexpr std::size_t SelectorColumns = 70;                                                                        \
     using ArithmetizationParams = crypto3::zk::snark::plonk_arithmetization_params<WitnessColumns, PublicInputColumns, \
                                                                                    ConstantColumns, SelectorColumns>;  \
