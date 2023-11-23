@@ -150,6 +150,9 @@ namespace nil {
                 FixedPoint rescale() const;
                 static FixedPoint dot(const std::vector<FixedPoint> &, const std::vector<FixedPoint> &);
 
+                template<typename Integer>
+                Integer to_int() const;
+
                 FixedPoint tanh() const;
 
                 double to_double() const;
@@ -856,6 +859,19 @@ namespace nil {
                 BLUEPRINT_RELEASE_ASSERT(scale == 2 * SCALE);
                 auto divmod = helper::round_div_mod(value, DELTA);
                 return FixedPoint(divmod.quotient, SCALE);
+            }
+
+            template<typename BlueprintFieldType, uint8_t M1, uint8_t M2>
+            template<typename Integer>
+            Integer FixedPoint<BlueprintFieldType, M1, M2>::to_int() const {
+                BLUEPRINT_RELEASE_ASSERT(scale == SCALE);
+                uint64_t pre, post;
+                bool sign = helper::split(value, scale, pre, post);
+                if (sign) {
+                    return Integer(-pre);
+                } else {
+                    return Integer(pre);
+                }
             }
 
             template<typename BlueprintFieldType>

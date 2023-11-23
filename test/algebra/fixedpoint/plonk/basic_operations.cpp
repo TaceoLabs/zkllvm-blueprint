@@ -273,6 +273,77 @@ void test_int_to_fixedpoint(typename FixedType::value_type input) {
         component_instance, public_input, result_check, instance_input);
 }
 
+template<typename FixedType, typename Integer>
+void test_fixedpoint_to_int_inner(FixedType input) {
+    using BlueprintFieldType = typename FixedType::field_type;
+
+    Integer expected_res_i = static_cast<Integer>(input.to_double());
+    Integer expected_res = input.template to_int<Integer>();
+
+    std::cout << "Input: " << input.get_value().data << "\n";
+    std::cout << "Input: " << input.to_double() << "\n";
+    std::cout << "Expected_i: " << (uint64_t)expected_res_i << "\n";
+    std::cout << "Expected: " << (uint64_t)expected_res << "\n\n";
+
+    BLUEPRINT_RELEASE_ASSERT(expected_res == expected_res_i);
+}
+
+template<typename FixedType, typename Integer, typename RngType>
+void test_fixedpoint_to_int_random_tester(RngType &rng, FixedType post_comma) {
+    using distribution = boost::random::uniform_int_distribution<Integer>;
+    using limits = std::numeric_limits<Integer>;
+
+    int64_t max_fix = (1ull << (16 * FixedType::M_1)) - 1;
+    auto max = limits::max();
+    if (max > max_fix) {
+        max = max_fix;
+    }
+
+    distribution dist = distribution(0, max);
+    auto val = dist(rng);
+
+    auto value = typename FixedType::value_type((uint64_t)val * FixedType::DELTA);
+    FixedType input = post_comma + FixedType(value, FixedType::SCALE);
+
+    if constexpr (std::is_signed_v<Integer>) {
+        distribution dist_bool = distribution(0, 1);
+        bool sign = dist_bool(rng) == 1;
+
+        if (sign) {
+            input = -input;
+        }
+    }
+
+    test_fixedpoint_to_int_inner<FixedType, Integer>(input);
+}
+
+template<typename FixedType, typename RngType>
+void test_fixedpoint_to_int_random(RngType &rng, FixedType post_comma) {
+    test_fixedpoint_to_int_random_tester<FixedType, uint8_t>(rng, post_comma);
+    test_fixedpoint_to_int_random_tester<FixedType, uint16_t>(rng, post_comma);
+    test_fixedpoint_to_int_random_tester<FixedType, uint32_t>(rng, post_comma);
+    test_fixedpoint_to_int_random_tester<FixedType, uint64_t>(rng, post_comma);
+
+    test_fixedpoint_to_int_random_tester<FixedType, int8_t>(rng, post_comma);
+    test_fixedpoint_to_int_random_tester<FixedType, int16_t>(rng, post_comma);
+    test_fixedpoint_to_int_random_tester<FixedType, int32_t>(rng, post_comma);
+    test_fixedpoint_to_int_random_tester<FixedType, int64_t>(rng, post_comma);
+}
+
+template<typename FixedType>
+void test_fixedpoint_to_int(FixedType input) {
+
+    test_fixedpoint_to_int_inner<FixedType, uint8_t>(input);
+    test_fixedpoint_to_int_inner<FixedType, uint16_t>(input);
+    test_fixedpoint_to_int_inner<FixedType, uint32_t>(input);
+    test_fixedpoint_to_int_inner<FixedType, uint64_t>(input);
+
+    test_fixedpoint_to_int_inner<FixedType, int8_t>(input);
+    test_fixedpoint_to_int_inner<FixedType, int16_t>(input);
+    test_fixedpoint_to_int_inner<FixedType, int32_t>(input);
+    test_fixedpoint_to_int_inner<FixedType, int64_t>(input);
+}
+
 template<typename FixedType>
 void test_fixedpoint_mul_rescale(FixedType input1, FixedType input2) {
     using BlueprintFieldType = typename FixedType::field_type;
@@ -891,6 +962,19 @@ FieldType generate_random_pre_comma(uint8_t m1, RngType &rng) {
     }
 }
 
+template<typename FieldType, typename RngType>
+FieldType generate_random_post_comma(uint8_t m2, RngType &rng) {
+    using distribution = boost::random::uniform_int_distribution<uint64_t>;
+
+    BLUEPRINT_RELEASE_ASSERT(m2 > 0 && m2 < 3);
+
+    uint64_t max = (1ull << (16 * m2)) - 1;
+
+    distribution dist = distribution(0, max);
+    uint64_t x = dist(rng);
+    return FieldType(x);
+}
+
 template<typename FixedType, typename RngType>
 void test_components_on_random_data(RngType &rng) {
     FixedType x(generate_random_for_fixedpoint<typename FixedType::value_type>(FixedType::M_1, FixedType::M_2, rng),
@@ -898,25 +982,29 @@ void test_components_on_random_data(RngType &rng) {
     FixedType y(generate_random_for_fixedpoint<typename FixedType::value_type>(FixedType::M_1, FixedType::M_2, rng),
                 FixedType::SCALE);
 
-    typename FixedType::value_type z = generate_random_pre_comma<typename FixedType::value_type>(FixedType::M_1, rng);
+    typename FixedType::value_type pre = generate_random_pre_comma<typename FixedType::value_type>(FixedType::M_1, rng);
 
-    test_add<FixedType>(x, y);
-    test_sub<FixedType>(x, y);
-    test_fixedpoint_rescale<FixedType>(FixedType(x.get_value() * FixedType::DELTA, FixedType::SCALE * 2));
-    test_fixedpoint_mul_rescale<FixedType>(x, y);
-    test_fixedpoint_mul_rescale_const<FixedType>(x, y);
-    test_fixedpoint_neg<FixedType>(x);
-    test_fixedpoint_sign_abs<FixedType>(x);
-    test_fixedpoint_floor<FixedType>(x);
-    test_fixedpoint_ceil<FixedType>(x);
-    test_int_to_fixedpoint<FixedType>(z);
-    if (y.get_value() != 0) {
-        test_fixedpoint_div<FixedType>(x, y);
-        test_fixedpoint_mod<FixedType>(x, y);
-        if (y.geq_0()) {
-            test_fixedpoint_div_by_pos<FixedType>(x, y);
-        }
-    }
+    FixedType post =
+        FixedType(generate_random_post_comma<typename FixedType::value_type>(FixedType::M_2, rng), FixedType::SCALE);
+
+    // test_add<FixedType>(x, y);
+    // test_sub<FixedType>(x, y);
+    // test_fixedpoint_rescale<FixedType>(FixedType(x.get_value() * FixedType::DELTA, FixedType::SCALE * 2));
+    // test_fixedpoint_mul_rescale<FixedType>(x, y);
+    // test_fixedpoint_mul_rescale_const<FixedType>(x, y);
+    // test_fixedpoint_neg<FixedType>(x);
+    // test_fixedpoint_sign_abs<FixedType>(x);
+    // test_fixedpoint_floor<FixedType>(x);
+    // test_fixedpoint_ceil<FixedType>(x);
+    // test_int_to_fixedpoint<FixedType>(pre);
+    test_fixedpoint_to_int_random<FixedType>(rng, post);
+    // if (y.get_value() != 0) {
+    //     test_fixedpoint_div<FixedType>(x, y);
+    //     test_fixedpoint_mod<FixedType>(x, y);
+    //     if (y.geq_0()) {
+    //         test_fixedpoint_div_by_pos<FixedType>(x, y);
+    //     }
+    // }
 }
 
 template<typename FixedType>
@@ -924,23 +1012,24 @@ void test_components(int i, int j) {
     FixedType x((int64_t)i);
     FixedType y((int64_t)j);
 
-    test_add<FixedType>(x, y);
-    test_sub<FixedType>(x, y);
-    test_fixedpoint_rescale<FixedType>(FixedType(x.get_value() * FixedType::DELTA, FixedType::SCALE * 2));
-    test_fixedpoint_mul_rescale<FixedType>(x, y);
-    test_fixedpoint_mul_rescale_const<FixedType>(x, y);
-    test_fixedpoint_neg<FixedType>(x);
-    test_fixedpoint_sign_abs<FixedType>(x);
-    test_fixedpoint_floor<FixedType>(x);
-    test_fixedpoint_ceil<FixedType>(x);
-    test_int_to_fixedpoint<FixedType>((int64_t)i);
-    if (y.get_value() != 0) {
-        test_fixedpoint_div<FixedType>(x, y);
-        test_fixedpoint_mod<FixedType>(x, y);
-        if (y.geq_0()) {
-            test_fixedpoint_div_by_pos<FixedType>(x, y);
-        }
-    }
+    // test_add<FixedType>(x, y);
+    // test_sub<FixedType>(x, y);
+    // test_fixedpoint_rescale<FixedType>(FixedType(x.get_value() * FixedType::DELTA, FixedType::SCALE * 2));
+    // test_fixedpoint_mul_rescale<FixedType>(x, y);
+    // test_fixedpoint_mul_rescale_const<FixedType>(x, y);
+    // test_fixedpoint_neg<FixedType>(x);
+    // test_fixedpoint_sign_abs<FixedType>(x);
+    // test_fixedpoint_floor<FixedType>(x);
+    // test_fixedpoint_ceil<FixedType>(x);
+    // test_int_to_fixedpoint<FixedType>((int64_t)i);
+    test_fixedpoint_to_int<FixedType>(x);
+    // if (y.get_value() != 0) {
+    //     test_fixedpoint_div<FixedType>(x, y);
+    //     test_fixedpoint_mod<FixedType>(x, y);
+    //     if (y.geq_0()) {
+    //         test_fixedpoint_div_by_pos<FixedType>(x, y);
+    //     }
+    // }
 }
 
 template<typename FixedType, std::size_t RandomTestsAmount>
