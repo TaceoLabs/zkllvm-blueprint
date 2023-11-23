@@ -390,7 +390,7 @@ namespace nil {
 
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
 
-                assignment.constant(splat(var_pos.y)) = offset;
+                assignment.constant(splat(var_pos.offset)) = offset;
             }
 
         }    // namespace components
