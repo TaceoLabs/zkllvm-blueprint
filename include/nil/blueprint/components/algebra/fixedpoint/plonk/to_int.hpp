@@ -291,8 +291,28 @@ namespace nil {
                 BLUEPRINT_RELEASE_ASSERT(x0_val.size() >= m);
 
                 auto s_val = sign ? -one : one;
-                // TACEO_TODO: This is only correct for some output types
-                typename BlueprintFieldType::value_type y_val = x0_val[m2] + x0_val[m2 + 1] * (1ULL << 16);
+                typename BlueprintFieldType::value_type y_val;
+
+                // Take the output depending on the output type
+                switch (component.out_type) {
+                    case plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::OutputType::U8:
+                    case plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::OutputType::I8:
+                    case plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::OutputType::U16:
+                    case plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::OutputType::I16: {
+                        y_val = x0_val[m2];
+                        break;
+                    }
+                    case plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::OutputType::U32:
+                    case plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::OutputType::I32:
+                    case plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::OutputType::U64:
+                    case plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::OutputType::I64: {
+                        y_val = x0_val[m2] + x0_val[m2 + 1] * (1ULL << 16);
+                        break;
+                    }
+                    default:
+                        BLUEPRINT_RELEASE_ASSERT(false);
+                }
+
                 if (sign) {
                     y_val = -y_val;
                     if (component.is_unsigned()) {
@@ -340,13 +360,35 @@ namespace nil {
                     x_pre += var(var_pos.x0.column() + m2 + i, var_pos.x0.row()) * (1ULL << (16 * i));
                 }
 
+                nil::crypto3::math::expression<var> composed;
+
+                // Take the output depending on the output type
+                switch (component.out_type) {
+                    case plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::OutputType::U8:
+                    case plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::OutputType::I8:
+                    case plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::OutputType::U16:
+                    case plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::OutputType::I16: {
+                        composed = nil::crypto3::math::expression(var(var_pos.x0.column() + m2, var_pos.x0.row()));
+                        break;
+                    }
+                    case plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::OutputType::U32:
+                    case plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::OutputType::I32:
+                    case plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::OutputType::U64:
+                    case plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::OutputType::I64: {
+                        composed = x_pre;
+                        break;
+                    }
+                    default:
+                        BLUEPRINT_RELEASE_ASSERT(false);
+                }
+
                 auto x = var(splat(var_pos.x));
                 auto y = var(splat(var_pos.y));
                 auto s = var(splat(var_pos.s));
 
                 auto constraint_1 = x - s * (x_pre * delta + x_post);
                 auto constraint_2 = (s - 1) * (s + 1);
-                auto constraint_3 = y - s * x_pre;
+                auto constraint_3 = y - s * composed;
                 if (component.is_unsigned()) {
                     auto inv2 = typename BlueprintFieldType::value_type(2).inversed();
                     constraint_3 -=

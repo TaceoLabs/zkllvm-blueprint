@@ -368,26 +368,26 @@ void test_fixedpoint_to_int_random_tester(RngType &rng, FixedType post_comma) {
 template<typename FixedType, typename RngType>
 void test_fixedpoint_to_int_random(RngType &rng, FixedType post_comma) {
     // test_fixedpoint_to_int_random_tester<FixedType, uint8_t>(rng, post_comma);
-    // test_fixedpoint_to_int_random_tester<FixedType, uint16_t>(rng, post_comma);
-    // test_fixedpoint_to_int_random_tester<FixedType, uint32_t>(rng, post_comma);
+    test_fixedpoint_to_int_random_tester<FixedType, uint16_t>(rng, post_comma);
+    test_fixedpoint_to_int_random_tester<FixedType, uint32_t>(rng, post_comma);
     test_fixedpoint_to_int_random_tester<FixedType, uint64_t>(rng, post_comma);
 
     // test_fixedpoint_to_int_random_tester<FixedType, int8_t>(rng, post_comma);
-    // test_fixedpoint_to_int_random_tester<FixedType, int16_t>(rng, post_comma);
-    // test_fixedpoint_to_int_random_tester<FixedType, int32_t>(rng, post_comma);
+    test_fixedpoint_to_int_random_tester<FixedType, int16_t>(rng, post_comma);
+    test_fixedpoint_to_int_random_tester<FixedType, int32_t>(rng, post_comma);
     test_fixedpoint_to_int_random_tester<FixedType, int64_t>(rng, post_comma);
 }
 
 template<typename FixedType>
 void test_fixedpoint_to_int(FixedType input) {
     // test_fixedpoint_to_int_inner<FixedType, uint8_t>(input);
-    // test_fixedpoint_to_int_inner<FixedType, uint16_t>(input);
-    // test_fixedpoint_to_int_inner<FixedType, uint32_t>(input);
+    test_fixedpoint_to_int_inner<FixedType, uint16_t>(input);
+    test_fixedpoint_to_int_inner<FixedType, uint32_t>(input);
     test_fixedpoint_to_int_inner<FixedType, uint64_t>(input);
 
     // test_fixedpoint_to_int_inner<FixedType, int8_t>(input);
-    // test_fixedpoint_to_int_inner<FixedType, int16_t>(input);
-    // test_fixedpoint_to_int_inner<FixedType, int32_t>(input);
+    test_fixedpoint_to_int_inner<FixedType, int16_t>(input);
+    test_fixedpoint_to_int_inner<FixedType, int32_t>(input);
     test_fixedpoint_to_int_inner<FixedType, int64_t>(input);
 }
 
