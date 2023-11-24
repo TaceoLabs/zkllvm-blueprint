@@ -1,5 +1,5 @@
-#ifndef CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_FLOOR_HPP
-#define CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_FLOOR_HPP
+#ifndef CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_TO_INT_HPP
+#define CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_TO_INT_HPP
 
 #include <nil/crypto3/zk/snark/arithmetization/plonk/constraint_system.hpp>
 
@@ -16,26 +16,34 @@ namespace nil {
     namespace blueprint {
         namespace components {
 
-            // Works by decomposing the input. We use a constant as an offset for the input to allow the same gadget for
-            // the ceil component
+            // Works by decomposing the input and composing the necessary part. If the input is negative and we have an
+            // unsigned typ, we add the MAX+1.
 
             /**
-             * Component representing a floor operation.
-             *
-             *
-             * The delta of y is the same as the delta of x.
+             * Component representing a cast_to_integer operation.
              *
              * Input:  x       ... field element
-             * Output: y       ... floor(x) (field element)
+             * Output: y       ... Integer(x) (field element)
              *
              */
+
+            // TACEO_TODO: Plan is:
+            // to_signed:
+            // y = sign * compose
+            //
+            // to_unsigend:
+            // y = sign *compose + (MAX + 1) (1-sign)/2
+            //
+            // to_bool (separate gadget):
+            // !is_zero()
+
             template<typename ArithmetizationType, typename FieldType, typename NonNativePolicyType>
-            class fix_floor;
+            class fix_to_int;
 
             template<typename BlueprintFieldType, typename ArithmetizationParams, typename NonNativePolicyType>
-            class fix_floor<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
-                            BlueprintFieldType, NonNativePolicyType>
-                : public plonk_component<BlueprintFieldType, ArithmetizationParams, 1, 0> {
+            class fix_to_int<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                             BlueprintFieldType, NonNativePolicyType>
+                : public plonk_component<BlueprintFieldType, ArithmetizationParams, 0, 0> {
             public:
                 using value_type = typename BlueprintFieldType::value_type;
 
@@ -51,6 +59,18 @@ namespace nil {
                 }
 
             public:
+                enum OutputType { U8 = 0, U16, U32, U64, I8, I16, I32, I64 };
+
+                static bool is_signed(OutputType out) {
+                    return out >= OutputType::I8;
+                }
+
+                static bool is_unsigned(OutputType out) {
+                    return out < OutputType::I8;
+                }
+
+                OutputType out_type;
+
                 uint8_t get_m() const {
                     return m1 + m2;
                 }
@@ -71,7 +91,7 @@ namespace nil {
                     return 3 + M(m1) + M(m2);
                 }
 
-                using component_type = plonk_component<BlueprintFieldType, ArithmetizationParams, 1, 0>;
+                using component_type = plonk_component<BlueprintFieldType, ArithmetizationParams, 0, 0>;
 
                 using var = typename component_type::var;
                 using manifest_type = plonk_component_manifest;
@@ -82,7 +102,7 @@ namespace nil {
                 class gate_manifest_type : public component_gate_manifest {
                 public:
                     std::uint32_t gates_amount() const override {
-                        return fix_floor::gates_amount;
+                        return fix_to_int::gates_amount;
                     }
                 };
 
@@ -115,18 +135,17 @@ namespace nil {
                 };
 
                 struct var_positions {
-                    CellPosition x, y, s, x0, offset;
+                    CellPosition x, y, s, x0;
                 };
 
                 var_positions get_var_pos(const int64_t start_row_index) const {
 
-                    // trace layout (3 + m col(s), 1 constant col(s), 1 row(s))
-                    // The constant col is set to 0, but allows to reuse the same gadget for ceil
+                    // trace layout (3 + m col(s), 1 row(s))
                     //
-                    //     |          witness              | constant |
-                    //  r\c| 0 | 1 | 2 | 3  | .. | 3 + m-1 |     0    |
-                    // +---+---+---+---+----+----+---------+----------+
-                    // | 0 | x | y | s | x0 | .. |   xm-1  |  offset  |
+                    //     |          witness              |
+                    //  r\c| 0 | 1 | 2 | 3  | .. | 3 + m-1 |
+                    // +---+---+---+---+----+----+---------+
+                    // | 0 | x | y | s | x0 | .. |   xm-1  |
 
                     auto m = this->get_m();
                     var_positions pos;
@@ -134,19 +153,18 @@ namespace nil {
                     pos.y = CellPosition(this->W(1), start_row_index);
                     pos.s = CellPosition(this->W(2), start_row_index);
                     pos.x0 = CellPosition(this->W(3 + 0 * m), start_row_index);    // occupies m cells
-                    pos.offset = CellPosition(this->C(0), start_row_index);
                     return pos;
                 }
 
                 struct result_type {
                     var output = var(0, 0, false);
 
-                    result_type(const fix_floor &component, std::uint32_t start_row_index) {
+                    result_type(const fix_to_int &component, std::uint32_t start_row_index) {
                         const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
                         output = var(splat(var_pos.y), false);
                     }
 
-                    result_type(const fix_floor &component, std::size_t start_row_index) {
+                    result_type(const fix_to_int &component, std::size_t start_row_index) {
                         const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
                         output = var(splat(var_pos.y), false);
                     }
@@ -172,34 +190,39 @@ namespace nil {
                 }
 #endif
 
+                template<typename ContainerType>
+                explicit fix_to_int(ContainerType witness, uint8_t m1, uint8_t m2, OutputType out) :
+                    component_type(witness, {}, {}, get_manifest(m1, m2)), m1(M(m1)), m2(M(m2)), out_type(out) {};
+
                 template<typename WitnessContainerType, typename ConstantContainerType,
                          typename PublicInputContainerType>
-                fix_floor(WitnessContainerType witness, ConstantContainerType constant,
-                          PublicInputContainerType public_input, uint8_t m1, uint8_t m2) :
+                fix_to_int(WitnessContainerType witness, ConstantContainerType constant,
+                           PublicInputContainerType public_input, uint8_t m1, uint8_t m2, OutputType out) :
                     component_type(witness, constant, public_input, get_manifest(m1, m2)),
-                    m1(M(m1)), m2(M(m2)) {};
+                    m1(M(m1)), m2(M(m2)), out_type(out) {};
 
-                fix_floor(std::initializer_list<typename component_type::witness_container_type::value_type> witnesses,
-                          std::initializer_list<typename component_type::constant_container_type::value_type> constants,
-                          std::initializer_list<typename component_type::public_input_container_type::value_type>
-                              public_inputs,
-                          uint8_t m1, uint8_t m2) :
+                fix_to_int(
+                    std::initializer_list<typename component_type::witness_container_type::value_type> witnesses,
+                    std::initializer_list<typename component_type::constant_container_type::value_type> constants,
+                    std::initializer_list<typename component_type::public_input_container_type::value_type>
+                        public_inputs,
+                    uint8_t m1, uint8_t m2, OutputType out) :
                     component_type(witnesses, constants, public_inputs, get_manifest(m1, m2)),
-                    m1(M(m1)), m2(M(m2)) {};
+                    m1(M(m1)), m2(M(m2)), out_type(out) {};
             };
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
-            using plonk_fixedpoint_floor =
-                fix_floor<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
-                          BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
+            using plonk_fixedpoint_to_int =
+                fix_to_int<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                           BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
-            typename plonk_fixedpoint_floor<BlueprintFieldType, ArithmetizationParams>::result_type
+            typename plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::result_type
                 generate_assignments(
-                    const plonk_fixedpoint_floor<BlueprintFieldType, ArithmetizationParams> &component,
+                    const plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams> &component,
                     assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                         &assignment,
-                    const typename plonk_fixedpoint_floor<BlueprintFieldType, ArithmetizationParams>::input_type
+                    const typename plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::input_type
                         instance_input,
                     const std::uint32_t start_row_index, std::uint64_t offset = 0) {
 
@@ -250,23 +273,23 @@ namespace nil {
                     BLUEPRINT_RELEASE_ASSERT((x_pre_val >> 32) == 0);
                 }
 
-                return typename plonk_fixedpoint_floor<BlueprintFieldType, ArithmetizationParams>::result_type(
+                return typename plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::result_type(
                     component, start_row_index);
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
             std::size_t generate_gates(
-                const plonk_fixedpoint_floor<BlueprintFieldType, ArithmetizationParams> &component,
+                const plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams> &component,
                 circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
                 assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                     &assignment,
-                const typename plonk_fixedpoint_floor<BlueprintFieldType, ArithmetizationParams>::input_type
+                const typename plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::input_type
                     &instance_input) {
 
                 int first_row = 1 - static_cast<int>(component.rows_amount);
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(first_row));
 
-                using var = typename plonk_fixedpoint_floor<BlueprintFieldType, ArithmetizationParams>::var;
+                using var = typename plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::var;
 
                 auto m = component.get_m();
                 auto m2 = component.get_m2();
@@ -296,11 +319,11 @@ namespace nil {
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
             std::size_t generate_lookup_gates(
-                const plonk_fixedpoint_floor<BlueprintFieldType, ArithmetizationParams> &component,
+                const plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams> &component,
                 circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
                 assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                     &assignment,
-                const typename plonk_fixedpoint_floor<BlueprintFieldType, ArithmetizationParams>::input_type
+                const typename plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::input_type
                     &instance_input) {
                 const int64_t start_row_index = 1 - static_cast<int64_t>(component.rows_amount);
                 const auto var_pos = component.get_var_pos(start_row_index);
@@ -308,10 +331,10 @@ namespace nil {
 
                 const std::map<std::string, std::size_t> &lookup_tables_indices = bp.get_reserved_indices();
 
-                using var = typename plonk_fixedpoint_floor<BlueprintFieldType, ArithmetizationParams>::var;
+                using var = typename plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::var;
                 using constraint_type = typename crypto3::zk::snark::plonk_lookup_constraint<BlueprintFieldType>;
                 using range_table =
-                    typename plonk_fixedpoint_floor<BlueprintFieldType, ArithmetizationParams>::range_table;
+                    typename plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::range_table;
 
                 std::vector<constraint_type> constraints;
                 constraints.reserve(m);
@@ -333,29 +356,29 @@ namespace nil {
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
             void generate_copy_constraints(
-                const plonk_fixedpoint_floor<BlueprintFieldType, ArithmetizationParams> &component,
+                const plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams> &component,
                 circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
                 assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                     &assignment,
-                const typename plonk_fixedpoint_floor<BlueprintFieldType, ArithmetizationParams>::input_type
+                const typename plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::input_type
                     &instance_input,
                 const std::size_t start_row_index) {
 
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
 
-                using var = typename plonk_fixedpoint_floor<BlueprintFieldType, ArithmetizationParams>::var;
+                using var = typename plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::var;
 
                 var x = var(splat(var_pos.x), false);
                 bp.add_copy_constraint({instance_input.x, x});
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
-            typename plonk_fixedpoint_floor<BlueprintFieldType, ArithmetizationParams>::result_type generate_circuit(
-                const plonk_fixedpoint_floor<BlueprintFieldType, ArithmetizationParams> &component,
+            typename plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::result_type generate_circuit(
+                const plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams> &component,
                 circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
                 assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                     &assignment,
-                const typename plonk_fixedpoint_floor<BlueprintFieldType, ArithmetizationParams>::input_type
+                const typename plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::input_type
                     &instance_input,
                 const std::size_t start_row_index, std::uint64_t offset = 0) {
 
@@ -371,16 +394,16 @@ namespace nil {
                 generate_copy_constraints(component, bp, assignment, instance_input, start_row_index);
                 generate_assignments_constant(component, assignment, instance_input, start_row_index, offset);
 
-                return typename plonk_fixedpoint_floor<BlueprintFieldType, ArithmetizationParams>::result_type(
+                return typename plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::result_type(
                     component, start_row_index);
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
             void generate_assignments_constant(
-                const plonk_fixedpoint_floor<BlueprintFieldType, ArithmetizationParams> &component,
+                const plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams> &component,
                 assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
                     &assignment,
-                const typename plonk_fixedpoint_floor<BlueprintFieldType, ArithmetizationParams>::input_type
+                const typename plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::input_type
                     &instance_input,
                 const std::size_t start_row_index, std::uint64_t offset) {
 
@@ -393,4 +416,4 @@ namespace nil {
     }        // namespace blueprint
 }    // namespace nil
 
-#endif    // CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_FLOOR_HPP
+#endif    // CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_TO_INT_HPP
