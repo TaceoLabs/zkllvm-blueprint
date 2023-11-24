@@ -28,13 +28,9 @@ namespace nil {
              */
 
             // TACEO_TODO: Plan is:
-            // to_signed:
-            // y = sign * compose
-            //
-            // to_unsigend:
-            // y = sign *compose + (MAX + 1) (1-sign)/2
-            //
             // uint8_t and int8_t: 8-bit lookups!
+            // We split everything into u16 as usual, except for x[m2] (i.e., the output) which we split into 2 u8s.
+            // This results in 1 extra column.
             //
             // to_bool (separate gadget):
             // !is_zero()
@@ -133,8 +129,13 @@ namespace nil {
                     return 1ULL << (16 * m2);
                 }
 
-                static std::size_t get_witness_columns(std::size_t witness_amount, uint8_t m1, uint8_t m2) {
-                    return 3 + M(m1) + M(m2);
+                static std::size_t get_witness_columns(std::size_t witness_amount, uint8_t m1, uint8_t m2,
+                                                       OutputType out) {
+                    if (out == OutputType::U8 || out == OutputType::I8) {
+                        return 4 + M(m1) + M(m2);
+                    } else {
+                        return 3 + M(m1) + M(m2);
+                    }
                 }
 
                 using component_type = plonk_component<BlueprintFieldType, ArithmetizationParams, 0, 0>;
@@ -157,9 +158,13 @@ namespace nil {
                     return manifest;
                 }
 
-                static manifest_type get_manifest(uint8_t m1, uint8_t m2) {
-                    static manifest_type manifest = manifest_type(
-                        std::shared_ptr<manifest_param>(new manifest_single_value_param(3 + M(m1) + M(m2))), false);
+                static manifest_type get_manifest(uint8_t m1, uint8_t m2, OutputType out) {
+                    auto cols = 3 + M(m1) + M(m2);
+                    if (out == OutputType::U8 || out == OutputType::I8) {
+                        cols += 1;
+                    }
+                    static manifest_type manifest =
+                        manifest_type(std::shared_ptr<manifest_param>(new manifest_single_value_param(cols)), false);
                     return manifest;
                 }
 
@@ -186,19 +191,19 @@ namespace nil {
 
                 var_positions get_var_pos(const int64_t start_row_index) const {
 
-                    // trace layout (3 + m col(s), 1 row(s))
+                    // trace layout (3 + m col(s) for 16/32/64 bit ouput, 4 + m col(s) for 8 bit output, 1 row(s))
                     //
-                    //     |          witness              |
-                    //  r\c| 0 | 1 | 2 | 3  | .. | 3 + m-1 |
+                    //     |          witness            |
+                    //  r\c| 0 | 1 | 2 | 3  | .. | 3 + m |
                     // +---+---+---+---+----+----+---------+
-                    // | 0 | x | y | s | x0 | .. |   xm-1  |
+                    // | 0 | x | y | s | x0 | .. |   xm  |
 
                     auto m = this->get_m();
                     var_positions pos;
                     pos.x = CellPosition(this->W(0), start_row_index);
                     pos.y = CellPosition(this->W(1), start_row_index);
                     pos.s = CellPosition(this->W(2), start_row_index);
-                    pos.x0 = CellPosition(this->W(3 + 0 * m), start_row_index);    // occupies m cells
+                    pos.x0 = CellPosition(this->W(3 + 0 * m), start_row_index);    // occupies m or m+1 cells
                     return pos;
                 }
 
@@ -221,6 +226,7 @@ namespace nil {
                 };
 
 // Allows disabling the lookup tables for faster testing
+// TACEO_TODO add uint8_t lookup table if required
 #ifndef TEST_WITHOUT_LOOKUP_TABLES
                 std::vector<std::shared_ptr<lookup_table_definition>> component_custom_lookup_tables() {
                     std::vector<std::shared_ptr<lookup_table_definition>> result = {};
@@ -238,13 +244,13 @@ namespace nil {
 
                 template<typename ContainerType>
                 explicit fix_to_int(ContainerType witness, uint8_t m1, uint8_t m2, OutputType out) :
-                    component_type(witness, {}, {}, get_manifest(m1, m2)), m1(M(m1)), m2(M(m2)), out_type(out) {};
+                    component_type(witness, {}, {}, get_manifest(m1, m2, out)), m1(M(m1)), m2(M(m2)), out_type(out) {};
 
                 template<typename WitnessContainerType, typename ConstantContainerType,
                          typename PublicInputContainerType>
                 fix_to_int(WitnessContainerType witness, ConstantContainerType constant,
                            PublicInputContainerType public_input, uint8_t m1, uint8_t m2, OutputType out) :
-                    component_type(witness, constant, public_input, get_manifest(m1, m2)),
+                    component_type(witness, constant, public_input, get_manifest(m1, m2, out)),
                     m1(M(m1)), m2(M(m2)), out_type(out) {};
 
                 fix_to_int(
@@ -253,9 +259,9 @@ namespace nil {
                     std::initializer_list<typename component_type::public_input_container_type::value_type>
                         public_inputs,
                     uint8_t m1, uint8_t m2, OutputType out) :
-                    component_type(witnesses, constants, public_inputs, get_manifest(m1, m2)),
+                    component_type(witnesses, constants, public_inputs, get_manifest(m1, m2, out)),
                     m1(M(m1)), m2(M(m2)), out_type(out) {};
-            };    // namespace components
+            };
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
             using plonk_fixedpoint_to_int =
@@ -271,6 +277,13 @@ namespace nil {
                     const typename plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::input_type
                         instance_input,
                     const std::uint32_t start_row_index) {
+
+                if (component.out_type ==
+                        plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::OutputType::U8 ||
+                    component.out_type ==
+                        plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::OutputType::I8) {
+                    BLUEPRINT_RELEASE_ASSERT(false && "Not yet implemented");
+                }
 
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
                 const auto one = BlueprintFieldType::value_type::one();
@@ -462,6 +475,13 @@ namespace nil {
                 const typename plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::input_type
                     &instance_input,
                 const std::size_t start_row_index) {
+
+                if (component.out_type ==
+                        plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::OutputType::U8 ||
+                    component.out_type ==
+                        plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::OutputType::I8) {
+                    BLUEPRINT_RELEASE_ASSERT(false && "Not yet implemented");
+                }
 
                 std::size_t selector_index = generate_gates(component, bp, assignment, instance_input);
                 assignment.enable_selector(selector_index, start_row_index);

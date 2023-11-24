@@ -277,7 +277,7 @@ void test_int_to_fixedpoint(typename FixedType::value_type input) {
 template<typename FixedType, typename Integer>
 void test_fixedpoint_to_int_inner(FixedType input) {
     using BlueprintFieldType = typename FixedType::field_type;
-    constexpr std::size_t WitnessColumns = 10;
+    constexpr std::size_t WitnessColumns = 4 + FixedType::M_1 + FixedType::M_2;
     constexpr std::size_t PublicInputColumns = 1;
     constexpr std::size_t ConstantColumns = 3;
     constexpr std::size_t SelectorColumns = 3;
