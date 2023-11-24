@@ -34,6 +34,8 @@ namespace nil {
             // to_unsigend:
             // y = sign *compose + (MAX + 1) (1-sign)/2
             //
+            // uint8_t and int8_t: 8-bit lookups!
+            //
             // to_bool (separate gadget):
             // !is_zero()
 
@@ -61,12 +63,56 @@ namespace nil {
             public:
                 enum OutputType { U8 = 0, U16, U32, U64, I8, I16, I32, I64 };
 
-                static bool is_signed(OutputType out) {
-                    return out >= OutputType::I8;
+                template<typename Integer>
+                static OutputType get_type() {
+                    BLUEPRINT_RELEASE_ASSERT(false);
+                }
+                template<typename Integer>
+                static OutputType get_offset() {
+                    BLUEPRINT_RELEASE_ASSERT(false);
+                }
+#define macro_get_type(type, enum_type)  \
+    template<>                           \
+    static OutputType get_type<type>() { \
+        return OutputType::enum_type;    \
+    }
+                macro_get_type(uint8_t, U8);
+                macro_get_type(uint16_t, U16);
+                macro_get_type(uint32_t, U32);
+                macro_get_type(uint64_t, U64);
+                macro_get_type(int8_t, I8);
+                macro_get_type(int16_t, I16);
+                macro_get_type(int32_t, I32);
+                macro_get_type(int64_t, I64);
+#undef macro_get_type
+
+                bool is_signed() const {
+                    return out_type >= OutputType::I8;
                 }
 
-                static bool is_unsigned(OutputType out) {
-                    return out < OutputType::I8;
+                bool is_unsigned() const {
+                    return out_type < OutputType::I8;
+                }
+
+                uint64_t get_offset() const {
+                    switch (out_type) {
+                        case U8: {
+                            return (uint64_t)std::numeric_limits<uint8_t>::max();
+                        }
+                        case U16: {
+                            return (uint64_t)std::numeric_limits<uint16_t>::max();
+                        }
+                        case U32: {
+                            return (uint64_t)std::numeric_limits<uint32_t>::max();
+                        }
+                        case U64: {
+                            return (uint64_t)std::numeric_limits<uint64_t>::max();
+                        }
+                        default: {
+                            BLUEPRINT_RELEASE_ASSERT(false);
+                            return 0;
+                        }
+                    }
                 }
 
                 OutputType out_type;
@@ -75,16 +121,16 @@ namespace nil {
                     return m1 + m2;
                 }
 
-                uint64_t get_delta() const {
-                    return 1ULL << (16 * this->m2);
-                }
-
                 uint8_t get_m1() const {
                     return m1;
                 }
 
                 uint8_t get_m2() const {
                     return m2;
+                }
+
+                uint64_t get_delta() const {
+                    return 1ULL << (16 * m2);
                 }
 
                 static std::size_t get_witness_columns(std::size_t witness_amount, uint8_t m1, uint8_t m2) {
@@ -209,7 +255,7 @@ namespace nil {
                     uint8_t m1, uint8_t m2, OutputType out) :
                     component_type(witnesses, constants, public_inputs, get_manifest(m1, m2)),
                     m1(M(m1)), m2(M(m2)), out_type(out) {};
-            };
+            };    // namespace components
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
             using plonk_fixedpoint_to_int =
@@ -224,53 +270,42 @@ namespace nil {
                         &assignment,
                     const typename plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::input_type
                         instance_input,
-                    const std::uint32_t start_row_index, std::uint64_t offset = 0) {
+                    const std::uint32_t start_row_index) {
 
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
                 const auto one = BlueprintFieldType::value_type::one();
                 auto m1 = component.get_m1();
                 auto m2 = component.get_m2();
                 auto m = m1 + m2;
-                auto delta = component.get_delta();
-                auto mask = (1ULL << 16) - 1;
 
                 auto x_val = var_value(assignment, instance_input.x);
 
                 assignment.witness(splat(var_pos.x)) = x_val;
 
-                auto x_val_ = x_val + offset;    // offset is zero for floor and Delta-1 for ceil
+                // uint64_t x_pre_val, x_post_val;
+                // bool sign = FixedPointHelper<BlueprintFieldType>::split(x_val, 16 * m2, x_pre_val, x_post_val);
 
-                uint64_t x_pre_val, x_post_val;
-                bool sign = FixedPointHelper<BlueprintFieldType>::split_exp(x_val_, 16 * m2, x_pre_val, x_post_val);
+                std::vector<uint16_t> x0_val;
+                bool sign = FixedPointHelper<BlueprintFieldType>::decompose(x_val, x0_val);
+                // is ok because x0_val is at least of size 4 and the biggest we have is 32.32
+                BLUEPRINT_RELEASE_ASSERT(x0_val.size() >= m);
 
                 auto s_val = sign ? -one : one;
-                typename BlueprintFieldType::value_type y_val = x_pre_val * delta;
+                // TACEO_TODO: This is only correct for some output types
+                typename BlueprintFieldType::value_type y_val = x0_val[m2] + x0_val[m2 + 1] * (1ULL << 16);
                 if (sign) {
                     y_val = -y_val;
+                    if (component.is_unsigned()) {
+                        y_val += component.get_offset();
+                        y_val += one;
+                    }
                 }
 
                 assignment.witness(splat(var_pos.s)) = s_val;
                 assignment.witness(splat(var_pos.y)) = y_val;
 
-                auto x0_val = x_post_val & mask;
-                assignment.witness(splat(var_pos.x0)) = x0_val;
-
-                if (m2 == 1) {
-                    BLUEPRINT_RELEASE_ASSERT((x_post_val >> 16) == 0);
-                } else {
-                    auto x1_val = (x_post_val >> 16) & mask;
-                    assignment.witness(var_pos.x0.column() + 1, var_pos.x0.row()) = x1_val;
-                    BLUEPRINT_RELEASE_ASSERT((x_post_val >> 32) == 0);
-                }
-
-                auto xi_val = x_pre_val & mask;
-                assignment.witness(var_pos.x0.column() + m2, var_pos.x0.row()) = xi_val;
-                if (m1 == 1) {
-                    BLUEPRINT_RELEASE_ASSERT((x_pre_val >> 16) == 0);
-                } else {
-                    auto x1i_val = (x_pre_val >> 16) & mask;
-                    assignment.witness(var_pos.x0.column() + m2 + 1, var_pos.x0.row()) = x1i_val;
-                    BLUEPRINT_RELEASE_ASSERT((x_pre_val >> 32) == 0);
+                for (auto i = 0; i < m; i++) {
+                    assignment.witness(var_pos.x0.column() + i, var_pos.x0.row()) = x0_val[i];
                 }
 
                 return typename plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::result_type(
@@ -291,8 +326,9 @@ namespace nil {
 
                 using var = typename plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::var;
 
-                auto m = component.get_m();
+                auto m1 = component.get_m1();
                 auto m2 = component.get_m2();
+                auto delta = component.get_delta();
 
                 auto x_post = nil::crypto3::math::expression(var(splat(var_pos.x0)));
                 for (auto i = 1; i < m2; i++) {
@@ -300,19 +336,22 @@ namespace nil {
                 }
 
                 auto x_pre = nil::crypto3::math::expression(var(var_pos.x0.column() + m2, var_pos.x0.row()));
-                x_pre *= 1ULL << (16 * m2);
-                for (auto i = m2 + 1; i < m; i++) {
-                    x_pre += var(var_pos.x0.column() + i, var_pos.x0.row()) * (1ULL << (16 * i));
+                for (auto i = 1; i < m1; i++) {
+                    x_pre += var(var_pos.x0.column() + m2 + i, var_pos.x0.row()) * (1ULL << (16 * i));
                 }
 
                 auto x = var(splat(var_pos.x));
                 auto y = var(splat(var_pos.y));
                 auto s = var(splat(var_pos.s));
-                auto offset = var(splat(var_pos.offset), true, var::column_type::constant);
 
-                auto constraint_1 = x + offset - s * x_pre - x_post;
+                auto constraint_1 = x - s * (x_pre * delta + x_post);
                 auto constraint_2 = (s - 1) * (s + 1);
                 auto constraint_3 = y - s * x_pre;
+                if (component.is_unsigned()) {
+                    auto inv2 = typename BlueprintFieldType::value_type(2).inversed();
+                    constraint_3 -=
+                        (1 - s) * (typename BlueprintFieldType::value_type(component.get_offset()) + 1) * inv2;
+                }
 
                 return bp.add_gate({constraint_1, constraint_2, constraint_3});
             }
@@ -380,7 +419,7 @@ namespace nil {
                     &assignment,
                 const typename plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::input_type
                     &instance_input,
-                const std::size_t start_row_index, std::uint64_t offset = 0) {
+                const std::size_t start_row_index) {
 
                 std::size_t selector_index = generate_gates(component, bp, assignment, instance_input);
                 assignment.enable_selector(selector_index, start_row_index);
@@ -392,24 +431,9 @@ namespace nil {
 #endif
 
                 generate_copy_constraints(component, bp, assignment, instance_input, start_row_index);
-                generate_assignments_constant(component, assignment, instance_input, start_row_index, offset);
 
                 return typename plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::result_type(
                     component, start_row_index);
-            }
-
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
-            void generate_assignments_constant(
-                const plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams> &component,
-                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
-                    &assignment,
-                const typename plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::input_type
-                    &instance_input,
-                const std::size_t start_row_index, std::uint64_t offset) {
-
-                const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-
-                assignment.constant(splat(var_pos.offset)) = offset;
             }
 
         }    // namespace components
