@@ -321,7 +321,7 @@ namespace nil {
                 const typename plonk_fixedpoint_dot_rescale_2_gates<
                     BlueprintFieldType, ArithmetizationParams>::input_type &instance_input) {
 
-                int64_t row = 0;    // row index is 0, we create a constraint for one row
+                int64_t row = 0;
                 const auto var_pos = component.get_var_pos(row);
 
                 using var =
@@ -349,7 +349,7 @@ namespace nil {
                 const typename plonk_fixedpoint_dot_rescale_2_gates<
                     BlueprintFieldType, ArithmetizationParams>::input_type &instance_input) {
 
-                int64_t row = 0;    // row index is 0, no use of relative row indices here
+                int64_t row = 0;
                 const auto var_pos = component.get_var_pos(row);
 
                 using var =
@@ -380,7 +380,7 @@ namespace nil {
                                                                     ArithmetizationParams>::input_type &instance_input,
                 const std::size_t start_row_index) {
 
-                int64_t row = 0;    // row index is 0, no use of relative row indices here
+                int64_t row = 0;
                 const auto var_pos = component.get_var_pos(row);
 
                 using var =
