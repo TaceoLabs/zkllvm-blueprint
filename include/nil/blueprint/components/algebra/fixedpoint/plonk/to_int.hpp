@@ -1,6 +1,7 @@
 #ifndef CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_TO_INT_HPP
 #define CRYPTO3_BLUEPRINT_PLONK_FIXEDPOINT_TO_INT_HPP
 
+#include <cstdint>
 #include <nil/crypto3/zk/snark/arithmetization/plonk/constraint_system.hpp>
 
 #include <nil/blueprint/blueprint/plonk/assignment.hpp>
@@ -143,7 +144,7 @@ namespace nil {
                 using var = typename component_type::var;
                 using manifest_type = plonk_component_manifest;
                 using lookup_table_definition =
-                    typename nil::crypto3::zk::snark::detail::lookup_table_definition<BlueprintFieldType>;
+                    typename nil::crypto3::zk::snark::lookup_table_definition<BlueprintFieldType>;
                 using range_table = fixedpoint_range_table<BlueprintFieldType>;
 
                 class gate_manifest_type : public component_gate_manifest {
@@ -158,7 +159,7 @@ namespace nil {
                     return manifest;
                 }
 
-                static manifest_type get_manifest(uint8_t m1, uint8_t m2, OutputType out) {
+                static manifest_type get_manifest(uint8_t m1, uint8_t m2, uint8_t out) {
                     auto cols = 3 + M(m1) + M(m2);
                     if (out == OutputType::U8 || out == OutputType::I8) {
                         cols += 1;
@@ -180,7 +181,7 @@ namespace nil {
                 struct input_type {
                     var x = var(0, 0, false);
 
-                    std::vector<var> all_vars() const {
+                    std::vector<std::reference_wrapper<var>> all_vars() {
                         return {x};
                     }
                 };
@@ -250,6 +251,13 @@ namespace nil {
                          typename PublicInputContainerType>
                 fix_to_int(WitnessContainerType witness, ConstantContainerType constant,
                            PublicInputContainerType public_input, uint8_t m1, uint8_t m2, OutputType out) :
+                    component_type(witness, constant, public_input, get_manifest(m1, m2, out)),
+                    m1(M(m1)), m2(M(m2)), out_type(out) {};
+
+                template<typename WitnessContainerType, typename ConstantContainerType,
+                         typename PublicInputContainerType>
+                fix_to_int(WitnessContainerType witness, ConstantContainerType constant,
+                           PublicInputContainerType public_input, uint8_t m1, uint8_t m2, uint8_t out) :
                     component_type(witness, constant, public_input, get_manifest(m1, m2, out)),
                     m1(M(m1)), m2(M(m2)), out_type(out) {};
 
