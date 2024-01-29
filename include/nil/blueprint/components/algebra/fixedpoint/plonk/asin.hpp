@@ -458,7 +458,7 @@ namespace nil {
                 auto m2 = component.get_m2();
 
                 auto q = nil::crypto3::math::expression(var(splat(var_pos.q0)));
-                for (auto i = 1; i < component.get_m2(); i++) {
+                for (auto i = 1; i < m2; i++) {
                     q += var(var_pos.q0.column() + i, var_pos.q0.row()) * (1ULL << (16 * i));
                 }
 

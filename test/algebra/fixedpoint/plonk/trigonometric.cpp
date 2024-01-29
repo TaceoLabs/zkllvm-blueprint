@@ -322,8 +322,8 @@ void test_fixedpoint_asin(FixedType input) {
     constexpr std::size_t ConstantColumns = 5;
     constexpr std::size_t SelectorColumns = 10;
 #else
-    constexpr std::size_t ConstantColumns = 15;
-    constexpr std::size_t SelectorColumns = 15;
+    constexpr std::size_t ConstantColumns = 16;
+    constexpr std::size_t SelectorColumns = 16;
 #endif
     using ArithmetizationParams = crypto3::zk::snark::
         plonk_arithmetization_params<WitnessColumns, PublicInputColumns, ConstantColumns, SelectorColumns>;
@@ -383,8 +383,8 @@ void test_fixedpoint_acos(FixedType input) {
     constexpr std::size_t ConstantColumns = 5;
     constexpr std::size_t SelectorColumns = 10;
 #else
-    constexpr std::size_t ConstantColumns = 15;
-    constexpr std::size_t SelectorColumns = 15;
+    constexpr std::size_t ConstantColumns = 16;
+    constexpr std::size_t SelectorColumns = 16;
 #endif
     using ArithmetizationParams = crypto3::zk::snark::
         plonk_arithmetization_params<WitnessColumns, PublicInputColumns, ConstantColumns, SelectorColumns>;
