@@ -493,7 +493,7 @@ namespace nil {
                 using var = typename plonk_fixedpoint_asin<BlueprintFieldType, ArithmetizationParams>::var;
                 using constraint_type = typename crypto3::zk::snark::plonk_lookup_constraint<BlueprintFieldType>;
                 using range_table =
-                    typename plonk_fixedpoint_asin<BlueprintFieldType, ArithmetizationParams>::range_table;
+                    typename plonk_fixedpoint_atan<BlueprintFieldType, ArithmetizationParams>::range_table;
 
                 std::vector<constraint_type> constraints;
                 constraints.reserve(m2);
@@ -504,7 +504,7 @@ namespace nil {
                     constraint_type constraint;
                     constraint.table_id = table_id;
 
-                    auto qi = var(var_pos.q0.column() + i, var_pos.q0.row());
+                    auto qi = var(var_pos.q0.column() + i, 0);
                     constraint.lookup_input = {qi};
                     constraints.push_back(constraint);
                 }
