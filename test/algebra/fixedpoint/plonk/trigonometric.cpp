@@ -341,20 +341,15 @@ void test_fixedpoint_asin(FixedType input) {
     double expected_res_f = asin(input.to_double());
     auto expected_res = input.asin();
 
-    // std::cout << "input: " << input.to_double() << "\n";
-    // std::cout << "input_f: " << input.get_value().data << "\n";
-    // std::cout << "expected_res_f: " << expected_res_f << "\n";
-    // std::cout << "expected_res: " << expected_res.to_double() << "\n\n";
-
     auto result_check = [&expected_res, &expected_res_f, input](AssignmentType &assignment,
                                                                 typename component_type::result_type &real_res) {
         auto real_res_ = FixedType(var_value(assignment, real_res.output), FixedType::SCALE);
         double real_res_f = real_res_.to_double();
 #ifdef BLUEPRINT_PLONK_PROFILING_ENABLED
-        PRINT_FIXED_POINT_TEST("atan")
+        PRINT_FIXED_POINT_TEST("asin")
 #endif
         if (!doubleEquals(expected_res_f, real_res_f, EPSILON) || expected_res != real_res_) {
-            PRINT_FIXED_POINT_TEST("atan")
+            PRINT_FIXED_POINT_TEST("asin")
             abort();
         }
     };
@@ -382,13 +377,13 @@ template<typename FixedType>
 void test_fixedpoint_acos(FixedType input) {
     using BlueprintFieldType = typename FixedType::field_type;
 
-    double expected_res_f = asin(input.to_double());
-    auto expected_res = input.asin();
+    double expected_res_f = acos(input.to_double());
+    auto expected_res = input.acos();
 
-    // std::cout << "input: " << input.to_double() << "\n";
-    // std::cout << "input_f: " << input.get_value().data << "\n";
-    // std::cout << "expected_res_f: " << expected_res_f << "\n";
-    // std::cout << "expected_res: " << expected_res.to_double() << "\n\n";
+    std::cout << "input: " << input.to_double() << "\n";
+    std::cout << "input_f: " << input.get_value().data << "\n";
+    std::cout << "expected_res_f: " << expected_res_f << "\n";
+    std::cout << "expected_res: " << expected_res.to_double() << "\n\n";
 }
 
 template<typename FieldType, typename RngType>

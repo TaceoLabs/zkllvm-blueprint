@@ -530,10 +530,33 @@ namespace nil {
                 auto div_comp = component.get_div_by_pos_component();
                 auto atan_comp = component.get_atan_component();
 
+                auto m2 = component.get_m2();
+
                 typename plonk_fixedpoint_div_by_pos<BlueprintFieldType, ArithmetizationParams>::input_type div_input;
                 typename plonk_fixedpoint_atan<BlueprintFieldType, ArithmetizationParams>::input_type atan_input;
 
-                // TODO
+                // Enable the sqrt component
+                if (m2 == 1) {
+                    typename plonk_fixedpoint_sqrt<BlueprintFieldType, ArithmetizationParams>::input_type sqrt_input;
+                    sqrt_input.x = var(splat(var_pos.sqrt_in), false);
+                    auto sqrt_out = generate_circuit(sqrt_comp, bp, assignment, sqrt_input, var_pos.sqrt_row).output;
+                    div_input.y = sqrt_out;
+                } else {
+                    typename plonk_fixedpoint_sqrt_floor<BlueprintFieldType, ArithmetizationParams>::input_type
+                        sqrt_input;
+                    sqrt_input.x = var(splat(var_pos.sqrt_in), false);
+                    auto sqrt_out =
+                        generate_circuit(sqrt_floor_comp, bp, assignment, sqrt_input, var_pos.sqrt_row).output;
+                    div_input.y = sqrt_out;
+                }
+
+                // Enable the div component
+                div_input.x = var(splat(var_pos.x), false);
+                auto div_out = generate_circuit(div_comp, bp, assignment, div_input, var_pos.div_row).output;
+
+                // Enable the atan component
+                atan_input.x = div_out;
+                generate_circuit(atan_comp, bp, assignment, atan_input, var_pos.atan_row);
 
                 // Enable the asin component
                 std::size_t asin_selector = generate_gates(component, bp, assignment, instance_input);
