@@ -190,33 +190,6 @@ namespace nil {
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
-            void generate_copy_constraints(
-                const plonk_fixedpoint_acos<BlueprintFieldType, ArithmetizationParams> &component,
-                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
-                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
-                    &assignment,
-                const typename plonk_fixedpoint_acos<BlueprintFieldType, ArithmetizationParams>::input_type
-                    &instance_input,
-                const std::size_t start_row_index) {
-
-                using var = typename plonk_fixedpoint_acos<BlueprintFieldType, ArithmetizationParams>::var;
-
-                const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-
-                auto atan_comp = component.get_atan_component();
-                std::uint32_t atan_row = var_pos.atan_row;
-
-                auto atan_res = typename plonk_fixedpoint_atan<BlueprintFieldType, ArithmetizationParams>::result_type(
-                    atan_comp, atan_row);
-
-                auto x = var(splat(var_pos.x), false);
-                auto atan_out = var(splat(var_pos.atan_out), false);
-
-                bp.add_copy_constraint({instance_input.x, x});
-                bp.add_copy_constraint({atan_res.output, atan_out});
-            }
-
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
             typename plonk_fixedpoint_acos<BlueprintFieldType, ArithmetizationParams>::result_type generate_circuit(
                 const plonk_fixedpoint_acos<BlueprintFieldType, ArithmetizationParams> &component,
                 circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
