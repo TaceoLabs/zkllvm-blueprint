@@ -138,7 +138,7 @@ namespace nil {
                 }
 
                 static std::size_t get_witness_columns(std::size_t witness_amount, uint8_t m1, uint8_t m2) {
-                    auto sqrt_witnesses = 0;
+                    std::size_t sqrt_witnesses = 0;
                     if (m2 == 1) {
                         sqrt_witnesses = sqrt_component::get_witness_columns(witness_amount, m1, m2);
                     } else {
@@ -146,7 +146,7 @@ namespace nil {
                     }
                     return std::max(sqrt_witnesses,
                                     std::max(atan_component::get_witness_columns(m1, m2),
-                                             div_by_pos_component::get_witness_columns(m1, m2)));
+                                             div_by_pos_component::get_witness_columns(witness_amount, m1, m2)));
                 }
 
                 struct var_positions {
