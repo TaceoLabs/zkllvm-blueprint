@@ -342,12 +342,174 @@ namespace nil {
                     instance_input,
                 const std::uint32_t start_row_index) {
 
+                using var = typename plonk_fixedpoint_asin<BlueprintFieldType, ArithmetizationParams>::var;
+
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
 
-                // TOOD
+                auto sqrt_comp = component.get_sqrt_component();
+                auto sqrt_floor_comp = component.get_sqrt_floor_component();
+                auto div_comp = component.get_div_by_pos_component();
+                auto atan_comp = component.get_atan_component();
+                auto delta = component.get_delta();
+                auto m2 = component.get_m2();
+
+                typename plonk_fixedpoint_div_by_pos<BlueprintFieldType, ArithmetizationParams>::input_type div_input;
+                typename plonk_fixedpoint_atan<BlueprintFieldType, ArithmetizationParams>::input_type atan_input;
+
+                ////////////////////////////////////////////////////////
+                // Build the trace
+                ////////////////////////////////////////////////////////
+                auto x_val = var_value(assignment, instance_input.x);
+                assignment.witness(splat(var_pos.x)) = x_val;
+
+                // square
+                typename BlueprintFieldType::value_type tmp = x_val * x_val;
+                DivMod<BlueprintFieldType> res =
+                    FixedPointHelper<BlueprintFieldType>::round_div_mod(tmp, component.get_delta());
+
+                auto sqrt_in_val = delta - res.quotient;
+                auto q_val = res.remainder;
+
+                assignment.witness(splat(var_pos.sqrt_in)) = sqrt_in_val;
+
+                if (m2 == 1) {
+                    assignment.witness(splat(var_pos.q0)) = q_val;
+                    // assign sqrt
+                    typename plonk_fixedpoint_sqrt<BlueprintFieldType, ArithmetizationParams>::input_type sqrt_input;
+                    sqrt_input.x = var(splat(var_pos.sqrt_in), false);
+                    auto sqrt_out = generate_assignments(sqrt_comp, assignment, sqrt_input, var_pos.sqrt_row).output;
+                    div_input.y = sqrt_out;
+                } else {
+                    std::vector<uint16_t> q0_val;
+                    bool sign = FixedPointHelper<BlueprintFieldType>::decompose(q_val, q0_val);
+                    BLUEPRINT_RELEASE_ASSERT(!sign);
+                    // is ok because q0_val is at least of size 4 and the biggest we have is 32.32
+                    BLUEPRINT_RELEASE_ASSERT(q0_val.size() >= component.get_m2());
+                    for (auto i = 0; i < component.get_m2(); i++) {
+                        assignment.witness(var_pos.q0.column() + i, var_pos.q0.row()) = q0_val[i];
+                    }
+                    // assign sqrt_floor
+                    typename plonk_fixedpoint_sqrt_floor<BlueprintFieldType, ArithmetizationParams>::input_type
+                        sqrt_input;
+                    sqrt_input.x = var(splat(var_pos.sqrt_in), false);
+                    auto sqrt_out =
+                        generate_assignments(sqrt_floor_comp, assignment, sqrt_input, var_pos.sqrt_row).output;
+                    div_input.y = sqrt_out;
+                }
+
+                // assign div
+                div_input.x = var(splat(var_pos.x), false);
+                auto div_out = generate_assignments(div_comp, assignment, div_input, var_pos.div_row).output;
+
+                // assign atan
+                atan_input.x = div_out;
+                auto atan_out = generate_assignments(atan_comp, assignment, atan_input, var_pos.atan_row).output;
+
+                // For asin we just assign y = atan_out, for acos we would assign y = pi/2 - atan_out
+                auto atan_val = var_value(assignment, atan_out);
+                assignment.witness(splat(var_pos.atan_out)) = atan_val;
+                assignment.witness(splat(var_pos.y)) = atan_val;
 
                 return typename plonk_fixedpoint_asin<BlueprintFieldType, ArithmetizationParams>::result_type(
                     component, start_row_index);
+            }
+
+            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            void generate_copy_constraints(
+                const plonk_fixedpoint_asin<BlueprintFieldType, ArithmetizationParams> &component,
+                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                    &assignment,
+                const typename plonk_fixedpoint_asin<BlueprintFieldType, ArithmetizationParams>::input_type
+                    &instance_input,
+                const std::size_t start_row_index) {
+
+                using var = typename plonk_fixedpoint_asin<BlueprintFieldType, ArithmetizationParams>::var;
+
+                const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
+
+                auto atan_comp = component.get_atan_component();
+                std::uint32_t atan_row = var_pos.atan_row;
+
+                auto atan_res = typename plonk_fixedpoint_atan<BlueprintFieldType, ArithmetizationParams>::result_type(
+                    atan_comp, atan_row);
+
+                auto x = var(splat(var_pos.x), false);
+                auto atan_out = var(splat(var_pos.atan_out), false);
+
+                bp.add_copy_constraint({instance_input.x, x});
+                bp.add_copy_constraint({atan_res.output, atan_out});
+            }
+
+            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            std::size_t generate_gates(
+                const plonk_fixedpoint_asin<BlueprintFieldType, ArithmetizationParams> &component,
+                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                    &assignment,
+                const typename plonk_fixedpoint_asin<BlueprintFieldType, ArithmetizationParams>::input_type
+                    &instance_input) {
+                using var = typename plonk_fixedpoint_asin<BlueprintFieldType, ArithmetizationParams>::var;
+
+                const int64_t start_row_index = static_cast<int64_t>(1) - component.rows_amount;
+                const auto var_pos = component.get_var_pos(start_row_index);
+
+                auto delta = component.get_delta();
+                auto m2 = component.get_m2();
+
+                auto q = nil::crypto3::math::expression(var(splat(var_pos.q0)));
+                for (auto i = 1; i < component.get_m2(); i++) {
+                    q += var(var_pos.q0.column() + i, var_pos.q0.row()) * (1ULL << (16 * i));
+                }
+
+                auto x = var(splat(var_pos.x));
+                auto y = var(splat(var_pos.y));
+                auto sqrt_in = var(splat(var_pos.sqrt_in));
+                auto atan_out = var(splat(var_pos.atan_out));
+
+                auto add_off = var(splat(var_pos.add_off), true, var::column_type::constant);
+                auto mul_off = var(splat(var_pos.mul_off), true, var::column_type::constant);
+
+                auto constraint_1 = 2 * (x * x - (delta - sqrt_in) * delta - q) + delta;
+                auto constraint_2 = mul_off * atan_out + add_off - y;
+
+                return bp.add_gate({constraint_1, constraint_2});
+            }
+
+            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            std::size_t generate_lookup_gates(
+                const plonk_fixedpoint_asin<BlueprintFieldType, ArithmetizationParams> &component,
+                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                    &assignment,
+                const typename plonk_fixedpoint_asin<BlueprintFieldType, ArithmetizationParams>::input_type
+                    &instance_input) {
+                int64_t start_row_index = 0;
+                const auto var_pos = component.get_var_pos(start_row_index);
+                auto m2 = component.get_m2();
+
+                const auto &lookup_tables_indices = bp.get_reserved_indices();
+
+                using var = typename plonk_fixedpoint_asin<BlueprintFieldType, ArithmetizationParams>::var;
+                using constraint_type = typename crypto3::zk::snark::plonk_lookup_constraint<BlueprintFieldType>;
+                using range_table =
+                    typename plonk_fixedpoint_asin<BlueprintFieldType, ArithmetizationParams>::range_table;
+
+                std::vector<constraint_type> constraints;
+                constraints.reserve(m2);
+
+                auto table_id = lookup_tables_indices.at(range_table::FULL_TABLE_NAME);
+
+                for (auto i = 0; i < m2; i++) {
+                    constraint_type constraint;
+                    constraint.table_id = table_id;
+
+                    auto qi = var(var_pos.q0.column() + i, var_pos.q0.row());
+                    constraint.lookup_input = {qi};
+                    constraints.push_back(constraint);
+                }
+
+                return bp.add_lookup_gate(constraints);
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
@@ -361,7 +523,30 @@ namespace nil {
                 const std::size_t start_row_index) {
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
 
+                using var = typename plonk_fixedpoint_asin<BlueprintFieldType, ArithmetizationParams>::var;
+
+                auto sqrt_comp = component.get_sqrt_component();
+                auto sqrt_floor_comp = component.get_sqrt_floor_component();
+                auto div_comp = component.get_div_by_pos_component();
+                auto atan_comp = component.get_atan_component();
+
+                typename plonk_fixedpoint_div_by_pos<BlueprintFieldType, ArithmetizationParams>::input_type div_input;
+                typename plonk_fixedpoint_atan<BlueprintFieldType, ArithmetizationParams>::input_type atan_input;
+
                 // TODO
+
+                // Enable the asin component
+                std::size_t asin_selector = generate_gates(component, bp, assignment, instance_input);
+                assignment.enable_selector(asin_selector, var_pos.asin_row);
+
+// Allows disabling the lookup tables for faster testing
+#ifndef TEST_WITHOUT_LOOKUP_TABLES
+                std::size_t lookup_selector_index = generate_lookup_gates(component, bp, assignment, instance_input);
+                assignment.enable_selector(lookup_selector_index, var_pos.asin_row);
+#endif
+
+                generate_copy_constraints(component, bp, assignment, instance_input, start_row_index);
+                generate_assignments_constant(component, assignment, instance_input, start_row_index);
 
                 return typename plonk_fixedpoint_asin<BlueprintFieldType, ArithmetizationParams>::result_type(
                     component, start_row_index);
@@ -377,7 +562,8 @@ namespace nil {
                 const std::size_t start_row_index) {
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
 
-                // TODO
+                assignment.constant(splat(var_pos.add_off)) = 0;
+                assignment.constant(splat(var_pos.mul_off)) = 1;
             }
 
         }    // namespace components
