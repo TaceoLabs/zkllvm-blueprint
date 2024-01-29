@@ -523,11 +523,11 @@ void test_components_on_random_data(RngType &rng) {
 
     FixedType x2(generate_random_post_comma_for_fixedpoint<typename FixedType::value_type>(FixedType::M_2, rng),
                  FixedType::SCALE);
-    // test_fixedpoint_sin<FixedType>(x);
-    // test_fixedpoint_cos<FixedType>(x);
-    // test_fixedpoint_tan_intermediate<FixedType>(x.to_double());
+    test_fixedpoint_sin<FixedType>(x);
+    test_fixedpoint_cos<FixedType>(x);
+    test_fixedpoint_tan_intermediate<FixedType>(x.to_double());
 
-    // test_fixedpoint_atan<FixedType>(x);
+    test_fixedpoint_atan<FixedType>(x);
     test_fixedpoint_asin<FixedType>(x2);
     test_fixedpoint_acos<FixedType>(x2);
 }
@@ -535,11 +535,11 @@ void test_components_on_random_data(RngType &rng) {
 template<typename FixedType>
 void test_components(double i) {
     FixedType x(i);
-    // test_fixedpoint_sin<FixedType>(x);
-    // test_fixedpoint_cos<FixedType>(x);
-    // test_fixedpoint_tan_intermediate<FixedType>(i);
+    test_fixedpoint_sin<FixedType>(x);
+    test_fixedpoint_cos<FixedType>(x);
+    test_fixedpoint_tan_intermediate<FixedType>(i);
 
-    // test_fixedpoint_atan<FixedType>(x);
+    test_fixedpoint_atan<FixedType>(x);
     if (i >= -1 && i <= 1) {
         test_fixedpoint_asin<FixedType>(x);
         test_fixedpoint_acos<FixedType>(x);
@@ -579,14 +579,14 @@ BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_trigonometric_test_vesta) {
 
 BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_trigonometric_test_pallas) {
     using field_type = typename crypto3::algebra::curves::pallas::base_field_type;
-    // field_operations_test<FixedPoint16_16<field_type>, random_tests_amount>();
-    // field_operations_test<FixedPoint32_32<field_type>, random_tests_amount>();
+    field_operations_test<FixedPoint16_16<field_type>, random_tests_amount>();
+    field_operations_test<FixedPoint32_32<field_type>, random_tests_amount>();
 }
 
 BOOST_AUTO_TEST_CASE(blueprint_plonk_fixedpoint_trigonometric_test_bls12) {
     using field_type = typename crypto3::algebra::fields::bls12_fr<381>;
-    // field_operations_test<FixedPoint16_16<field_type>, random_tests_amount>();
-    // field_operations_test<FixedPoint32_32<field_type>, random_tests_amount>();
+    field_operations_test<FixedPoint16_16<field_type>, random_tests_amount>();
+    field_operations_test<FixedPoint32_32<field_type>, random_tests_amount>();
 }
 
 BOOST_AUTO_TEST_SUITE_END()
