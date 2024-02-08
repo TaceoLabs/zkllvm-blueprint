@@ -28,16 +28,16 @@ namespace nil {
                     this->subtables[FULL_SUBTABLE_NAME] = {{0}, 0, fixedpoint_tables::RangeLen - 1};
                 }
 
-                virtual void generate() {
+                virtual void generate() override {
                     auto table = fixedpoint_tables::get_range_table();
                     this->_table = {table};
                 }
 
-                virtual std::size_t get_columns_number() {
+                virtual std::size_t get_columns_number() override {
                     return 1;
                 }
 
-                virtual std::size_t get_rows_number() {
+                virtual std::size_t get_rows_number() override {
                     return fixedpoint_tables::RangeLen;
                 }
             };

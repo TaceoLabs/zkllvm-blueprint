@@ -52,7 +52,7 @@ namespace nil {
                     auto witness_columns = exp_component::get_witness_columns(m2);
                     BLUEPRINT_RELEASE_ASSERT(this->witness_amount() >= witness_columns);
                     witness_list.reserve(witness_columns);
-                    for (auto i = 0; i < witness_columns; i++) {
+                    for (std::size_t i = 0; i < witness_columns; i++) {
                         witness_list.push_back(this->W(i));
                     }
                     return exp_component(witness_list, std::array<std::uint32_t, 0>(), std::array<std::uint32_t, 0>(),
@@ -96,8 +96,8 @@ namespace nil {
                 }
 
                 static std::size_t get_witness_columns(std::size_t witness_amount, uint8_t m1, uint8_t m2) {
-                    auto exp_cols = exp_component::get_witness_columns(m2);
-                    auto log_cols = 7 + 2 * (m2 + m1);
+                    std::size_t exp_cols = exp_component::get_witness_columns(m2);
+                    std::size_t log_cols = 7 + 2 * (m2 + m1);
                     return exp_cols > log_cols ? exp_cols : log_cols;
                 }
 
@@ -380,8 +380,8 @@ namespace nil {
 
                 std::vector<crypto3::zk::snark::plonk_constraint<BlueprintFieldType>> constraints;
 
-                auto a0 = nil::crypto3::math::expression(var(splat(var_pos.a0)));
-                auto b0 = nil::crypto3::math::expression(var(splat(var_pos.b0)));
+                auto a0 = nil::crypto3::math::expression<var>(var(splat(var_pos.a0)));
+                auto b0 = nil::crypto3::math::expression<var>(var(splat(var_pos.b0)));
                 for (auto i = 1; i < m; i++) {
                     a0 += var(var_pos.a0.column() + i, var_pos.a0.row()) * (1ULL << (16 * i));
                     b0 += var(var_pos.b0.column() + i, var_pos.b0.row()) * (1ULL << (16 * i));
