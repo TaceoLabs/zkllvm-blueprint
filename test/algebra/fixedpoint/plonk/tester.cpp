@@ -268,7 +268,7 @@ void add_tanh(ComponentType &component, FixedType input) {
 template<typename FixedType, typename ComponentType>
 void add_sqrt(ComponentType &component, FixedType input) {
 
-    double expected_res_f = sqrt(input.to_double());
+    double expected_res_f = std::sqrt(input.to_double());
     auto expected_res = input.sqrt();
 
     BLUEPRINT_RELEASE_ASSERT(doubleEquals(expected_res_f, expected_res.to_double(), EPSILON));
@@ -284,7 +284,7 @@ void add_sqrt(ComponentType &component, FixedType input) {
 template<typename FixedType, typename ComponentType>
 void add_sqrt_floor(ComponentType &component, FixedType input) {
 
-    double expected_res_f = sqrt(input.to_double());
+    double expected_res_f = std::sqrt(input.to_double());
     auto expected_res = input.sqrt(true);
 
     BLUEPRINT_RELEASE_ASSERT(doubleEquals(expected_res_f, expected_res.to_double(), EPSILON));
@@ -1303,7 +1303,7 @@ void field_operations_test_inner(ComponentType &component) {
                                                                                                                 \
     nil::crypto3::test_component<component_type, BlueprintFieldType, ArithmetizationParams, hash_type, Lambda>( \
         component_instance, public_input, result_check, instance_input,                                         \
-        crypto3::detail::connectedness_check_type::WEAK);                                                       \
+        nil::blueprint::connectedness_check_type::type::WEAK);                                                       \
     // We do not have inputs/outputs so the weak check is sufficient
 
 ////////////////////////////////////////////////////////////////////////////////

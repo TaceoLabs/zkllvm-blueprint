@@ -91,7 +91,7 @@ using namespace nil;
     std::vector<typename BlueprintFieldType::value_type> public_input = {value_type(a), value_type(b)};         \
     nil::crypto3::test_component<component_type, BlueprintFieldType, ArithmetizationParams, hash_type, Lambda>( \
         component_instance, public_input, result_check, instance_input,                                         \
-        crypto3::detail::connectedness_check_type::STRONG, m);
+        nil::blueprint::connectedness_check_type::type::STRONG, m);
 
 #define macro_stdout_test_progress(readable_name)                                \
     std::cout << std::endl << "STARTING " << readable_name << ":" << std::endl;  \

@@ -114,7 +114,7 @@ void test_fixedpoint_sin(FixedType input) {
         public_input,
         result_check,
         instance_input,
-        crypto3::detail::connectedness_check_type::STRONG,
+        nil::blueprint::connectedness_check_type::type::STRONG,
         FixedType::M_1,
         FixedType::M_2);
 }
@@ -181,7 +181,7 @@ void test_fixedpoint_cos(FixedType input) {
         public_input,
         result_check,
         instance_input,
-        crypto3::detail::connectedness_check_type::STRONG,
+        nil::blueprint::connectedness_check_type::type::STRONG,
         FixedType::M_1,
         FixedType::M_2);
 }
@@ -248,7 +248,7 @@ void test_fixedpoint_tan(FixedType input) {
         public_input,
         result_check,
         instance_input,
-        crypto3::detail::connectedness_check_type::STRONG,
+        nil::blueprint::connectedness_check_type::type::STRONG,
         FixedType::M_1,
         FixedType::M_2);
 }
@@ -376,7 +376,7 @@ void test_fixedpoint_asin(FixedType input) {
         public_input,
         result_check,
         instance_input,
-        crypto3::detail::connectedness_check_type::STRONG,
+        nil::blueprint::connectedness_check_type::type::STRONG,
         FixedType::M_1,
         FixedType::M_2);
 }
@@ -443,7 +443,7 @@ void test_fixedpoint_acos(FixedType input) {
         public_input,
         result_check,
         instance_input,
-        crypto3::detail::connectedness_check_type::STRONG,
+        nil::blueprint::connectedness_check_type::type::STRONG,
         FixedType::M_1,
         FixedType::M_2);
 }

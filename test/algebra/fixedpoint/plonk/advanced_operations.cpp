@@ -61,7 +61,7 @@ void test_fixedpoint_sqrt(FixedType input) {
 
     typename component_type::input_type instance_input = {var(0, 0, false, var::column_type::public_input)};
 
-    double expected_res_f = sqrt(input.to_double());
+    double expected_res_f = std::sqrt(input.to_double());
     auto expected_res = input.sqrt();
 
     auto result_check = [&expected_res, &expected_res_f, input](AssignmentType &assignment,
@@ -99,7 +99,7 @@ void test_fixedpoint_sqrt(FixedType input) {
         public_input,
         result_check,
         instance_input,
-        crypto3::detail::connectedness_check_type::STRONG,
+        nil::blueprint::connectedness_check_type::type::STRONG,
         FixedType::M_1,
         FixedType::M_2);
 }
@@ -127,7 +127,7 @@ void test_fixedpoint_sqrt_floor(FixedType input) {
 
     typename component_type::input_type instance_input = {var(0, 0, false, var::column_type::public_input)};
 
-    double expected_res_f = sqrt(input.to_double());
+    double expected_res_f = std::sqrt(input.to_double());
     auto expected_res = input.sqrt(true);
 
     auto result_check = [&expected_res, &expected_res_f, input](AssignmentType &assignment,
@@ -165,7 +165,7 @@ void test_fixedpoint_sqrt_floor(FixedType input) {
         public_input,
         result_check,
         instance_input,
-        crypto3::detail::connectedness_check_type::STRONG,
+        nil::blueprint::connectedness_check_type::type::STRONG,
         FixedType::M_1,
         FixedType::M_2);
 }
@@ -232,7 +232,7 @@ void test_fixedpoint_log(FixedType input) {
         public_input,
         result_check,
         instance_input,
-        crypto3::detail::connectedness_check_type::STRONG,
+        nil::blueprint::connectedness_check_type::type::STRONG,
         FixedType::M_1,
         FixedType::M_2);
 }
@@ -301,7 +301,7 @@ void test_fixedpoint_log_ranged(FixedType input) {
         public_input,
         result_check,
         instance_input,
-        crypto3::detail::connectedness_check_type::STRONG,
+        nil::blueprint::connectedness_check_type::type::STRONG,
         FixedType::M_1,
         FixedType::M_2);
 }

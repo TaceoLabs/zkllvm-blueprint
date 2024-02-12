@@ -510,7 +510,7 @@ void test_fixedpoint_div(FixedType input1, FixedType input2) {
     std::vector<typename BlueprintFieldType::value_type> public_input = {input1.get_value(), input2.get_value()};
     nil::crypto3::test_component<component_type, BlueprintFieldType, ArithmetizationParams, hash_type, Lambda>(
         component_instance, public_input, result_check, instance_input,
-        crypto3::detail::connectedness_check_type::STRONG, FixedType::M_1, FixedType::M_2);
+        nil::blueprint::connectedness_check_type::type::STRONG, FixedType::M_1, FixedType::M_2);
 }
 
 template<typename FixedType>
@@ -572,7 +572,7 @@ void test_fixedpoint_div_by_pos(FixedType input1, FixedType input2) {
     std::vector<typename BlueprintFieldType::value_type> public_input = {input1.get_value(), input2.get_value()};
     nil::crypto3::test_component<component_type, BlueprintFieldType, ArithmetizationParams, hash_type, Lambda>(
         component_instance, public_input, result_check, instance_input,
-        crypto3::detail::connectedness_check_type::STRONG, FixedType::M_1, FixedType::M_2);
+        nil::blueprint::connectedness_check_type::type::STRONG, FixedType::M_1, FixedType::M_2);
 }
 
 template<typename FixedType>
@@ -641,7 +641,7 @@ void test_fixedpoint_mod(FixedType input1, FixedType input2) {
     std::vector<typename BlueprintFieldType::value_type> public_input = {input1.get_value(), input2.get_value()};
     nil::crypto3::test_component<component_type, BlueprintFieldType, ArithmetizationParams, hash_type, Lambda>(
         component_instance, public_input, result_check, instance_input,
-        crypto3::detail::connectedness_check_type::STRONG, FixedType::M_1, FixedType::M_2);
+        nil::blueprint::connectedness_check_type::type::STRONG, FixedType::M_1, FixedType::M_2);
 }
 
 template<typename FixedType>
