@@ -43,13 +43,6 @@ namespace nil {
                 uint32_t dots;
                 uint32_t dots_per_row;
 
-                static uint8_t M(uint8_t m) {
-                    if (m == 0 || m > 2) {
-                        BLUEPRINT_RELEASE_ASSERT(false);
-                    }
-                    return m;
-                }
-
                 static std::size_t gates_amount_internal(std::size_t witness_amount, uint32_t dots) {
                     return get_dot_rows(witness_amount, 0, dots) == 1 ? 1 : 2;
                 }
@@ -77,8 +70,6 @@ namespace nil {
 
                 using var = typename component_type::var;
                 using manifest_type = plonk_component_manifest;
-                using lookup_table_definition =
-                    typename nil::crypto3::zk::snark::lookup_table_definition<BlueprintFieldType>;
 
                 class gate_manifest_type : public component_gate_manifest {
                 private:
@@ -187,12 +178,12 @@ namespace nil {
                     var output = var(0, 0, false);
                     result_type(const dot_2_gates &component, std::uint32_t start_row_index) {
                         const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-                        output = var(component.W(0), start_row_index + var_pos.dot_rows_amount - 1, false);
+                        output =  var(splat(var_pos.dot_result), false);
                     }
 
                     result_type(const dot_2_gates &component, std::size_t start_row_index) {
                         const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-                        output = var(component.W(0), start_row_index + var_pos.dot_rows_amount - 1, false);
+                        output =  var(splat(var_pos.dot_result), false);
                     }
 
                     std::vector<var> all_vars() const {
