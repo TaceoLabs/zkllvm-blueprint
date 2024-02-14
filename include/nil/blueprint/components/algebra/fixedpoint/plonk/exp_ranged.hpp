@@ -213,14 +213,14 @@ namespace nil {
                 using exp_component_result_type = typename exp_component::result_type;
                 struct result_type {
                 public:
-                    var output = var(0, 0, false);
+                    var output;
                     result_type(const fix_exp_ranged<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType,
                                                                                                  ArithmetizationParams>,
                                                      BlueprintFieldType, NonNativePolicyType> &component,
                                 std::uint32_t start_row_index) :
-                        inner(component.exp, start_row_index) {
-                        const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-                        inner = exp_component_result_type(component.exp, static_cast<size_t>(var_pos.exp_row));
+                        inner(
+                            component.exp,
+                            static_cast<size_t>(component.get_var_pos(static_cast<int64_t>(start_row_index)).exp_row)) {
                         output = inner.output;
                     }
 
@@ -228,9 +228,9 @@ namespace nil {
                                                                                                  ArithmetizationParams>,
                                                      BlueprintFieldType, NonNativePolicyType> &component,
                                 std::size_t start_row_index) :
-                        inner(component.exp, start_row_index) {
-                        const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-                        inner = exp_component_result_type(component.exp, static_cast<size_t>(var_pos.exp_row));
+                        inner(
+                            component.exp,
+                            static_cast<size_t>(component.get_var_pos(static_cast<int64_t>(start_row_index)).exp_row)) {
                         output = inner.output;
                     }
 

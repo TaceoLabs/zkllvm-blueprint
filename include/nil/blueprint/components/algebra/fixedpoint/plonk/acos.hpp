@@ -119,14 +119,14 @@ namespace nil {
                 using asin_result_type = typename asin_component::result_type;
                 struct result_type {
                 public:
-                    var output = var(0, 0, false);
+                    var output;
                     result_type(
                         const fix_acos<
                             crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                             BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>> &component,
                         std::uint32_t start_row_index) :
-                        inner(component.asin, start_row_index),
-                        output(inner.output) {
+                        inner(component.asin, start_row_index) {
+                        output = inner.output;
                     }
 
                     result_type(
@@ -134,8 +134,8 @@ namespace nil {
                             crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                             BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>> &component,
                         std::size_t start_row_index) :
-                        inner(component.asin, start_row_index),
-                        output(inner.output) {
+                        inner(component.asin, start_row_index) {
+                        output = inner.output;
                     }
 
                     result_type(asin_result_type inner) : inner(inner), output(inner.output) {

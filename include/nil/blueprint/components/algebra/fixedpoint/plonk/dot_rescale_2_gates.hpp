@@ -218,14 +218,16 @@ namespace nil {
                 using rescale_result_type = typename rescale_component::result_type;
                 struct result_type {
                 public:
-                    var output = var(0, 0, false);
+                    var output;
                     result_type(
                         const fix_dot_rescale_2_gates<
                             crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                             BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>> &component,
                         std::uint32_t start_row_index) :
-                        inner(component.rescale, start_row_index),
-                        output(inner.output) {
+                        inner(component.rescale,
+                              static_cast<size_t>(
+                                  component.get_var_pos(static_cast<int64_t>(start_row_index)).rescale_row)) {
+                        output = inner.output;
                     }
 
                     result_type(
@@ -233,8 +235,10 @@ namespace nil {
                             crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
                             BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>> &component,
                         std::size_t start_row_index) :
-                        inner(component.rescale, start_row_index),
-                        output(inner.output) {
+                        inner(component.rescale,
+                              static_cast<size_t>(
+                                  component.get_var_pos(static_cast<int64_t>(start_row_index)).rescale_row)) {
+                        output = inner.output;
                     }
 
                     result_type(rescale_result_type inner) : inner(inner), output(inner.output) {
