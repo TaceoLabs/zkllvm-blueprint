@@ -215,7 +215,37 @@ namespace nil {
                     return pos;
                 }
 
-                using result_type = typename rescale_component::result_type;
+                using rescale_result_type = typename rescale_component::result_type;
+                struct result_type {
+                public:
+                    var output = var(0, 0, false);
+                    result_type(
+                        const fix_dot_rescale_2_gates<
+                            crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                            BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>> &component,
+                        std::uint32_t start_row_index) :
+                        inner(component.rescale, start_row_index),
+                        output(inner.output) {
+                    }
+
+                    result_type(
+                        const fix_dot_rescale_2_gates<
+                            crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                            BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>> &component,
+                        std::size_t start_row_index) :
+                        inner(component.rescale, start_row_index),
+                        output(inner.output) {
+                    }
+
+                    result_type(rescale_result_type inner) : inner(inner), output(inner.output) {
+                    }
+                    std::vector<var> all_vars() const {
+                        return inner.all_vars();
+                    }
+
+                private:
+                    rescale_result_type inner;
+                };
 
 // Allows disabling the lookup tables for faster testing
 #ifndef TEST_WITHOUT_LOOKUP_TABLES
@@ -316,7 +346,9 @@ namespace nil {
                 rescale_input.x = var(splat(var_pos.dot_result), false);
 
                 auto rescale_comp = component.get_rescale_component();
-                return generate_assignments(rescale_comp, assignment, rescale_input, var_pos.rescale_row);
+                auto result = generate_assignments(rescale_comp, assignment, rescale_input, var_pos.rescale_row);
+                return typename plonk_fixedpoint_dot_rescale_2_gates<BlueprintFieldType,
+                                                                     ArithmetizationParams>::result_type(result);
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
@@ -447,7 +479,9 @@ namespace nil {
                 rescale_input.x = var(splat(var_pos.dot_result), false);
 
                 auto rescale_comp = component.get_rescale_component();
-                return generate_circuit(rescale_comp, bp, assignment, rescale_input, var_pos.rescale_row);
+                auto result = generate_circuit(rescale_comp, bp, assignment, rescale_input, var_pos.rescale_row);
+                return typename plonk_fixedpoint_dot_rescale_2_gates<BlueprintFieldType,
+                                                                     ArithmetizationParams>::result_type(result);
             }
 
         }    // namespace components

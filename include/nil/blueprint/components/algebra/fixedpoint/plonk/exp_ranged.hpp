@@ -210,17 +210,49 @@ namespace nil {
                     get_rows_amount(this->witness_amount(), 0, range.get_m1(), range.get_m2());
 
                 using input_type = typename exp_component::input_type;
-                using result_type = typename exp_component::result_type;
+                using exp_component_result_type = typename exp_component::result_type;
+                struct result_type {
+                public:
+                    var output = var(0, 0, false);
+                    result_type(const fix_exp_ranged<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType,
+                                                                                                 ArithmetizationParams>,
+                                                     BlueprintFieldType, NonNativePolicyType> &component,
+                                std::uint32_t start_row_index) :
+                        inner(component.exp, start_row_index) {
+                        const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
+                        inner = exp_component_result_type(component.exp, static_cast<size_t>(var_pos.exp_row));
+                        output = inner.output;
+                    }
 
-                result_type get_result(std::uint32_t start_row_index) const {
-                    const auto var_pos = get_var_pos(static_cast<int64_t>(start_row_index));
-                    return result_type(exp, static_cast<size_t>(var_pos.exp_row));
-                }
+                    result_type(const fix_exp_ranged<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType,
+                                                                                                 ArithmetizationParams>,
+                                                     BlueprintFieldType, NonNativePolicyType> &component,
+                                std::size_t start_row_index) :
+                        inner(component.exp, start_row_index) {
+                        const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
+                        inner = exp_component_result_type(component.exp, static_cast<size_t>(var_pos.exp_row));
+                        output = inner.output;
+                    }
 
-                result_type get_result(std::size_t start_row_index) const {
-                    const auto var_pos = get_var_pos(static_cast<int64_t>(start_row_index));
-                    return result_type(exp, static_cast<size_t>(var_pos.exp_row));
-                }
+                    result_type(exp_component_result_type inner) : inner(inner), output(inner.output) {
+                    }
+                    std::vector<var> all_vars() const {
+                        return inner.all_vars();
+                    }
+
+                private:
+                    exp_component_result_type inner;
+                };
+
+                // result_type get_result(std::uint32_t start_row_index) const {
+                //     const auto var_pos = get_var_pos(static_cast<int64_t>(start_row_index));
+                //     return result_type(exp, static_cast<size_t>(var_pos.exp_row));
+                // }
+                //
+                // result_type get_result(std::size_t start_row_index) const {
+                //     const auto var_pos = get_var_pos(static_cast<int64_t>(start_row_index));
+                //     return result_type(exp, static_cast<size_t>(var_pos.exp_row));
+                // }
 
 // Allows disabling the lookup tables for faster testing
 #ifndef TEST_WITHOUT_LOOKUP_TABLES
@@ -369,7 +401,8 @@ namespace nil {
                 // Finally, we have to put the min/max values into the constant columns
                 generate_assignments_constant(component, assignment, instance_input, var_pos.start_row);
 
-                return component.get_result(start_row_index);
+                return typename plonk_fixedpoint_exp_ranged<BlueprintFieldType, ArithmetizationParams>::result_type(
+                    component, start_row_index);
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
