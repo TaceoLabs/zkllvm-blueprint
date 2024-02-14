@@ -131,7 +131,37 @@ namespace nil {
                     get_rows_amount(this->witness_amount(), 0, div_by_pos.get_m1(), div_by_pos.get_m2());
 
                 using input_type = typename div_by_pos_component::input_type;
-                using result_type = typename div_by_pos_component::result_type;
+                using div_by_pos_result_type = typename div_by_pos_component::result_type;
+                struct result_type {
+                public:
+                    var output = var(0, 0, false);
+                    result_type(
+                        const fix_div<
+                            crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                            BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>> &component,
+                        std::uint32_t start_row_index) :
+                        inner(component.div_by_pos, start_row_index),
+                        output(inner.output) {
+                    }
+
+                    result_type(
+                        const fix_div<
+                            crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                            BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>> &component,
+                        std::size_t start_row_index) :
+                        inner(component.div_by_pos, start_row_index),
+                        output(inner.output) {
+                    }
+
+                    result_type(div_by_pos_result_type inner) : inner(inner), output(inner.output) {
+                    }
+                    std::vector<var> all_vars() const {
+                        return inner.all_vars();
+                    }
+
+                private:
+                    div_by_pos_result_type inner;
+                };
 
                 struct var_positions {
                     CellPosition x, y, z, c, q0, a0, s_y, y0;
@@ -255,7 +285,7 @@ namespace nil {
                     assignment.witness(var_pos.y0.column() + i, var_pos.y0.row()) = y0_val[i];
                 }
 
-                return result;
+                return typename plonk_fixedpoint_div<BlueprintFieldType, ArithmetizationParams>::result_type(result);
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
@@ -370,7 +400,7 @@ namespace nil {
                 generate_copy_constraints(div_by_pos_comp, bp, assignment, instance_input, start_row_index);
 
                 return typename plonk_fixedpoint_div<BlueprintFieldType, ArithmetizationParams>::result_type(
-                    div_by_pos_comp, start_row_index);
+                    component, start_row_index);
             }
 
         }    // namespace components

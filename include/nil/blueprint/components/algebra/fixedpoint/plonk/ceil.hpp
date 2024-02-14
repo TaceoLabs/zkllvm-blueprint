@@ -112,7 +112,37 @@ namespace nil {
                 const std::size_t rows_amount = get_rows_amount(this->witness_amount(), 0);
 
                 using input_type = typename floor_component::input_type;
-                using result_type = typename floor_component::result_type;
+                using floor_result_type = typename floor_component::result_type;
+                struct result_type {
+                public:
+                    var output = var(0, 0, false);
+                    result_type(
+                        const fix_ceil<
+                            crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                            BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>> &component,
+                        std::uint32_t start_row_index) :
+                        inner(component.floor, start_row_index),
+                        output(inner.output) {
+                    }
+
+                    result_type(
+                        const fix_ceil<
+                            crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                            BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>> &component,
+                        std::size_t start_row_index) :
+                        inner(component.floor, start_row_index),
+                        output(inner.output) {
+                    }
+
+                    result_type(floor_result_type inner) : inner(inner), output(inner.output) {
+                    }
+                    std::vector<var> all_vars() const {
+                        return inner.all_vars();
+                    }
+
+                private:
+                    floor_result_type inner;
+                };
                 using var_positions = typename floor_component::var_positions;
 
 // Allows disabling the lookup tables for faster testing
@@ -156,7 +186,8 @@ namespace nil {
                     instance_input,
                 const std::uint32_t start_row_index) {
                 auto floor = component.get_floor_component();
-                return generate_assignments(floor, assignment, instance_input, start_row_index, component.get_offset());
+                auto result = generate_assignments(floor, assignment, instance_input, start_row_index, component.get_offset());
+                return typename plonk_fixedpoint_ceil<BlueprintFieldType, ArithmetizationParams>::result_type(result);
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
@@ -170,7 +201,8 @@ namespace nil {
                 const std::size_t start_row_index) {
 
                 auto floor = component.get_floor_component();
-                return generate_circuit(floor, bp, assignment, instance_input, start_row_index, component.get_offset());
+                auto result = generate_circuit(floor, bp, assignment, instance_input, start_row_index, component.get_offset());
+                return typename plonk_fixedpoint_ceil<BlueprintFieldType, ArithmetizationParams>::result_type(result);
             }
 
         }    // namespace components

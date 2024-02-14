@@ -116,7 +116,37 @@ namespace nil {
                 const std::size_t rows_amount = get_rows_amount(this->witness_amount(), 0, get_m1(), get_m2());
 
                 using input_type = typename asin_component::input_type;
-                using result_type = typename asin_component::result_type;
+                using asin_result_type = typename asin_component::result_type;
+                struct result_type {
+                public:
+                    var output = var(0, 0, false);
+                    result_type(
+                        const fix_acos<
+                            crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                            BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>> &component,
+                        std::uint32_t start_row_index) :
+                        inner(component.asin, start_row_index),
+                        output(inner.output) {
+                    }
+
+                    result_type(
+                        const fix_acos<
+                            crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                            BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>> &component,
+                        std::size_t start_row_index) :
+                        inner(component.asin, start_row_index),
+                        output(inner.output) {
+                    }
+
+                    result_type(asin_result_type inner) : inner(inner), output(inner.output) {
+                    }
+                    std::vector<var> all_vars() const {
+                        return inner.all_vars();
+                    }
+
+                private:
+                    asin_result_type inner;
+                };
 
 // Allows disabling the lookup tables for faster testing
 #ifndef TEST_WITHOUT_LOOKUP_TABLES
@@ -181,8 +211,7 @@ namespace nil {
                 }
                 auto res = assignment.witness(splat(var_pos.y));
                 assignment.witness(splat(var_pos.y)) = pi_2 - res;
-
-                return asin_res;
+                return typename plonk_fixedpoint_acos<BlueprintFieldType, ArithmetizationParams>::result_type(asin_res);
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
@@ -202,7 +231,7 @@ namespace nil {
                 // Overwrite the constants
                 generate_assignments_constant(component, assignment, instance_input, start_row_index);
 
-                return asin_res;
+                return typename plonk_fixedpoint_acos<BlueprintFieldType, ArithmetizationParams>::result_type(asin_res);
             }
 
             template<typename BlueprintFieldType, typename ArithmetizationParams>
