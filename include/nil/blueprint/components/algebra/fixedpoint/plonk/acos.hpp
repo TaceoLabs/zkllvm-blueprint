@@ -138,7 +138,7 @@ namespace nil {
                         output = inner.output;
                     }
 
-                    result_type(asin_result_type inner) : inner(inner), output(inner.output) {
+                    result_type(asin_result_type inner) : output(inner.output), inner(inner) {
                     }
                     std::vector<var> all_vars() const {
                         return inner.all_vars();
