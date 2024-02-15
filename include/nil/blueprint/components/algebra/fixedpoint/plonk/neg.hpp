@@ -137,12 +137,7 @@ namespace nil {
 
                 auto x = var_value(assignment, instance_input.x);
                 assignment.witness(splat(var_pos.x)) = x;
-                if (x == 0) {
-                    // Workaround for bug that x != -x for x = 0;
-                    assignment.witness(splat(var_pos.y)) = x;
-                } else {
-                    assignment.witness(splat(var_pos.y)) = -x;
-                }
+                assignment.witness(splat(var_pos.y)) = -x;
 
                 return typename plonk_fixedpoint_neg<BlueprintFieldType, ArithmetizationParams>::result_type(
                     component, start_row_index);
