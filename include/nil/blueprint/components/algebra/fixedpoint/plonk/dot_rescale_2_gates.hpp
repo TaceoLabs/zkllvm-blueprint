@@ -125,7 +125,7 @@ namespace nil {
                 }
 
                 // Hardcoded to max 15 for now
-                static manifest_type get_manifest(uint32_t dots, uint8_t m2) {
+                static manifest_type get_manifest(uint8_t m2) {
                     manifest_type manifest =
                         manifest_type(std::shared_ptr<manifest_param>(new manifest_range_param(3, 15)), false)
                             .merge_with(rescale_component::get_manifest(m2));
@@ -264,7 +264,7 @@ namespace nil {
 
                 template<typename ContainerType>
                 explicit fix_dot_rescale_2_gates(ContainerType witness, uint32_t dots, uint8_t m2) :
-                    component_type(witness, {}, {}, get_manifest(dots, m2)), dots(dots), m2(m2),
+                    component_type(witness, {}, {}, get_manifest(m2)), dots(dots), m2(m2),
                     rescale(instantiate_rescale(m2)) {
                     dots_per_row = (this->witness_amount() - 1) / 2;
                 };
@@ -273,7 +273,7 @@ namespace nil {
                          typename PublicInputContainerType>
                 fix_dot_rescale_2_gates(WitnessContainerType witness, ConstantContainerType constant,
                                         PublicInputContainerType public_input, uint32_t dots, uint8_t m2) :
-                    component_type(witness, constant, public_input, get_manifest(dots, m2)),
+                    component_type(witness, constant, public_input, get_manifest(m2)),
                     dots(dots), m2(m2), rescale(instantiate_rescale(m2)) {
                     dots_per_row = (this->witness_amount() - 1) / 2;
                 };
@@ -284,7 +284,7 @@ namespace nil {
                     std::initializer_list<typename component_type::public_input_container_type::value_type>
                         public_inputs,
                     uint32_t dots, uint8_t m2) :
-                    component_type(witnesses, constants, public_inputs, get_manifest(dots, m2)),
+                    component_type(witnesses, constants, public_inputs, get_manifest(m2)),
                     dots(dots), m2(m2), rescale(instantiate_rescale(m2)) {
                     dots_per_row = (this->witness_amount() - 1) / 2;
                 };
