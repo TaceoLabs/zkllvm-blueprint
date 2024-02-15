@@ -93,7 +93,7 @@ namespace nil {
                 }
 
                 // Hardcoded to max 15 for now
-                static manifest_type get_manifest(uint32_t dots) {
+                static manifest_type get_manifest() {
                     manifest_type manifest =
                         manifest_type(std::shared_ptr<manifest_param>(new manifest_range_param(3, 15)), false);
                     return manifest;
@@ -193,7 +193,7 @@ namespace nil {
 
                 template<typename ContainerType>
                 explicit dot_2_gates(ContainerType witness, uint32_t dots) :
-                    component_type(witness, {}, {}, get_manifest(dots)), dots(dots) {
+                    component_type(witness, {}, {}, get_manifest()), dots(dots) {
                     dots_per_row = (this->witness_amount() - 1) / 2;
                 };
 
@@ -201,7 +201,7 @@ namespace nil {
                          typename PublicInputContainerType>
                 dot_2_gates(WitnessContainerType witness, ConstantContainerType constant,
                             PublicInputContainerType public_input, uint32_t dots) :
-                    component_type(witness, constant, public_input, get_manifest(dots)),
+                    component_type(witness, constant, public_input, get_manifest()),
                     dots(dots) {
                     dots_per_row = (this->witness_amount() - 1) / 2;
                 };
@@ -213,7 +213,7 @@ namespace nil {
                             std::initializer_list<typename component_type::public_input_container_type::value_type>
                                 public_inputs,
                             uint32_t dots) :
-                    component_type(witnesses, constants, public_inputs, get_manifest(dots)),
+                    component_type(witnesses, constants, public_inputs, get_manifest()),
                     dots(dots) {
                     dots_per_row = (this->witness_amount() - 1) / 2;
                 };
