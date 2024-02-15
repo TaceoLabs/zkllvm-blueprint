@@ -178,12 +178,12 @@ namespace nil {
                     var output = var(0, 0, false);
                     result_type(const dot_2_gates &component, std::uint32_t start_row_index) {
                         const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-                        output =  var(splat(var_pos.dot_result), false);
+                        output = var(splat(var_pos.dot_result), false);
                     }
 
                     result_type(const dot_2_gates &component, std::size_t start_row_index) {
                         const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-                        output =  var(splat(var_pos.dot_result), false);
+                        output = var(splat(var_pos.dot_result), false);
                     }
 
                     std::vector<var> all_vars() const {
@@ -373,8 +373,6 @@ namespace nil {
                     &assignment,
                 const typename plonk_dot_2_gates<BlueprintFieldType, ArithmetizationParams>::input_type &instance_input,
                 const std::size_t start_row_index) {
-
-                const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
 
                 std::size_t first_selector = generate_first_gate(component, bp, assignment, instance_input);
                 assignment.enable_selector(first_selector, start_row_index);

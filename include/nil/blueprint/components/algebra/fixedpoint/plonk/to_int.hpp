@@ -381,7 +381,7 @@ namespace nil {
                     x_post += var(var_pos.x0.column() + i, var_pos.x0.row()) * (1ULL << (16 * i));
                 }
 
-                auto x_pre = nil::crypto3::math::expression(var(var_pos.x0.column() + m2, var_pos.x0.row()));
+                auto x_pre = nil::crypto3::math::expression<var>(var(var_pos.x0.column() + m2, var_pos.x0.row()));
                 if (component.out_type ==
                         plonk_fixedpoint_to_int<BlueprintFieldType, ArithmetizationParams>::OutputType::U8 ||
                     component.out_type ==
