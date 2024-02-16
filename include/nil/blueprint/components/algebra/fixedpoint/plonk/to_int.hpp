@@ -219,7 +219,6 @@ namespace nil {
                 };
 
 // Allows disabling the lookup tables for faster testing
-// TACEO_TODO add uint8_t lookup table if required
 #ifndef TEST_WITHOUT_LOOKUP_TABLES
                 std::vector<std::shared_ptr<lookup_table_definition>> component_custom_lookup_tables() {
                     std::vector<std::shared_ptr<lookup_table_definition>> result = {};
