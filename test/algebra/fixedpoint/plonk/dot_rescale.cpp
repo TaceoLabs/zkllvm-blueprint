@@ -46,9 +46,7 @@ void test_fixedpoint_dot_1_gate(std::vector<FixedType> &input1, std::vector<Fixe
     constexpr std::size_t PublicInputColumns = 1;
     constexpr std::size_t ConstantColumns = 2;
     constexpr std::size_t SelectorColumns = 4;
-    using ArithmetizationParams = crypto3::zk::snark::plonk_arithmetization_params<WitnessColumns, PublicInputColumns,
-                                                                                   ConstantColumns, SelectorColumns>;
-    using ArithmetizationType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>;
+    using ArithmetizationType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>;
     using hash_type = nil::crypto3::hashes::keccak_1600<256>;
     constexpr std::size_t Lambda = 40;
     using AssignmentType = nil::blueprint::assignment<ArithmetizationType>;
@@ -111,8 +109,10 @@ void test_fixedpoint_dot_1_gate(std::vector<FixedType> &input1, std::vector<Fixe
     component_type component_instance(witness_list, std::array<std::uint32_t, 0>(), std::array<std::uint32_t, 0>(),
                                       dots, FixedType::M_2);
 
-    nil::crypto3::test_component<component_type, BlueprintFieldType, ArithmetizationParams, hash_type, Lambda>(
-        component_instance, public_input, result_check, instance_input, nil::blueprint::connectedness_check_type::type::NONE,
+    nil::crypto3::test_component<component_type, BlueprintFieldType, hash_type, Lambda>(
+        component_instance,
+        nil::crypto3::zk::snark::plonk_table_description<BlueprintFieldType>(
+            WitnessColumns, PublicInputColumns, ConstantColumns, SelectorColumns), public_input, result_check, instance_input, nil::blueprint::connectedness_check_type::type::NONE,
         static_cast<uint32_t>(dots), FixedType::M_2);
     // The zero is sometimes not connected
 }
@@ -126,9 +126,7 @@ void test_fixedpoint_dot_2_gates(std::vector<FixedType> &input1, std::vector<Fix
     constexpr std::size_t PublicInputColumns = 1;
     constexpr std::size_t ConstantColumns = 2;
     constexpr std::size_t SelectorColumns = 5;
-    using ArithmetizationParams = crypto3::zk::snark::plonk_arithmetization_params<WitnessColumns, PublicInputColumns,
-                                                                                   ConstantColumns, SelectorColumns>;
-    using ArithmetizationType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>;
+    using ArithmetizationType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>;
     using hash_type = nil::crypto3::hashes::keccak_1600<256>;
     constexpr std::size_t Lambda = 40;
     using AssignmentType = nil::blueprint::assignment<ArithmetizationType>;
@@ -191,8 +189,10 @@ void test_fixedpoint_dot_2_gates(std::vector<FixedType> &input1, std::vector<Fix
     component_type component_instance(witness_list, std::array<std::uint32_t, 0>(), std::array<std::uint32_t, 0>(),
                                       dots, FixedType::M_2);
 
-    nil::crypto3::test_component<component_type, BlueprintFieldType, ArithmetizationParams, hash_type, Lambda>(
-        component_instance, public_input, result_check, instance_input, nil::blueprint::connectedness_check_type::type::NONE,
+    nil::crypto3::test_component<component_type, BlueprintFieldType, hash_type, Lambda>(
+        component_instance,
+        nil::crypto3::zk::snark::plonk_table_description<BlueprintFieldType>(
+            WitnessColumns, PublicInputColumns, ConstantColumns, SelectorColumns), public_input, result_check, instance_input, nil::blueprint::connectedness_check_type::type::NONE,
         static_cast<uint32_t>(dots), FixedType::M_2);
     // The zero is sometimes not connected
 }

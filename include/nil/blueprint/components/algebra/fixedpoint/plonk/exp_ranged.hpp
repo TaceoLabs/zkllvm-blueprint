@@ -24,19 +24,20 @@ namespace nil {
             template<typename ArithmetizationType, typename FieldType, typename NonNativePolicyType>
             class fix_exp_ranged;
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams, typename NonNativePolicyType>
-            class fix_exp_ranged<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+            template<typename BlueprintFieldType, typename NonNativePolicyType>
+            class fix_exp_ranged<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                                  BlueprintFieldType, NonNativePolicyType>
-                : public plonk_component<BlueprintFieldType, ArithmetizationParams, 2, 0> {
+                : public plonk_component<BlueprintFieldType> {
 
             public:
+                static const int constants_amount = 2;
                 using value_type = typename BlueprintFieldType::value_type;
 
                 using exp_component =
-                    fix_exp<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                    fix_exp<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                             BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
                 using range_component =
-                    fix_range<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                    fix_range<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                               BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
             private:
@@ -169,7 +170,7 @@ namespace nil {
                     return exp_max;
                 }
 
-                using component_type = plonk_component<BlueprintFieldType, ArithmetizationParams, 2, 0>;
+                using component_type = plonk_component<BlueprintFieldType>;
 
                 using var = typename component_type::var;
                 using manifest_type = plonk_component_manifest;
@@ -214,8 +215,7 @@ namespace nil {
                 struct result_type {
                 public:
                     var output;
-                    result_type(const fix_exp_ranged<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType,
-                                                                                                 ArithmetizationParams>,
+                    result_type(const fix_exp_ranged<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                                                      BlueprintFieldType, NonNativePolicyType> &component,
                                 std::uint32_t start_row_index) :
                         inner(
@@ -224,8 +224,7 @@ namespace nil {
                         output = inner.output;
                     }
 
-                    result_type(const fix_exp_ranged<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType,
-                                                                                                 ArithmetizationParams>,
+                    result_type(const fix_exp_ranged<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                                                      BlueprintFieldType, NonNativePolicyType> &component,
                                 std::size_t start_row_index) :
                         inner(
@@ -236,7 +235,7 @@ namespace nil {
 
                     result_type(exp_component_result_type inner) : output(inner.output), inner(inner) {
                     }
-                    std::vector<var> all_vars() const {
+                    std::vector<std::reference_wrapper<var>> all_vars() {
                         return inner.all_vars();
                     }
 
@@ -290,18 +289,18 @@ namespace nil {
                     exp_max(calc_max(m1, m2)), exp(instantiate_exp(m2)), range(instantiate_range(m1, m2, lo, hi)) {};
             };
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            template<typename BlueprintFieldType>
             using plonk_fixedpoint_exp_ranged =
-                fix_exp_ranged<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                fix_exp_ranged<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                                BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
-            typename plonk_fixedpoint_exp_ranged<BlueprintFieldType, ArithmetizationParams>::result_type
+            template<typename BlueprintFieldType>
+            typename plonk_fixedpoint_exp_ranged<BlueprintFieldType>::result_type
                 generate_assignments(
-                    const plonk_fixedpoint_exp_ranged<BlueprintFieldType, ArithmetizationParams> &component,
-                    assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                    const plonk_fixedpoint_exp_ranged<BlueprintFieldType> &component,
+                    assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                         &assignment,
-                    const typename plonk_fixedpoint_exp_ranged<BlueprintFieldType, ArithmetizationParams>::input_type
+                    const typename plonk_fixedpoint_exp_ranged<BlueprintFieldType>::input_type
                         instance_input,
                     const std::uint32_t start_row_index) {
 
@@ -311,8 +310,7 @@ namespace nil {
                 // First, we put the range gadget into the trace
                 // Then, we add the exp gadget into new rows
 
-                typename plonk_fixedpoint_exp_ranged<BlueprintFieldType,
-                                                     ArithmetizationParams>::range_component::input_type range_input;
+                typename plonk_fixedpoint_exp_ranged<BlueprintFieldType>::range_component::input_type range_input;
                 range_input.x = instance_input.x;
 
                 auto range_comp = component.get_range_component();
@@ -331,19 +329,19 @@ namespace nil {
                 return exp_result;
             }
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            template<typename BlueprintFieldType>
             std::size_t generate_exp_gates(
-                const plonk_fixedpoint_exp_ranged<BlueprintFieldType, ArithmetizationParams> &component,
-                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
-                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                const plonk_fixedpoint_exp_ranged<BlueprintFieldType> &component,
+                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>> &bp,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                     &assignment,
-                const typename plonk_fixedpoint_exp_ranged<BlueprintFieldType, ArithmetizationParams>::input_type
+                const typename plonk_fixedpoint_exp_ranged<BlueprintFieldType>::input_type
                     &instance_input) {
 
                 int64_t start_row_index = 1 - static_cast<int64_t>(component.rows_amount);
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
 
-                using var = typename plonk_fixedpoint_exp_ranged<BlueprintFieldType, ArithmetizationParams>::var;
+                using var = typename plonk_fixedpoint_exp_ranged<BlueprintFieldType>::var;
 
                 auto exp_comp = component.get_exp_component();
 
@@ -363,20 +361,19 @@ namespace nil {
                 return bp.add_gate(constraints);
             }
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
-            typename plonk_fixedpoint_exp_ranged<BlueprintFieldType, ArithmetizationParams>::result_type
+            template<typename BlueprintFieldType>
+            typename plonk_fixedpoint_exp_ranged<BlueprintFieldType>::result_type
                 generate_circuit(
-                    const plonk_fixedpoint_exp_ranged<BlueprintFieldType, ArithmetizationParams> &component,
-                    circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
-                    assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                    const plonk_fixedpoint_exp_ranged<BlueprintFieldType> &component,
+                    circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>> &bp,
+                    assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                         &assignment,
-                    const typename plonk_fixedpoint_exp_ranged<BlueprintFieldType, ArithmetizationParams>::input_type
+                    const typename plonk_fixedpoint_exp_ranged<BlueprintFieldType>::input_type
                         &instance_input,
                     const std::size_t start_row_index) {
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
 
-                typename plonk_fixedpoint_exp_ranged<BlueprintFieldType,
-                                                     ArithmetizationParams>::range_component::input_type range_input;
+                typename plonk_fixedpoint_exp_ranged<BlueprintFieldType>::range_component::input_type range_input;
                 range_input.x = instance_input.x;
 
                 // Enable the range component
@@ -401,16 +398,16 @@ namespace nil {
                 // Finally, we have to put the min/max values into the constant columns
                 generate_assignments_constant(component, assignment, instance_input, var_pos.start_row);
 
-                return typename plonk_fixedpoint_exp_ranged<BlueprintFieldType, ArithmetizationParams>::result_type(
+                return typename plonk_fixedpoint_exp_ranged<BlueprintFieldType>::result_type(
                     component, start_row_index);
             }
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            template<typename BlueprintFieldType>
             void generate_assignments_constant(
-                const plonk_fixedpoint_exp_ranged<BlueprintFieldType, ArithmetizationParams> &component,
-                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                const plonk_fixedpoint_exp_ranged<BlueprintFieldType> &component,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                     &assignment,
-                const typename plonk_fixedpoint_exp_ranged<BlueprintFieldType, ArithmetizationParams>::input_type
+                const typename plonk_fixedpoint_exp_ranged<BlueprintFieldType>::input_type
                     &instance_input,
                 const std::size_t start_row_index) {
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));

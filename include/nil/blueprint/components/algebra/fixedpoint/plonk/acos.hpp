@@ -20,16 +20,17 @@ namespace nil {
             template<typename ArithmetizationType, typename FieldType, typename NonNativePolicyType>
             class fix_acos;
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams, typename NonNativePolicyType>
-            class fix_acos<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+            template<typename BlueprintFieldType, typename NonNativePolicyType>
+            class fix_acos<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                            BlueprintFieldType, NonNativePolicyType>
-                : public plonk_component<BlueprintFieldType, ArithmetizationParams, 2, 0> {
+                : public plonk_component<BlueprintFieldType> {
 
             public:
+                static const int constants_amount = 2;
                 using value_type = typename BlueprintFieldType::value_type;
 
                 using asin_component =
-                    fix_asin<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                    fix_asin<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                              BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
             private:
@@ -90,7 +91,7 @@ namespace nil {
                     return asin;
                 }
 
-                using component_type = plonk_component<BlueprintFieldType, ArithmetizationParams, 2, 0>;
+                using component_type = plonk_component<BlueprintFieldType>;
 
                 using var = typename component_type::var;
                 using manifest_type = plonk_component_manifest;
@@ -122,7 +123,7 @@ namespace nil {
                     var output;
                     result_type(
                         const fix_acos<
-                            crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                            crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                             BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>> &component,
                         std::uint32_t start_row_index) :
                         inner(component.asin, start_row_index) {
@@ -131,7 +132,7 @@ namespace nil {
 
                     result_type(
                         const fix_acos<
-                            crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                            crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                             BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>> &component,
                         std::size_t start_row_index) :
                         inner(component.asin, start_row_index) {
@@ -140,7 +141,7 @@ namespace nil {
 
                     result_type(asin_result_type inner) : output(inner.output), inner(inner) {
                     }
-                    std::vector<var> all_vars() const {
+                    std::vector<std::reference_wrapper<var>> all_vars() {
                         return inner.all_vars();
                     }
 
@@ -179,17 +180,17 @@ namespace nil {
                     asin(instantiate_asin(m1, m2)) {};
             };
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            template<typename BlueprintFieldType>
             using plonk_fixedpoint_acos =
-                fix_acos<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                fix_acos<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                          BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
-            typename plonk_fixedpoint_acos<BlueprintFieldType, ArithmetizationParams>::result_type generate_assignments(
-                const plonk_fixedpoint_acos<BlueprintFieldType, ArithmetizationParams> &component,
-                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+            template<typename BlueprintFieldType>
+            typename plonk_fixedpoint_acos<BlueprintFieldType>::result_type generate_assignments(
+                const plonk_fixedpoint_acos<BlueprintFieldType> &component,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                     &assignment,
-                const typename plonk_fixedpoint_acos<BlueprintFieldType, ArithmetizationParams>::input_type
+                const typename plonk_fixedpoint_acos<BlueprintFieldType>::input_type
                     instance_input,
                 const std::uint32_t start_row_index) {
 
@@ -211,16 +212,16 @@ namespace nil {
                 }
                 auto res = assignment.witness(splat(var_pos.y));
                 assignment.witness(splat(var_pos.y)) = pi_2 - res;
-                return typename plonk_fixedpoint_acos<BlueprintFieldType, ArithmetizationParams>::result_type(asin_res);
+                return typename plonk_fixedpoint_acos<BlueprintFieldType>::result_type(asin_res);
             }
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
-            typename plonk_fixedpoint_acos<BlueprintFieldType, ArithmetizationParams>::result_type generate_circuit(
-                const plonk_fixedpoint_acos<BlueprintFieldType, ArithmetizationParams> &component,
-                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
-                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+            template<typename BlueprintFieldType>
+            typename plonk_fixedpoint_acos<BlueprintFieldType>::result_type generate_circuit(
+                const plonk_fixedpoint_acos<BlueprintFieldType> &component,
+                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>> &bp,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                     &assignment,
-                const typename plonk_fixedpoint_acos<BlueprintFieldType, ArithmetizationParams>::input_type
+                const typename plonk_fixedpoint_acos<BlueprintFieldType>::input_type
                     &instance_input,
                 const std::size_t start_row_index) {
 
@@ -231,15 +232,15 @@ namespace nil {
                 // Overwrite the constants
                 generate_assignments_constant(component, assignment, instance_input, start_row_index);
 
-                return typename plonk_fixedpoint_acos<BlueprintFieldType, ArithmetizationParams>::result_type(asin_res);
+                return typename plonk_fixedpoint_acos<BlueprintFieldType>::result_type(asin_res);
             }
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            template<typename BlueprintFieldType>
             void generate_assignments_constant(
-                const plonk_fixedpoint_acos<BlueprintFieldType, ArithmetizationParams> &component,
-                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                const plonk_fixedpoint_acos<BlueprintFieldType> &component,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                     &assignment,
-                const typename plonk_fixedpoint_acos<BlueprintFieldType, ArithmetizationParams>::input_type
+                const typename plonk_fixedpoint_acos<BlueprintFieldType>::input_type
                     &instance_input,
                 const std::size_t start_row_index) {
                 auto asin_component = component.get_asin_component();

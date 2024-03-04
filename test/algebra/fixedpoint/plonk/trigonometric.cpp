@@ -64,9 +64,7 @@ void test_fixedpoint_sin(FixedType input) {
     constexpr std::size_t ConstantColumns = 15;
     constexpr std::size_t SelectorColumns = 15;
 #endif
-    using ArithmetizationParams = crypto3::zk::snark::
-        plonk_arithmetization_params<WitnessColumns, PublicInputColumns, ConstantColumns, SelectorColumns>;
-    using ArithmetizationType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>;
+    using ArithmetizationType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>;
     using hash_type = nil::crypto3::hashes::keccak_1600<256>;
     constexpr std::size_t Lambda = 40;
     using AssignmentType = nil::blueprint::assignment<ArithmetizationType>;
@@ -109,8 +107,10 @@ void test_fixedpoint_sin(FixedType input) {
         witness_list, const_list, std::array<std::uint32_t, 0>(), FixedType::M_1, FixedType::M_2);
 
     std::vector<typename BlueprintFieldType::value_type> public_input = {input.get_value()};
-    nil::crypto3::test_component<component_type, BlueprintFieldType, ArithmetizationParams, hash_type, Lambda>(
+    nil::crypto3::test_component<component_type, BlueprintFieldType, hash_type, Lambda>(
         component_instance,
+        nil::crypto3::zk::snark::plonk_table_description<BlueprintFieldType>(
+            WitnessColumns, PublicInputColumns, ConstantColumns, SelectorColumns),
         public_input,
         result_check,
         instance_input,
@@ -131,9 +131,7 @@ void test_fixedpoint_cos(FixedType input) {
     constexpr std::size_t ConstantColumns = 15;
     constexpr std::size_t SelectorColumns = 15;
 #endif
-    using ArithmetizationParams = crypto3::zk::snark::
-        plonk_arithmetization_params<WitnessColumns, PublicInputColumns, ConstantColumns, SelectorColumns>;
-    using ArithmetizationType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>;
+    using ArithmetizationType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>;
     using hash_type = nil::crypto3::hashes::keccak_1600<256>;
     constexpr std::size_t Lambda = 40;
     using AssignmentType = nil::blueprint::assignment<ArithmetizationType>;
@@ -176,8 +174,10 @@ void test_fixedpoint_cos(FixedType input) {
         witness_list, const_list, std::array<std::uint32_t, 0>(), FixedType::M_1, FixedType::M_2);
 
     std::vector<typename BlueprintFieldType::value_type> public_input = {input.get_value()};
-    nil::crypto3::test_component<component_type, BlueprintFieldType, ArithmetizationParams, hash_type, Lambda>(
+    nil::crypto3::test_component<component_type, BlueprintFieldType, hash_type, Lambda>(
         component_instance,
+        nil::crypto3::zk::snark::plonk_table_description<BlueprintFieldType>(
+            WitnessColumns, PublicInputColumns, ConstantColumns, SelectorColumns),
         public_input,
         result_check,
         instance_input,
@@ -198,9 +198,7 @@ void test_fixedpoint_tan(FixedType input) {
     constexpr std::size_t ConstantColumns = 15;
     constexpr std::size_t SelectorColumns = 15;
 #endif
-    using ArithmetizationParams = crypto3::zk::snark::
-        plonk_arithmetization_params<WitnessColumns, PublicInputColumns, ConstantColumns, SelectorColumns>;
-    using ArithmetizationType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>;
+    using ArithmetizationType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>;
     using hash_type = nil::crypto3::hashes::keccak_1600<256>;
     constexpr std::size_t Lambda = 40;
     using AssignmentType = nil::blueprint::assignment<ArithmetizationType>;
@@ -243,8 +241,10 @@ void test_fixedpoint_tan(FixedType input) {
         witness_list, const_list, std::array<std::uint32_t, 0>(), FixedType::M_1, FixedType::M_2);
 
     std::vector<typename BlueprintFieldType::value_type> public_input = {input.get_value()};
-    nil::crypto3::test_component<component_type, BlueprintFieldType, ArithmetizationParams, hash_type, Lambda>(
+    nil::crypto3::test_component<component_type, BlueprintFieldType, hash_type, Lambda>(
         component_instance,
+        nil::crypto3::zk::snark::plonk_table_description<BlueprintFieldType>(
+            WitnessColumns, PublicInputColumns, ConstantColumns, SelectorColumns),
         public_input,
         result_check,
         instance_input,
@@ -265,9 +265,7 @@ void test_fixedpoint_atan(FixedType input) {
     constexpr std::size_t ConstantColumns = 15;
     constexpr std::size_t SelectorColumns = 15;
 #endif
-    using ArithmetizationParams = crypto3::zk::snark::
-        plonk_arithmetization_params<WitnessColumns, PublicInputColumns, ConstantColumns, SelectorColumns>;
-    using ArithmetizationType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>;
+    using ArithmetizationType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>;
     using hash_type = nil::crypto3::hashes::keccak_1600<256>;
     constexpr std::size_t Lambda = 40;
     using AssignmentType = nil::blueprint::assignment<ArithmetizationType>;
@@ -310,8 +308,10 @@ void test_fixedpoint_atan(FixedType input) {
         witness_list, const_list, std::array<std::uint32_t, 0>(), FixedType::M_1, FixedType::M_2);
 
     std::vector<typename BlueprintFieldType::value_type> public_input = {input.get_value()};
-    nil::crypto3::test_component<component_type, BlueprintFieldType, ArithmetizationParams, hash_type, Lambda>(
-        component_instance, public_input, result_check, instance_input);
+    nil::crypto3::test_component<component_type, BlueprintFieldType, hash_type, Lambda>(
+        component_instance,
+        nil::crypto3::zk::snark::plonk_table_description<BlueprintFieldType>(
+            WitnessColumns, PublicInputColumns, ConstantColumns, SelectorColumns), public_input, result_check, instance_input);
 }
 
 template<typename FixedType>
@@ -326,9 +326,7 @@ void test_fixedpoint_asin(FixedType input) {
     constexpr std::size_t ConstantColumns = 16;
     constexpr std::size_t SelectorColumns = 16;
 #endif
-    using ArithmetizationParams = crypto3::zk::snark::
-        plonk_arithmetization_params<WitnessColumns, PublicInputColumns, ConstantColumns, SelectorColumns>;
-    using ArithmetizationType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>;
+    using ArithmetizationType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>;
     using hash_type = nil::crypto3::hashes::keccak_1600<256>;
     constexpr std::size_t Lambda = 40;
     using AssignmentType = nil::blueprint::assignment<ArithmetizationType>;
@@ -371,8 +369,10 @@ void test_fixedpoint_asin(FixedType input) {
         witness_list, const_list, std::array<std::uint32_t, 0>(), FixedType::M_1, FixedType::M_2);
 
     std::vector<typename BlueprintFieldType::value_type> public_input = {input.get_value()};
-    nil::crypto3::test_component<component_type, BlueprintFieldType, ArithmetizationParams, hash_type, Lambda>(
+    nil::crypto3::test_component<component_type, BlueprintFieldType, hash_type, Lambda>(
         component_instance,
+        nil::crypto3::zk::snark::plonk_table_description<BlueprintFieldType>(
+            WitnessColumns, PublicInputColumns, ConstantColumns, SelectorColumns),
         public_input,
         result_check,
         instance_input,
@@ -393,9 +393,7 @@ void test_fixedpoint_acos(FixedType input) {
     constexpr std::size_t ConstantColumns = 16;
     constexpr std::size_t SelectorColumns = 16;
 #endif
-    using ArithmetizationParams = crypto3::zk::snark::
-        plonk_arithmetization_params<WitnessColumns, PublicInputColumns, ConstantColumns, SelectorColumns>;
-    using ArithmetizationType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>;
+    using ArithmetizationType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>;
     using hash_type = nil::crypto3::hashes::keccak_1600<256>;
     constexpr std::size_t Lambda = 40;
     using AssignmentType = nil::blueprint::assignment<ArithmetizationType>;
@@ -438,8 +436,10 @@ void test_fixedpoint_acos(FixedType input) {
         witness_list, const_list, std::array<std::uint32_t, 0>(), FixedType::M_1, FixedType::M_2);
 
     std::vector<typename BlueprintFieldType::value_type> public_input = {input.get_value()};
-    nil::crypto3::test_component<component_type, BlueprintFieldType, ArithmetizationParams, hash_type, Lambda>(
+    nil::crypto3::test_component<component_type, BlueprintFieldType, hash_type, Lambda>(
         component_instance,
+        nil::crypto3::zk::snark::plonk_table_description<BlueprintFieldType>(
+            WitnessColumns, PublicInputColumns, ConstantColumns, SelectorColumns),
         public_input,
         result_check,
         instance_input,

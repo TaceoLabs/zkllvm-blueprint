@@ -24,14 +24,15 @@ namespace nil {
             template<typename ArithmetizationType, typename FieldType, typename NonNativePolicyType>
             class fix_div;
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams, typename NonNativePolicyType>
-            class fix_div<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+            template<typename BlueprintFieldType, typename NonNativePolicyType>
+            class fix_div<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                           BlueprintFieldType, NonNativePolicyType>
-                : public plonk_component<BlueprintFieldType, ArithmetizationParams, 0, 0> {
+                : public plonk_component<BlueprintFieldType> {
 
             public:
+                static const int constants_amount = 0;
                 using div_by_pos_component = fix_div_by_pos<
-                    crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                    crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                     BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
             private:
@@ -84,7 +85,7 @@ namespace nil {
                                                                                                 5 + (m1 + m2);
                 }
 
-                using component_type = plonk_component<BlueprintFieldType, ArithmetizationParams, 0, 0>;
+                using component_type = plonk_component<BlueprintFieldType>;
 
                 using var = typename component_type::var;
                 using manifest_type = plonk_component_manifest;
@@ -137,7 +138,7 @@ namespace nil {
                     var output;
                     result_type(
                         const fix_div<
-                            crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                            crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                             BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>> &component,
                         std::uint32_t start_row_index) :
                         inner(component.div_by_pos, start_row_index) {
@@ -146,7 +147,7 @@ namespace nil {
 
                     result_type(
                         const fix_div<
-                            crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                            crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                             BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>> &component,
                         std::size_t start_row_index) :
                         inner(component.div_by_pos, start_row_index) {
@@ -155,7 +156,7 @@ namespace nil {
 
                     result_type(div_by_pos_result_type inner) : output(inner.output), inner(inner) {
                     }
-                    std::vector<var> all_vars() const {
+                    std::vector<std::reference_wrapper<var>> all_vars() {
                         return inner.all_vars();
                     }
 
@@ -252,17 +253,17 @@ namespace nil {
                     div_by_pos(instantiate_div_by_pos(m1, m2)) {};
             };
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            template<typename BlueprintFieldType>
             using plonk_fixedpoint_div =
-                fix_div<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                fix_div<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                         BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
-            typename plonk_fixedpoint_div<BlueprintFieldType, ArithmetizationParams>::result_type generate_assignments(
-                const plonk_fixedpoint_div<BlueprintFieldType, ArithmetizationParams> &component,
-                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+            template<typename BlueprintFieldType>
+            typename plonk_fixedpoint_div<BlueprintFieldType>::result_type generate_assignments(
+                const plonk_fixedpoint_div<BlueprintFieldType> &component,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                     &assignment,
-                const typename plonk_fixedpoint_div<BlueprintFieldType, ArithmetizationParams>::input_type
+                const typename plonk_fixedpoint_div<BlueprintFieldType>::input_type
                     instance_input,
                 const std::uint32_t start_row_index) {
 
@@ -285,21 +286,21 @@ namespace nil {
                     assignment.witness(var_pos.y0.column() + i, var_pos.y0.row()) = y0_val[i];
                 }
 
-                return typename plonk_fixedpoint_div<BlueprintFieldType, ArithmetizationParams>::result_type(result);
+                return typename plonk_fixedpoint_div<BlueprintFieldType>::result_type(result);
             }
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            template<typename BlueprintFieldType>
             std::size_t generate_gates(
-                const plonk_fixedpoint_div<BlueprintFieldType, ArithmetizationParams> &component,
-                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
-                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                const plonk_fixedpoint_div<BlueprintFieldType> &component,
+                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>> &bp,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                     &assignment,
-                const typename plonk_fixedpoint_div<BlueprintFieldType, ArithmetizationParams>::input_type
+                const typename plonk_fixedpoint_div<BlueprintFieldType>::input_type
                     &instance_input) {
                 int64_t start_row_index = 1 - static_cast<int64_t>(component.rows_amount);
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
 
-                using var = typename plonk_fixedpoint_div<BlueprintFieldType, ArithmetizationParams>::var;
+                using var = typename plonk_fixedpoint_div<BlueprintFieldType>::var;
                 // 2x\Delta_z + |y| - c = 2zy + 2q and proving 0 <= q < |y|
                 auto m = component.get_m();
                 auto delta = component.get_delta();
@@ -328,13 +329,13 @@ namespace nil {
                 return bp.add_gate({constraint_1, constraint_2, constraint_3, constraint_4, constraint_5});
             }
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            template<typename BlueprintFieldType>
             std::size_t generate_lookup_gates(
-                const plonk_fixedpoint_div<BlueprintFieldType, ArithmetizationParams> &component,
-                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
-                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                const plonk_fixedpoint_div<BlueprintFieldType> &component,
+                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>> &bp,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                     &assignment,
-                const typename plonk_fixedpoint_div<BlueprintFieldType, ArithmetizationParams>::input_type
+                const typename plonk_fixedpoint_div<BlueprintFieldType>::input_type
                     &instance_input) {
                 int64_t start_row_index = 1 - static_cast<int64_t>(component.rows_amount);
                 const auto var_pos = component.get_var_pos(start_row_index);
@@ -342,10 +343,10 @@ namespace nil {
 
                 const auto &lookup_tables_indices = bp.get_reserved_indices();
 
-                using var = typename plonk_fixedpoint_div<BlueprintFieldType, ArithmetizationParams>::var;
+                using var = typename plonk_fixedpoint_div<BlueprintFieldType>::var;
                 using constraint_type = typename crypto3::zk::snark::plonk_lookup_constraint<BlueprintFieldType>;
                 using range_table =
-                    typename plonk_fixedpoint_div<BlueprintFieldType, ArithmetizationParams>::range_table;
+                    typename plonk_fixedpoint_div<BlueprintFieldType>::range_table;
 
                 std::vector<constraint_type> constraints;
                 constraints.reserve(3 * m);
@@ -372,13 +373,13 @@ namespace nil {
                 return bp.add_lookup_gate(constraints);
             }
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
-            typename plonk_fixedpoint_div<BlueprintFieldType, ArithmetizationParams>::result_type generate_circuit(
-                const plonk_fixedpoint_div<BlueprintFieldType, ArithmetizationParams> &component,
-                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
-                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+            template<typename BlueprintFieldType>
+            typename plonk_fixedpoint_div<BlueprintFieldType>::result_type generate_circuit(
+                const plonk_fixedpoint_div<BlueprintFieldType> &component,
+                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>> &bp,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                     &assignment,
-                const typename plonk_fixedpoint_div<BlueprintFieldType, ArithmetizationParams>::input_type
+                const typename plonk_fixedpoint_div<BlueprintFieldType>::input_type
                     &instance_input,
                 const std::size_t start_row_index) {
 
@@ -399,7 +400,7 @@ namespace nil {
                 auto div_by_pos_comp = component.get_div_by_pos_component();
                 generate_copy_constraints(div_by_pos_comp, bp, assignment, instance_input, start_row_index);
 
-                return typename plonk_fixedpoint_div<BlueprintFieldType, ArithmetizationParams>::result_type(
+                return typename plonk_fixedpoint_div<BlueprintFieldType>::result_type(
                     component, start_row_index);
             }
 

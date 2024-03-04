@@ -22,17 +22,18 @@ namespace nil {
             template<typename ArithmetizationType, typename FieldType, typename NonNativePolicyType>
             class fix_hyperbol_log;
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams, typename NonNativePolicyType>
+            template<typename BlueprintFieldType, typename NonNativePolicyType>
             class fix_hyperbol_log<
-                crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                 BlueprintFieldType, NonNativePolicyType>
-                : public plonk_component<BlueprintFieldType, ArithmetizationParams, 0, 0> {
+                : public plonk_component<BlueprintFieldType> {
 
             public:
+                static const int constants_amount = 0;
                 using value_type = typename BlueprintFieldType::value_type;
 
                 using exp_component =
-                    fix_exp<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                    fix_exp<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                             BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
             private:
@@ -105,7 +106,7 @@ namespace nil {
                     return exp;
                 }
 
-                using component_type = plonk_component<BlueprintFieldType, ArithmetizationParams, 0, 0>;
+                using component_type = plonk_component<BlueprintFieldType>;
 
                 using var = typename component_type::var;
                 using manifest_type = plonk_component_manifest;
@@ -219,7 +220,7 @@ namespace nil {
                         output = var(splat(var_pos.res), false);
                     }
 
-                    std::vector<var> all_vars() const {
+                    std::vector<std::reference_wrapper<var>> all_vars() {
                         return {output};
                     }
                 };
@@ -254,22 +255,22 @@ namespace nil {
                     exp(instantiate_exp(m1)), m1(m1), m2_real(m2_real) {};
             };
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            template<typename BlueprintFieldType>
             using plonk_fixedpoint_hyperbol_log =
-                fix_hyperbol_log<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                fix_hyperbol_log<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                                  BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
-            typename plonk_fixedpoint_hyperbol_log<BlueprintFieldType, ArithmetizationParams>::result_type
+            template<typename BlueprintFieldType>
+            typename plonk_fixedpoint_hyperbol_log<BlueprintFieldType>::result_type
                 generate_assignments(
-                    const plonk_fixedpoint_hyperbol_log<BlueprintFieldType, ArithmetizationParams> &component,
-                    assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                    const plonk_fixedpoint_hyperbol_log<BlueprintFieldType> &component,
+                    assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                         &assignment,
-                    const typename plonk_fixedpoint_hyperbol_log<BlueprintFieldType, ArithmetizationParams>::input_type
+                    const typename plonk_fixedpoint_hyperbol_log<BlueprintFieldType>::input_type
                         instance_input,
                     const std::uint32_t start_row_index) {
 
-                using var = typename plonk_fixedpoint_hyperbol_log<BlueprintFieldType, ArithmetizationParams>::var;
+                using var = typename plonk_fixedpoint_hyperbol_log<BlueprintFieldType>::var;
                 using value_type = typename BlueprintFieldType::value_type;
 
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
@@ -277,8 +278,7 @@ namespace nil {
                 auto exp_comp = component.get_exp_component();
 
                 // Exp inputs
-                typename plonk_fixedpoint_hyperbol_log<BlueprintFieldType,
-                                                       ArithmetizationParams>::exp_component::input_type exp1_input,
+                typename plonk_fixedpoint_hyperbol_log<BlueprintFieldType>::exp_component::input_type exp1_input,
                     exp2_input;
                 exp1_input.x = var(splat(var_pos.y), false);
                 exp2_input.x = var(splat(var_pos.exp2_in), false);
@@ -360,20 +360,20 @@ namespace nil {
                 assignment.witness(splat(var_pos.res)) = res_val;
                 assignment.witness(splat(var_pos.q)) = q_val;
 
-                return typename plonk_fixedpoint_hyperbol_log<BlueprintFieldType, ArithmetizationParams>::result_type(
+                return typename plonk_fixedpoint_hyperbol_log<BlueprintFieldType>::result_type(
                     component, start_row_index);
             }
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            template<typename BlueprintFieldType>
             std::size_t generate_gates(
-                const plonk_fixedpoint_hyperbol_log<BlueprintFieldType, ArithmetizationParams> &component,
-                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
-                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                const plonk_fixedpoint_hyperbol_log<BlueprintFieldType> &component,
+                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>> &bp,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                     &assignment,
-                const typename plonk_fixedpoint_hyperbol_log<BlueprintFieldType, ArithmetizationParams>::input_type
+                const typename plonk_fixedpoint_hyperbol_log<BlueprintFieldType>::input_type
                     &instance_input) {
 
-                using var = typename plonk_fixedpoint_hyperbol_log<BlueprintFieldType, ArithmetizationParams>::var;
+                using var = typename plonk_fixedpoint_hyperbol_log<BlueprintFieldType>::var;
                 auto m = component.get_m();
                 const int64_t start_row_index = 1 - static_cast<int64_t>(component.rows_amount);
                 const auto var_pos = component.get_var_pos(start_row_index);
@@ -411,13 +411,13 @@ namespace nil {
                 return bp.add_gate(constraints);
             }
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            template<typename BlueprintFieldType>
             std::size_t generate_lookup_gates(
-                const plonk_fixedpoint_hyperbol_log<BlueprintFieldType, ArithmetizationParams> &component,
-                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
-                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                const plonk_fixedpoint_hyperbol_log<BlueprintFieldType> &component,
+                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>> &bp,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                     &assignment,
-                const typename plonk_fixedpoint_hyperbol_log<BlueprintFieldType, ArithmetizationParams>::input_type
+                const typename plonk_fixedpoint_hyperbol_log<BlueprintFieldType>::input_type
                     &instance_input) {
                 int64_t start_row_index = 1 - static_cast<int64_t>(component.rows_amount);
                 const auto var_pos = component.get_var_pos(start_row_index);
@@ -425,10 +425,10 @@ namespace nil {
 
                 const auto &lookup_tables_indices = bp.get_reserved_indices();
 
-                using var = typename plonk_fixedpoint_hyperbol_log<BlueprintFieldType, ArithmetizationParams>::var;
+                using var = typename plonk_fixedpoint_hyperbol_log<BlueprintFieldType>::var;
                 using constraint_type = typename crypto3::zk::snark::plonk_lookup_constraint<BlueprintFieldType>;
                 using range_table =
-                    typename plonk_fixedpoint_hyperbol_log<BlueprintFieldType, ArithmetizationParams>::range_table;
+                    typename plonk_fixedpoint_hyperbol_log<BlueprintFieldType>::range_table;
 
                 std::vector<constraint_type> constraints;
                 constraints.reserve(2 * m);
@@ -458,28 +458,26 @@ namespace nil {
                 return bp.add_lookup_gate(constraints);
             }
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            template<typename BlueprintFieldType>
             void generate_copy_constraints(
-                const plonk_fixedpoint_hyperbol_log<BlueprintFieldType, ArithmetizationParams> &component,
-                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
-                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                const plonk_fixedpoint_hyperbol_log<BlueprintFieldType> &component,
+                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>> &bp,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                     &assignment,
-                const typename plonk_fixedpoint_hyperbol_log<BlueprintFieldType, ArithmetizationParams>::input_type
+                const typename plonk_fixedpoint_hyperbol_log<BlueprintFieldType>::input_type
                     &instance_input,
                 const std::size_t start_row_index) {
 
-                using var = typename plonk_fixedpoint_hyperbol_log<BlueprintFieldType, ArithmetizationParams>::var;
+                using var = typename plonk_fixedpoint_hyperbol_log<BlueprintFieldType>::var;
 
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
 
                 auto exp_comp = component.get_exp_component();
 
-                auto exp1_res = typename plonk_fixedpoint_hyperbol_log<
-                    BlueprintFieldType, ArithmetizationParams>::exp_component::result_type(exp_comp,
+                auto exp1_res = typename plonk_fixedpoint_hyperbol_log<BlueprintFieldType>::exp_component::result_type(exp_comp,
                                                                                            static_cast<std::size_t>(
                                                                                                var_pos.exp1_row));
-                auto exp2_res = typename plonk_fixedpoint_hyperbol_log<
-                    BlueprintFieldType, ArithmetizationParams>::exp_component::result_type(exp_comp,
+                auto exp2_res = typename plonk_fixedpoint_hyperbol_log<BlueprintFieldType>::exp_component::result_type(exp_comp,
                                                                                            static_cast<std::size_t>(
                                                                                                var_pos.exp2_row));
 
@@ -492,25 +490,24 @@ namespace nil {
                 bp.add_copy_constraint({exp2_res.output, exp2_out});
             }
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
-            typename plonk_fixedpoint_hyperbol_log<BlueprintFieldType, ArithmetizationParams>::result_type
+            template<typename BlueprintFieldType>
+            typename plonk_fixedpoint_hyperbol_log<BlueprintFieldType>::result_type
                 generate_circuit(
-                    const plonk_fixedpoint_hyperbol_log<BlueprintFieldType, ArithmetizationParams> &component,
-                    circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
-                    assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                    const plonk_fixedpoint_hyperbol_log<BlueprintFieldType> &component,
+                    circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>> &bp,
+                    assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                         &assignment,
-                    const typename plonk_fixedpoint_hyperbol_log<BlueprintFieldType, ArithmetizationParams>::input_type
+                    const typename plonk_fixedpoint_hyperbol_log<BlueprintFieldType>::input_type
                         &instance_input,
                     const std::size_t start_row_index) {
 
-                using var = typename plonk_fixedpoint_hyperbol_log<BlueprintFieldType, ArithmetizationParams>::var;
+                using var = typename plonk_fixedpoint_hyperbol_log<BlueprintFieldType>::var;
 
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
                 auto exp_comp = component.get_exp_component();
 
                 // Exp inputs
-                typename plonk_fixedpoint_hyperbol_log<BlueprintFieldType,
-                                                       ArithmetizationParams>::exp_component::input_type exp1_input,
+                typename plonk_fixedpoint_hyperbol_log<BlueprintFieldType>::exp_component::input_type exp1_input,
                     exp2_input;
                 exp1_input.x = var(splat(var_pos.y), false);
                 exp2_input.x = var(splat(var_pos.exp2_in), false);
@@ -534,7 +531,7 @@ namespace nil {
 
                 generate_copy_constraints(component, bp, assignment, instance_input, start_row_index);
 
-                return typename plonk_fixedpoint_hyperbol_log<BlueprintFieldType, ArithmetizationParams>::result_type(
+                return typename plonk_fixedpoint_hyperbol_log<BlueprintFieldType>::result_type(
                     component, start_row_index);
             }
 

@@ -82,12 +82,13 @@ namespace nil {
             template<typename ArithmetizationType, typename FieldType, typename NonNativePolicyType>
             class fix_tester;
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams, typename NonNativePolicyType>
-            class fix_tester<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
-                             BlueprintFieldType, NonNativePolicyType>
-                : public plonk_component<BlueprintFieldType, ArithmetizationParams, TESTER_MAX_CONSTANT_COLS, 0> {
+            template<typename BlueprintFieldType, typename NonNativePolicyType>
+            class fix_tester<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>, BlueprintFieldType,
+                             NonNativePolicyType> : public plonk_component<BlueprintFieldType> {
             public:
                 using value_type = typename BlueprintFieldType::value_type;
+
+                static const int constants_amount = TESTER_MAX_CONSTANT_COLS;
 
                 struct testcase {
                     FixedPointComponents component;
@@ -131,8 +132,7 @@ namespace nil {
                 static std::size_t get_component_rows_amount(FixedPointComponents component, std::size_t witness_amount,
                                                              std::size_t lookup_column_amount, uint8_t m1, uint8_t m2,
                                                              std::uint32_t size = 0) {
-                    using ArithmetizationType =
-                        crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>;
+                    using ArithmetizationType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>;
 
                     auto input_output_rows = 1;
                     auto component_rows = 0;
@@ -292,8 +292,7 @@ namespace nil {
                     return result;
                 }
 
-                using component_type =
-                    plonk_component<BlueprintFieldType, ArithmetizationParams, TESTER_MAX_CONSTANT_COLS, 0>;
+                using component_type = plonk_component<BlueprintFieldType>;
 
                 using var = typename component_type::var;
                 using manifest_type = plonk_component_manifest;
@@ -324,7 +323,7 @@ namespace nil {
                     result_type(const fix_tester &component, std::size_t start_row_index) {
                     }
 
-                    std::vector<var> all_vars() const {
+                    std::vector<std::reference_wrapper<var>> all_vars() {
                         return {};
                     }
                 };
@@ -516,10 +515,9 @@ namespace nil {
                     component_type(witnesses, constants, public_inputs, get_manifest()) {};
             };
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
-            using plonk_fixedpoint_tester =
-                fix_tester<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
-                           BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
+            template<typename BlueprintFieldType>
+            using plonk_fixedpoint_tester = fix_tester<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
+                                                       BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  macros for generating the circuit and the assignments
@@ -534,13 +532,21 @@ namespace nil {
     vars = func;                                                                 \
     component_rows = component_instance.rows_amount;
 ///////////////////////////////////////////////////////////////////////////////
-#define macro_assigner()                                                                                        \
-    generate_assignments(component_instance, assignment, instance_input, current_row_index + input_output_rows) \
-        .all_vars()
+#define macro_assigner()                                                                                             \
+    typename new_component_type::result_type tmp_res =                                                               \
+        generate_assignments(component_instance, assignment, instance_input, current_row_index + input_output_rows); \
+    std::vector<var> res = {};                                                                                       \
+    for (auto v : tmp_res.all_vars()) {                                                                              \
+        res.push_back(v.get());                                                                                      \
+    }                                                                                                                \
 ///////////////////////////////////////////////////////////////////////////////
-#define macro_circuit()                                                                                         \
-    generate_circuit(component_instance, bp, assignment, instance_input, current_row_index + input_output_rows) \
-        .all_vars()
+#define macro_circuit()                                                                                              \
+    typename new_component_type::result_type tmp_res =                                                               \
+        generate_circuit(component_instance, bp, assignment, instance_input, current_row_index + input_output_rows); \
+    std::vector<var> res = {};                                                                                       \
+    for (auto v : tmp_res.all_vars()) {                                                                              \
+        res.push_back(v.get());                                                                                      \
+    }                                                                                                                \
 ///////////////////////////////////////////////////////////////////////////////
 #define macro_1_input() \
     typename new_component_type::input_type instance_input {var(component.W(0), current_row_index, false)};
@@ -572,49 +578,51 @@ namespace nil {
 #define macro_assigner_1_input(name, num_constant, ...) \
     macro_component(name, ##__VA_ARGS__);               \
     macro_1_input();                                    \
-    macro_func(num_constant, macro_assigner());
+    macro_assigner();                                   \
+    macro_func(num_constant, res);
 ///////////////////////////////////////////////////////////////////////////////
 #define macro_assigner_2_inputs(name, num_constant, ...) \
     macro_component(name, ##__VA_ARGS__);                \
     macro_2_inputs();                                    \
-    macro_func(num_constant, macro_assigner());
+    macro_assigner();                                    \
+    macro_func(num_constant, res);
 ///////////////////////////////////////////////////////////////////////////////
 #define macro_assigner_3_inputs(name, num_constant, ...) \
     macro_component(name, ##__VA_ARGS__);                \
     macro_3_inputs();                                    \
-    macro_func(num_constant, macro_assigner());
+    macro_assigner();                                    \
+    macro_func(num_constant, res);
 ///////////////////////////////////////////////////////////////////////////////
 #define macro_circuit_1_input(name, num_constant, ...) \
     macro_component(name, ##__VA_ARGS__);              \
     macro_1_input();                                   \
-    macro_func(num_constant, macro_circuit());
+    macro_circuit();                                   \
+    macro_func(num_constant, res);
 ///////////////////////////////////////////////////////////////////////////////
 #define macro_circuit_2_inputs(name, num_constant, ...) \
     macro_component(name, ##__VA_ARGS__);               \
     macro_2_inputs();                                   \
-    macro_func(num_constant, macro_circuit());
+    macro_circuit();                                    \
+    macro_func(num_constant, res);
 ///////////////////////////////////////////////////////////////////////////////
 #define macro_circuit_3_inputs(name, num_constant, ...) \
     macro_component(name, ##__VA_ARGS__);               \
     macro_3_inputs();                                   \
-    macro_func(num_constant, macro_circuit());
+    macro_circuit();                                    \
+    macro_func(num_constant, res);
             ///////////////////////////////////////////////////////////////////////////////
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
-            typename plonk_fixedpoint_tester<BlueprintFieldType, ArithmetizationParams>::result_type
-                generate_assignments(
-                    const plonk_fixedpoint_tester<BlueprintFieldType, ArithmetizationParams> &component,
-                    assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
-                        &assignment,
-                    const typename plonk_fixedpoint_tester<BlueprintFieldType, ArithmetizationParams>::input_type
-                        instance_input,
-                    const std::uint32_t start_row_index) {
+            template<typename BlueprintFieldType>
+            typename plonk_fixedpoint_tester<BlueprintFieldType>::result_type generate_assignments(
+                const plonk_fixedpoint_tester<BlueprintFieldType> &component,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>> &assignment,
+                const typename plonk_fixedpoint_tester<BlueprintFieldType>::input_type instance_input,
+                const std::uint32_t start_row_index) {
 
-                using var = typename plonk_fixedpoint_tester<BlueprintFieldType, ArithmetizationParams>::var;
-                using ArithmetizationType =
-                    crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>;
+                using var = typename plonk_fixedpoint_tester<BlueprintFieldType>::var;
+                using ArithmetizationType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>;
                 using PolicyType = nil::blueprint::basic_non_native_policy<BlueprintFieldType>;
-                using tester = plonk_fixedpoint_tester<BlueprintFieldType, ArithmetizationParams>;
+                using tester = plonk_fixedpoint_tester<BlueprintFieldType>;
 
                 auto witness_list = component.get_witness_list();
                 auto constant_list = component.get_constant_list();
@@ -693,14 +701,16 @@ namespace nil {
                             input_output_rows = tester::io_rows_for_dot(witness_list.size(), size);
                             macro_component(fix_dot_rescale_1_gate, size, m2);
                             macro_dot_input();
-                            macro_func(0, macro_assigner());
+                            macro_assigner();
+                            macro_func(0, res);
                             break;
                         }
                         case FixedPointComponents::DOT_RESCALE2: {
                             input_output_rows = tester::io_rows_for_dot(witness_list.size(), size);
                             macro_component(fix_dot_rescale_2_gates, size, m2);
                             macro_dot_input();
-                            macro_func(0, macro_assigner());
+                            macro_assigner();
+                            macro_func(0, res);
                             break;
                         }
                         case FixedPointComponents::EXP: {
@@ -807,25 +817,21 @@ namespace nil {
                     current_row_index += component_rows + input_output_rows;
                 }
 
-                return typename plonk_fixedpoint_tester<BlueprintFieldType, ArithmetizationParams>::result_type(
-                    component, start_row_index);
+                return typename plonk_fixedpoint_tester<BlueprintFieldType>::result_type(component, start_row_index);
             }
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
-            typename plonk_fixedpoint_tester<BlueprintFieldType, ArithmetizationParams>::result_type generate_circuit(
-                const plonk_fixedpoint_tester<BlueprintFieldType, ArithmetizationParams> &component,
-                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
-                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
-                    &assignment,
-                const typename plonk_fixedpoint_tester<BlueprintFieldType, ArithmetizationParams>::input_type
-                    &instance_input,
+            template<typename BlueprintFieldType>
+            typename plonk_fixedpoint_tester<BlueprintFieldType>::result_type generate_circuit(
+                const plonk_fixedpoint_tester<BlueprintFieldType> &component,
+                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>> &bp,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>> &assignment,
+                const typename plonk_fixedpoint_tester<BlueprintFieldType>::input_type &instance_input,
                 const std::size_t start_row_index) {
 
-                using var = typename plonk_fixedpoint_tester<BlueprintFieldType, ArithmetizationParams>::var;
-                using ArithmetizationType =
-                    crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>;
+                using var = typename plonk_fixedpoint_tester<BlueprintFieldType>::var;
+                using ArithmetizationType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>;
                 using PolicyType = nil::blueprint::basic_non_native_policy<BlueprintFieldType>;
-                using tester = plonk_fixedpoint_tester<BlueprintFieldType, ArithmetizationParams>;
+                using tester = plonk_fixedpoint_tester<BlueprintFieldType>;
 
                 auto witness_list = component.get_witness_list();
                 auto constant_list = component.get_constant_list();
@@ -893,14 +899,16 @@ namespace nil {
                             input_output_rows = tester::io_rows_for_dot(witness_list.size(), size);
                             macro_component(fix_dot_rescale_1_gate, size, m2);
                             macro_dot_input();
-                            macro_func(0, macro_circuit());
+                            macro_circuit();
+                            macro_func(0, res);
                             break;
                         }
                         case FixedPointComponents::DOT_RESCALE2: {
                             input_output_rows = tester::io_rows_for_dot(witness_list.size(), size);
                             macro_component(fix_dot_rescale_2_gates, size, m2);
                             macro_dot_input();
-                            macro_func(0, macro_circuit());
+                            macro_circuit();
+                            macro_func(0, res);
                             break;
                         }
                         case FixedPointComponents::EXP: {
@@ -1005,8 +1013,7 @@ namespace nil {
                     current_row_index += component_rows + input_output_rows;
                 }
 
-                return typename plonk_fixedpoint_tester<BlueprintFieldType, ArithmetizationParams>::result_type(
-                    component, start_row_index);
+                return typename plonk_fixedpoint_tester<BlueprintFieldType>::result_type(component, start_row_index);
             }
 #undef macro_component
 #undef macro_func
@@ -1023,12 +1030,11 @@ namespace nil {
 #undef macro_circuit_2_inputs
 #undef macro_circuit_3_inputs
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams, typename ComponentType>
+            template<typename BlueprintFieldType, typename ComponentType>
             struct is_component_tester : std::false_type { };
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
-            struct is_component_tester<BlueprintFieldType, ArithmetizationParams,
-                                       plonk_fixedpoint_tester<BlueprintFieldType, ArithmetizationParams>>
+            template<typename BlueprintFieldType>
+            struct is_component_tester<BlueprintFieldType, plonk_fixedpoint_tester<BlueprintFieldType>>
                 : std::true_type { };
 
         }    // namespace components

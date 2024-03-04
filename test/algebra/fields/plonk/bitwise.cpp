@@ -34,64 +34,63 @@ using namespace nil;
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
-#define macro_component_setup(name)                                                                                    \
-    constexpr std::size_t WitnessColumns = 15;                                                                         \
-    constexpr std::size_t PublicInputColumns = 5;                                                                      \
-    constexpr std::size_t ConstantColumns = 15;                                                                        \
-    constexpr std::size_t SelectorColumns = 30;                                                                        \
-                                                                                                                       \
-    using value_type = typename BlueprintFieldType::value_type;                                                        \
-    using ArithmetizationParams = crypto3::zk::snark::plonk_arithmetization_params<WitnessColumns, PublicInputColumns, \
-                                                                                   ConstantColumns, SelectorColumns>;  \
-    using ArithmetizationType =                                                                                        \
-        crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>;                        \
-    using hash_type = nil::crypto3::hashes::keccak_1600<256>;                                                          \
-    constexpr std::size_t Lambda = 40;                                                                                 \
-    using AssignmentType = nil::blueprint::assignment<ArithmetizationType>;                                            \
-                                                                                                                       \
-    using var = crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>;                           \
-                                                                                                                       \
-    using component_type = blueprint::components::name<ArithmetizationType, BlueprintFieldType,                        \
+#define macro_component_setup(name)                                                              \
+    constexpr std::size_t WitnessColumns = 15;                                                   \
+    constexpr std::size_t PublicInputColumns = 5;                                                \
+    constexpr std::size_t ConstantColumns = 15;                                                  \
+    constexpr std::size_t SelectorColumns = 30;                                                  \
+                                                                                                 \
+    using value_type = typename BlueprintFieldType::value_type;                                  \
+    using ArithmetizationType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>; \
+    using hash_type = nil::crypto3::hashes::keccak_1600<256>;                                    \
+    constexpr std::size_t Lambda = 40;                                                           \
+    using AssignmentType = nil::blueprint::assignment<ArithmetizationType>;                      \
+                                                                                                 \
+    using var = crypto3::zk::snark::plonk_variable<typename BlueprintFieldType::value_type>;     \
+                                                                                                 \
+    using component_type = blueprint::components::name<ArithmetizationType, BlueprintFieldType,  \
                                                        nil::blueprint::basic_non_native_policy<BlueprintFieldType>>;
 
-#define macro_component_run(readable_name)                                                                      \
-                                                                                                                \
-    typename component_type::input_type instance_input = {var(0, 0, false, var::column_type::public_input),     \
-                                                          var(0, 1, false, var::column_type::public_input)};    \
-                                                                                                                \
-    auto result_check = [expected_res, a, b, m](AssignmentType &assignment,                                     \
-                                                typename component_type::result_type &real_res) {               \
-        auto real_res_ = var_value(assignment, real_res.output);                                                \
-        auto expected = value_type(expected_res);                                                               \
-        if (expected != real_res_) {                                                                            \
-            std::cout << std::endl << "ERROR at " << readable_name << ":" << std::endl;                         \
-            std::cout << "a                : " << a << std::endl;                                               \
-            std::cout << "a (field)        : " << value_type(a) << std::endl;                                   \
-            std::cout << "b                : " << b << std::endl;                                               \
-            std::cout << "b (field)        : " << value_type(b) << std::endl;                                   \
-            std::cout << "expected         : " << expected_res << std::endl;                                    \
-            std::cout << "expected (field) : " << expected << std::endl;                                        \
-            std::cout << "real (field)     : " << real_res_ << std::endl;                                       \
-            std::cout << "m                : " << int(m) << std::endl;                                          \
-            abort();                                                                                            \
-        }                                                                                                       \
-    };                                                                                                          \
-                                                                                                                \
-    std::vector<std::uint32_t> witness_list;                                                                    \
-    witness_list.reserve(WitnessColumns);                                                                       \
-    for (auto i = 0; i < WitnessColumns; i++) {                                                                 \
-        witness_list.push_back(i);                                                                              \
-    }                                                                                                           \
-    std::vector<std::uint32_t> const_list;                                                                      \
-    const_list.reserve(ConstantColumns);                                                                        \
-    for (auto i = 0; i < ConstantColumns; i++) {                                                                \
-        const_list.push_back(i);                                                                                \
-    }                                                                                                           \
-    component_type component_instance(witness_list, const_list, std::array<std::uint32_t, 0>(), m);             \
-    std::vector<typename BlueprintFieldType::value_type> public_input = {value_type(a), value_type(b)};         \
-    nil::crypto3::test_component<component_type, BlueprintFieldType, ArithmetizationParams, hash_type, Lambda>( \
-        component_instance, public_input, result_check, instance_input,                                         \
-        nil::blueprint::connectedness_check_type::type::STRONG, m);
+#define macro_component_run(readable_name)                                                                       \
+                                                                                                                 \
+    typename component_type::input_type instance_input = {var(0, 0, false, var::column_type::public_input),      \
+                                                          var(0, 1, false, var::column_type::public_input)};     \
+                                                                                                                 \
+    auto result_check = [expected_res, a, b, m](AssignmentType &assignment,                                      \
+                                                typename component_type::result_type &real_res) {                \
+        auto real_res_ = var_value(assignment, real_res.output);                                                 \
+        auto expected = value_type(expected_res);                                                                \
+        if (expected != real_res_) {                                                                             \
+            std::cout << std::endl << "ERROR at " << readable_name << ":" << std::endl;                          \
+            std::cout << "a                : " << a << std::endl;                                                \
+            std::cout << "a (field)        : " << value_type(a) << std::endl;                                    \
+            std::cout << "b                : " << b << std::endl;                                                \
+            std::cout << "b (field)        : " << value_type(b) << std::endl;                                    \
+            std::cout << "expected         : " << expected_res << std::endl;                                     \
+            std::cout << "expected (field) : " << expected << std::endl;                                         \
+            std::cout << "real (field)     : " << real_res_ << std::endl;                                        \
+            std::cout << "m                : " << int(m) << std::endl;                                           \
+            abort();                                                                                             \
+        }                                                                                                        \
+    };                                                                                                           \
+                                                                                                                 \
+    std::vector<std::uint32_t> witness_list;                                                                     \
+    witness_list.reserve(WitnessColumns);                                                                        \
+    for (auto i = 0; i < WitnessColumns; i++) {                                                                  \
+        witness_list.push_back(i);                                                                               \
+    }                                                                                                            \
+    std::vector<std::uint32_t> const_list;                                                                       \
+    const_list.reserve(ConstantColumns);                                                                         \
+    for (auto i = 0; i < ConstantColumns; i++) {                                                                 \
+        const_list.push_back(i);                                                                                 \
+    }                                                                                                            \
+    component_type component_instance(witness_list, const_list, std::array<std::uint32_t, 0>(), m);              \
+    std::vector<typename BlueprintFieldType::value_type> public_input = {value_type(a), value_type(b)};          \
+    nil::crypto3::test_component<component_type, BlueprintFieldType, hash_type, Lambda>(                         \
+        component_instance,                                                                                      \
+        nil::crypto3::zk::snark::plonk_table_description<BlueprintFieldType>(WitnessColumns, PublicInputColumns, \
+                                                                             ConstantColumns, SelectorColumns),  \
+        public_input, result_check, instance_input, nil::blueprint::connectedness_check_type::type::STRONG, m);
 
 #define macro_stdout_test_progress(readable_name)                                \
     std::cout << std::endl << "STARTING " << readable_name << ":" << std::endl;  \

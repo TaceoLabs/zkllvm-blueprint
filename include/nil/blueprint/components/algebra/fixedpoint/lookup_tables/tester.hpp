@@ -15,10 +15,10 @@ namespace nil {
             return false;
         }
 
-        template<typename BlueprintFieldType, typename ArithmetizationParams>
+        template<typename BlueprintFieldType>
         bool check_lookup_constraint(
-            circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
-            const assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+            circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>> &bp,
+            const assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                 &assignment,
             crypto3::zk::snark::plonk_lookup_constraint<BlueprintFieldType> &constraint, int row) {
 
@@ -118,10 +118,10 @@ namespace nil {
             return true;
         }
 
-        template<typename BlueprintFieldType, typename ArithmetizationParams>
+        template<typename BlueprintFieldType>
         bool check_lookup_tables(
-            circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
-            const assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+            circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>> &bp,
+            const assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                 &assignment) {
 
             // The tables

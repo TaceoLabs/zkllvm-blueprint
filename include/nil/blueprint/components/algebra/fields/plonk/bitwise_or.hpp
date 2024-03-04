@@ -36,10 +36,10 @@ namespace nil {
             template<typename ArithmetizationType, typename FieldType, typename NonNativePolicyType>
             class bitwise_or;
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams, typename NonNativePolicyType>
-            class bitwise_or<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+            template<typename BlueprintFieldType, typename NonNativePolicyType>
+            class bitwise_or<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                              BlueprintFieldType, NonNativePolicyType>
-                : public plonk_component<BlueprintFieldType, ArithmetizationParams, 1, 0> {
+                : public plonk_component<BlueprintFieldType> {
 
             public:
                 using value_type = typename BlueprintFieldType::value_type;
@@ -56,6 +56,7 @@ namespace nil {
                 }
 
             public:
+                static const int constants_amount = 1;
                 struct var_positions {
                     CellPosition x, y, z, s_x, s_y, x0, x1, y0, y1, z0, z1, n;
                     int64_t start_row;
@@ -150,7 +151,7 @@ namespace nil {
                     return 0;
                 }
 
-                using component_type = plonk_component<BlueprintFieldType, ArithmetizationParams, 1, 0>;
+                using component_type = plonk_component<BlueprintFieldType>;
 
                 using var = typename component_type::var;
                 using manifest_type = plonk_component_manifest;
@@ -210,7 +211,7 @@ namespace nil {
                         output = var(splat(var_pos.z), false);
                     }
 
-                    std::vector<var> all_vars() const {
+                    std::vector<std::reference_wrapper<var>> all_vars() {
                         return {output};
                     }
                 };
@@ -253,17 +254,17 @@ namespace nil {
                     m(m) {};
             };
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            template<typename BlueprintFieldType>
             using plonk_bitwise_or =
-                bitwise_or<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                bitwise_or<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                            BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
-            typename plonk_bitwise_or<BlueprintFieldType, ArithmetizationParams>::result_type generate_assignments(
-                const plonk_bitwise_or<BlueprintFieldType, ArithmetizationParams> &component,
-                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+            template<typename BlueprintFieldType>
+            typename plonk_bitwise_or<BlueprintFieldType>::result_type generate_assignments(
+                const plonk_bitwise_or<BlueprintFieldType> &component,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                     &assignment,
-                const typename plonk_bitwise_or<BlueprintFieldType, ArithmetizationParams>::input_type instance_input,
+                const typename plonk_bitwise_or<BlueprintFieldType>::input_type instance_input,
                 const std::uint32_t start_row_index) {
 
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
@@ -322,21 +323,21 @@ namespace nil {
                     assignment.witness(var_pos.z1.column() + i - 1, var_pos.z1.row()) = z0_val[i];
                 }
 
-                return typename plonk_bitwise_or<BlueprintFieldType, ArithmetizationParams>::result_type(
+                return typename plonk_bitwise_or<BlueprintFieldType>::result_type(
                     component, start_row_index);
             }
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            template<typename BlueprintFieldType>
             std::size_t generate_gates(
-                const plonk_bitwise_or<BlueprintFieldType, ArithmetizationParams> &component,
-                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
-                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                const plonk_bitwise_or<BlueprintFieldType> &component,
+                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>> &bp,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                     &assignment,
-                const typename plonk_bitwise_or<BlueprintFieldType, ArithmetizationParams>::input_type
+                const typename plonk_bitwise_or<BlueprintFieldType>::input_type
                     &instance_input) {
                 const int64_t start_row_index = 1 - static_cast<int64_t>(component.rows_amount);
                 const auto var_pos = component.get_var_pos(start_row_index);
-                using var = typename plonk_bitwise_or<BlueprintFieldType, ArithmetizationParams>::var;
+                using var = typename plonk_bitwise_or<BlueprintFieldType>::var;
                 using value_type = typename BlueprintFieldType::value_type;
                 auto m = component.get_m();
                 {
@@ -376,16 +377,16 @@ namespace nil {
                 return bp.add_gate(constraints);
             }
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            template<typename BlueprintFieldType>
             void generate_copy_constraints(
-                const plonk_bitwise_or<BlueprintFieldType, ArithmetizationParams> &component,
-                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
-                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                const plonk_bitwise_or<BlueprintFieldType> &component,
+                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>> &bp,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                     &assignment,
-                const typename plonk_bitwise_or<BlueprintFieldType, ArithmetizationParams>::input_type &instance_input,
+                const typename plonk_bitwise_or<BlueprintFieldType>::input_type &instance_input,
                 const std::size_t start_row_index) {
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-                using var = typename plonk_bitwise_or<BlueprintFieldType, ArithmetizationParams>::var;
+                using var = typename plonk_bitwise_or<BlueprintFieldType>::var;
 
                 auto x = var(splat(var_pos.x), false);
                 auto y = var(splat(var_pos.y), false);
@@ -395,13 +396,13 @@ namespace nil {
 
 #ifndef TEST_WITHOUT_LOOKUP_TABLES
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            template<typename BlueprintFieldType>
             std::size_t generate_lookup_gates(
-                const plonk_bitwise_or<BlueprintFieldType, ArithmetizationParams> &component,
-                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
-                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                const plonk_bitwise_or<BlueprintFieldType> &component,
+                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>> &bp,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                     &assignment,
-                const typename plonk_bitwise_or<BlueprintFieldType, ArithmetizationParams>::input_type
+                const typename plonk_bitwise_or<BlueprintFieldType>::input_type
                     &instance_input) {
 
                 using value_type = typename BlueprintFieldType::value_type;
@@ -411,11 +412,11 @@ namespace nil {
 
                 const auto &lookup_tables_indices = bp.get_reserved_indices();
 
-                using var = typename plonk_bitwise_or<BlueprintFieldType, ArithmetizationParams>::var;
+                using var = typename plonk_bitwise_or<BlueprintFieldType>::var;
                 using constraint_type = typename crypto3::zk::snark::plonk_lookup_constraint<BlueprintFieldType>;
 
                 using bitwise_table =
-                    typename plonk_bitwise_or<BlueprintFieldType, ArithmetizationParams>::bitwise_table;
+                    typename plonk_bitwise_or<BlueprintFieldType>::bitwise_table;
 
                 auto or_table_id = lookup_tables_indices.at(bitwise_table::OR_TABLE_NAME);
 
@@ -480,13 +481,13 @@ namespace nil {
 
 #endif    // TEST_WITHOUT_LOOKUP_TABLES
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
-            typename plonk_bitwise_or<BlueprintFieldType, ArithmetizationParams>::result_type generate_circuit(
-                const plonk_bitwise_or<BlueprintFieldType, ArithmetizationParams> &component,
-                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
-                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+            template<typename BlueprintFieldType>
+            typename plonk_bitwise_or<BlueprintFieldType>::result_type generate_circuit(
+                const plonk_bitwise_or<BlueprintFieldType> &component,
+                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>> &bp,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                     &assignment,
-                const typename plonk_bitwise_or<BlueprintFieldType, ArithmetizationParams>::input_type &instance_input,
+                const typename plonk_bitwise_or<BlueprintFieldType>::input_type &instance_input,
                 const std::size_t start_row_index) {
 
                 std::size_t selector_index = generate_gates(component, bp, assignment, instance_input);
@@ -499,7 +500,7 @@ namespace nil {
 #endif    // TEST_WITHOUT_LOOKUP_TABLES
                 generate_copy_constraints(component, bp, assignment, instance_input, start_row_index);
 
-                return typename plonk_bitwise_or<BlueprintFieldType, ArithmetizationParams>::result_type(
+                return typename plonk_bitwise_or<BlueprintFieldType>::result_type(
                     component, start_row_index);
             }
 

@@ -34,10 +34,10 @@ namespace nil {
             template<typename ArithmetizationType, typename FieldType, typename NonNativePolicyType>
             class dot_2_gates;
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams, typename NonNativePolicyType>
-            class dot_2_gates<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+            template<typename BlueprintFieldType, typename NonNativePolicyType>
+            class dot_2_gates<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                               BlueprintFieldType, NonNativePolicyType>
-                : public plonk_component<BlueprintFieldType, ArithmetizationParams, 0, 0> {
+                : public plonk_component<BlueprintFieldType> {
 
             private:
                 uint32_t dots;
@@ -48,6 +48,7 @@ namespace nil {
                 }
 
             public:
+                static const int constants_amount = 0;
                 uint32_t get_dots() const {
                     return dots;
                 }
@@ -66,7 +67,7 @@ namespace nil {
                     return {row, column};
                 }
 
-                using component_type = plonk_component<BlueprintFieldType, ArithmetizationParams, 0, 0>;
+                using component_type = plonk_component<BlueprintFieldType>;
 
                 using var = typename component_type::var;
                 using manifest_type = plonk_component_manifest;
@@ -186,7 +187,7 @@ namespace nil {
                         output = var(splat(var_pos.dot_result), false);
                     }
 
-                    std::vector<var> all_vars() const {
+                    std::vector<std::reference_wrapper<var>> all_vars() {
                         return {output};
                     }
                 };
@@ -219,26 +220,26 @@ namespace nil {
                 };
             };
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            template<typename BlueprintFieldType>
             using plonk_dot_2_gates =
-                dot_2_gates<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                dot_2_gates<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                             BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
-            typename plonk_dot_2_gates<BlueprintFieldType, ArithmetizationParams>::var
-                get_copy_var(const plonk_dot_2_gates<BlueprintFieldType, ArithmetizationParams> &component,
+            template<typename BlueprintFieldType>
+            typename plonk_dot_2_gates<BlueprintFieldType>::var
+                get_copy_var(const plonk_dot_2_gates<BlueprintFieldType> &component,
                              std::size_t start_row_index, std::size_t dot_index, bool is_x) {
                 auto pos = component.dot_position(start_row_index, dot_index, is_x);
-                using var = typename plonk_dot_2_gates<BlueprintFieldType, ArithmetizationParams>::var;
+                using var = typename plonk_dot_2_gates<BlueprintFieldType>::var;
                 return var(component.W(pos.second), static_cast<int>(pos.first), false);
             }
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
-            typename plonk_dot_2_gates<BlueprintFieldType, ArithmetizationParams>::result_type generate_assignments(
-                const plonk_dot_2_gates<BlueprintFieldType, ArithmetizationParams> &component,
-                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+            template<typename BlueprintFieldType>
+            typename plonk_dot_2_gates<BlueprintFieldType>::result_type generate_assignments(
+                const plonk_dot_2_gates<BlueprintFieldType> &component,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                     &assignment,
-                const typename plonk_dot_2_gates<BlueprintFieldType, ArithmetizationParams>::input_type instance_input,
+                const typename plonk_dot_2_gates<BlueprintFieldType>::input_type instance_input,
                 const std::uint32_t start_row_index) {
 
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
@@ -268,23 +269,23 @@ namespace nil {
                     assignment.witness(var_pos.dot_0.column(), var_pos.dot_0.row() + row) = sum;
                 }
 
-                return typename plonk_dot_2_gates<BlueprintFieldType, ArithmetizationParams>::result_type(
+                return typename plonk_dot_2_gates<BlueprintFieldType>::result_type(
                     component, start_row_index);
             }
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            template<typename BlueprintFieldType>
             std::size_t generate_first_gate(
-                const plonk_dot_2_gates<BlueprintFieldType, ArithmetizationParams> &component,
-                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
-                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                const plonk_dot_2_gates<BlueprintFieldType> &component,
+                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>> &bp,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                     &assignment,
-                const typename plonk_dot_2_gates<BlueprintFieldType, ArithmetizationParams>::input_type
+                const typename plonk_dot_2_gates<BlueprintFieldType>::input_type
                     &instance_input) {
 
                 int64_t row = 0;
                 const auto var_pos = component.get_var_pos(row);
 
-                using var = typename plonk_dot_2_gates<BlueprintFieldType, ArithmetizationParams>::var;
+                using var = typename plonk_dot_2_gates<BlueprintFieldType>::var;
                 // sum = sum_i x_i * y_i
 
                 nil::crypto3::math::expression<var> dot;
@@ -299,19 +300,19 @@ namespace nil {
                 return bp.add_gate(constraint_1);
             }
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            template<typename BlueprintFieldType>
             std::size_t generate_second_gate(
-                const plonk_dot_2_gates<BlueprintFieldType, ArithmetizationParams> &component,
-                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
-                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                const plonk_dot_2_gates<BlueprintFieldType> &component,
+                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>> &bp,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                     &assignment,
-                const typename plonk_dot_2_gates<BlueprintFieldType, ArithmetizationParams>::input_type
+                const typename plonk_dot_2_gates<BlueprintFieldType>::input_type
                     &instance_input) {
 
                 int64_t row = 0;
                 const auto var_pos = component.get_var_pos(row);
 
-                using var = typename plonk_dot_2_gates<BlueprintFieldType, ArithmetizationParams>::var;
+                using var = typename plonk_dot_2_gates<BlueprintFieldType>::var;
                 // sum = prev_sum + sum_i x_i * y_i
 
                 nil::crypto3::math::expression<var> dot;
@@ -328,19 +329,19 @@ namespace nil {
                 return bp.add_gate(constraint_1);
             }
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            template<typename BlueprintFieldType>
             void generate_copy_constraints(
-                const plonk_dot_2_gates<BlueprintFieldType, ArithmetizationParams> &component,
-                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
-                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                const plonk_dot_2_gates<BlueprintFieldType> &component,
+                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>> &bp,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                     &assignment,
-                const typename plonk_dot_2_gates<BlueprintFieldType, ArithmetizationParams>::input_type &instance_input,
+                const typename plonk_dot_2_gates<BlueprintFieldType>::input_type &instance_input,
                 const std::size_t start_row_index) {
 
                 int64_t row = 0;
                 const auto var_pos = component.get_var_pos(row);
 
-                using var = typename plonk_dot_2_gates<BlueprintFieldType, ArithmetizationParams>::var;
+                using var = typename plonk_dot_2_gates<BlueprintFieldType>::var;
 
                 auto dots = component.get_dots();
                 auto dots_per_row = component.get_dots_per_row();
@@ -365,13 +366,13 @@ namespace nil {
                 }
             }
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
-            typename plonk_dot_2_gates<BlueprintFieldType, ArithmetizationParams>::result_type generate_circuit(
-                const plonk_dot_2_gates<BlueprintFieldType, ArithmetizationParams> &component,
-                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
-                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+            template<typename BlueprintFieldType>
+            typename plonk_dot_2_gates<BlueprintFieldType>::result_type generate_circuit(
+                const plonk_dot_2_gates<BlueprintFieldType> &component,
+                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>> &bp,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                     &assignment,
-                const typename plonk_dot_2_gates<BlueprintFieldType, ArithmetizationParams>::input_type &instance_input,
+                const typename plonk_dot_2_gates<BlueprintFieldType>::input_type &instance_input,
                 const std::size_t start_row_index) {
 
                 std::size_t first_selector = generate_first_gate(component, bp, assignment, instance_input);
@@ -385,7 +386,7 @@ namespace nil {
 
                 generate_copy_constraints(component, bp, assignment, instance_input, start_row_index);
 
-                return typename plonk_dot_2_gates<BlueprintFieldType, ArithmetizationParams>::result_type(
+                return typename plonk_dot_2_gates<BlueprintFieldType>::result_type(
                     component, start_row_index);
             }
 

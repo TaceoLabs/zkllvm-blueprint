@@ -28,15 +28,16 @@ namespace nil {
             template<typename ArithmetizationType, typename FieldType, typename NonNativePolicyType>
             class fix_cmp_extended;
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams, typename NonNativePolicyType>
+            template<typename BlueprintFieldType, typename NonNativePolicyType>
             class fix_cmp_extended<
-                crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                 BlueprintFieldType, NonNativePolicyType>
-                : public plonk_component<BlueprintFieldType, ArithmetizationParams, 0, 0> {
+                : public plonk_component<BlueprintFieldType> {
 
             public:
+                static const int constants_amount = 0;
                 using cmp_component =
-                    fix_cmp<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                    fix_cmp<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                             BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
             private:
@@ -70,7 +71,7 @@ namespace nil {
                     return cmp;
                 }
 
-                using component_type = plonk_component<BlueprintFieldType, ArithmetizationParams, 0, 0>;
+                using component_type = plonk_component<BlueprintFieldType>;
 
                 using var = typename component_type::var;
                 using manifest_type = plonk_component_manifest;
@@ -174,7 +175,7 @@ namespace nil {
                         geq = var(splat(var_pos.geq), false);
                     }
 
-                    std::vector<var> all_vars() const {
+                    std::vector<std::reference_wrapper<var>> all_vars() {
                         return {eq, lt, gt, neq, leq, geq};
                     }
                 };
@@ -211,18 +212,18 @@ namespace nil {
                     cmp(instantiate_cmp(m1, m2)) {};
             };
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            template<typename BlueprintFieldType>
             using plonk_fixedpoint_cmp_extended =
-                fix_cmp_extended<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                fix_cmp_extended<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                                  BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
-            typename plonk_fixedpoint_cmp_extended<BlueprintFieldType, ArithmetizationParams>::result_type
+            template<typename BlueprintFieldType>
+            typename plonk_fixedpoint_cmp_extended<BlueprintFieldType>::result_type
                 generate_assignments(
-                    const plonk_fixedpoint_cmp_extended<BlueprintFieldType, ArithmetizationParams> &component,
-                    assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                    const plonk_fixedpoint_cmp_extended<BlueprintFieldType> &component,
+                    assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                         &assignment,
-                    const typename plonk_fixedpoint_cmp_extended<BlueprintFieldType, ArithmetizationParams>::input_type
+                    const typename plonk_fixedpoint_cmp_extended<BlueprintFieldType>::input_type
                         instance_input,
                     const std::uint32_t start_row_index) {
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
@@ -235,23 +236,23 @@ namespace nil {
                 assignment.witness(splat(var_pos.leq)) = one - var_value(assignment, result.gt);
                 assignment.witness(splat(var_pos.geq)) = one - var_value(assignment, result.lt);
 
-                return typename plonk_fixedpoint_cmp_extended<BlueprintFieldType, ArithmetizationParams>::result_type(
+                return typename plonk_fixedpoint_cmp_extended<BlueprintFieldType>::result_type(
                     component, start_row_index);
             }
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            template<typename BlueprintFieldType>
             std::size_t generate_gates(
-                const plonk_fixedpoint_cmp_extended<BlueprintFieldType, ArithmetizationParams> &component,
-                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
-                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                const plonk_fixedpoint_cmp_extended<BlueprintFieldType> &component,
+                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>> &bp,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                     &assignment,
-                const typename plonk_fixedpoint_cmp_extended<BlueprintFieldType, ArithmetizationParams>::input_type
+                const typename plonk_fixedpoint_cmp_extended<BlueprintFieldType>::input_type
                     &instance_input) {
 
                 int64_t start_row_index = 1 - static_cast<int64_t>(component.rows_amount);
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
 
-                using var = typename plonk_fixedpoint_cmp_extended<BlueprintFieldType, ArithmetizationParams>::var;
+                using var = typename plonk_fixedpoint_cmp_extended<BlueprintFieldType>::var;
 
                 auto cmp_comp = component.get_cmp_component();
                 auto constraints = get_constraints(cmp_comp, bp, assignment, instance_input);
@@ -276,13 +277,13 @@ namespace nil {
                 return bp.add_gate(constraints);
             }
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            template<typename BlueprintFieldType>
             void generate_copy_constraints(
-                const plonk_fixedpoint_cmp_extended<BlueprintFieldType, ArithmetizationParams> &component,
-                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
-                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                const plonk_fixedpoint_cmp_extended<BlueprintFieldType> &component,
+                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>> &bp,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                     &assignment,
-                const typename plonk_fixedpoint_cmp_extended<BlueprintFieldType, ArithmetizationParams>::input_type
+                const typename plonk_fixedpoint_cmp_extended<BlueprintFieldType>::input_type
                     &instance_input,
                 const std::size_t start_row_index) {
 
@@ -290,14 +291,14 @@ namespace nil {
                 generate_copy_constraints(cmp_comp, bp, assignment, instance_input, start_row_index);
             }
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
-            typename plonk_fixedpoint_cmp_extended<BlueprintFieldType, ArithmetizationParams>::result_type
+            template<typename BlueprintFieldType>
+            typename plonk_fixedpoint_cmp_extended<BlueprintFieldType>::result_type
                 generate_circuit(
-                    const plonk_fixedpoint_cmp_extended<BlueprintFieldType, ArithmetizationParams> &component,
-                    circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
-                    assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                    const plonk_fixedpoint_cmp_extended<BlueprintFieldType> &component,
+                    circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>> &bp,
+                    assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                         &assignment,
-                    const typename plonk_fixedpoint_cmp_extended<BlueprintFieldType, ArithmetizationParams>::input_type
+                    const typename plonk_fixedpoint_cmp_extended<BlueprintFieldType>::input_type
                         &instance_input,
                     const std::size_t start_row_index) {
 
@@ -314,7 +315,7 @@ namespace nil {
 
                 generate_copy_constraints(component, bp, assignment, instance_input, start_row_index);
 
-                return typename plonk_fixedpoint_cmp_extended<BlueprintFieldType, ArithmetizationParams>::result_type(
+                return typename plonk_fixedpoint_cmp_extended<BlueprintFieldType>::result_type(
                     component, start_row_index);
             }
 

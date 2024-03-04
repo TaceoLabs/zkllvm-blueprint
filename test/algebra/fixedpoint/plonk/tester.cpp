@@ -1268,10 +1268,7 @@ void field_operations_test_inner(ComponentType &component) {
     constexpr std::size_t PublicInputColumns = 1;                                                                      \
     constexpr std::size_t ConstantColumns = 50;                                                                        \
     constexpr std::size_t SelectorColumns = 70;                                                                        \
-    using ArithmetizationParams = crypto3::zk::snark::plonk_arithmetization_params<WitnessColumns, PublicInputColumns, \
-                                                                                   ConstantColumns, SelectorColumns>;  \
-    using ArithmetizationType =                                                                                        \
-        crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>;                        \
+    using ArithmetizationType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>;                       \
     using hash_type = nil::crypto3::hashes::keccak_1600<256>;                                                          \
     constexpr std::size_t Lambda = 40;                                                                                 \
     using AssignmentType = nil::blueprint::assignment<ArithmetizationType>;                                            \
@@ -1297,13 +1294,15 @@ void field_operations_test_inner(ComponentType &component) {
                                                                                                                        \
     component_type component_instance(witness_list, constant_list, public_list);
 
-#define macro_component_run()                                                                                   \
-    typename component_type::input_type instance_input = {};                                                    \
-    std::vector<typename BlueprintFieldType::value_type> public_input = {};                                     \
-                                                                                                                \
-    nil::crypto3::test_component<component_type, BlueprintFieldType, ArithmetizationParams, hash_type, Lambda>( \
-        component_instance, public_input, result_check, instance_input,                                         \
-        nil::blueprint::connectedness_check_type::type::WEAK);                                                       \
+#define macro_component_run()                                                                                    \
+    typename component_type::input_type instance_input = {};                                                     \
+    std::vector<typename BlueprintFieldType::value_type> public_input = {};                                      \
+                                                                                                                 \
+    nil::crypto3::test_component<component_type, BlueprintFieldType, hash_type, Lambda>(                         \
+        component_instance,                                                                                      \
+        nil::crypto3::zk::snark::plonk_table_description<BlueprintFieldType>(WitnessColumns, PublicInputColumns, \
+                                                                             ConstantColumns, SelectorColumns),  \
+        public_input, result_check, instance_input, nil::blueprint::connectedness_check_type::type::WEAK);       \
     // We do not have inputs/outputs so the weak check is sufficient
 
 ////////////////////////////////////////////////////////////////////////////////

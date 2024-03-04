@@ -23,14 +23,15 @@ namespace nil {
             template<typename ArithmetizationType, typename FieldType, typename NonNativePolicyType>
             class fix_ceil;
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams, typename NonNativePolicyType>
-            class fix_ceil<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+            template<typename BlueprintFieldType, typename NonNativePolicyType>
+            class fix_ceil<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                            BlueprintFieldType, NonNativePolicyType>
-                : public plonk_component<BlueprintFieldType, ArithmetizationParams, 1, 0> {
+                : public plonk_component<BlueprintFieldType> {
             public:
+                static const int constants_amount = 1;
                 using value_type = typename BlueprintFieldType::value_type;
                 using floor_component =
-                    fix_floor<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                    fix_floor<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                               BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
             private:
@@ -78,7 +79,7 @@ namespace nil {
                     return floor_component::get_witness_columns(witness_amount, m1, m2);
                 }
 
-                using component_type = plonk_component<BlueprintFieldType, ArithmetizationParams, 1, 0>;
+                using component_type = plonk_component<BlueprintFieldType>;
 
                 using var = typename component_type::var;
                 using manifest_type = plonk_component_manifest;
@@ -118,7 +119,7 @@ namespace nil {
                     var output;
                     result_type(
                         const fix_ceil<
-                            crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                            crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                             BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>> &component,
                         std::uint32_t start_row_index) :
                         inner(component.floor, start_row_index) {
@@ -127,7 +128,7 @@ namespace nil {
 
                     result_type(
                         const fix_ceil<
-                            crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                            crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                             BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>> &component,
                         std::size_t start_row_index) :
                         inner(component.floor, start_row_index) {
@@ -136,7 +137,7 @@ namespace nil {
 
                     result_type(floor_result_type inner) : output(inner.output), inner(inner) {
                     }
-                    std::vector<var> all_vars() const {
+                    std::vector<std::reference_wrapper<var>> all_vars() {
                         return inner.all_vars();
                     }
 
@@ -172,39 +173,39 @@ namespace nil {
                     floor(instantiate_floor(m1, m2)), offset(floor.get_delta() - 1) {};
             };
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            template<typename BlueprintFieldType>
             using plonk_fixedpoint_ceil =
-                fix_ceil<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                fix_ceil<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                          BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
-            typename plonk_fixedpoint_ceil<BlueprintFieldType, ArithmetizationParams>::result_type generate_assignments(
-                const plonk_fixedpoint_ceil<BlueprintFieldType, ArithmetizationParams> &component,
-                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+            template<typename BlueprintFieldType>
+            typename plonk_fixedpoint_ceil<BlueprintFieldType>::result_type generate_assignments(
+                const plonk_fixedpoint_ceil<BlueprintFieldType> &component,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                     &assignment,
-                const typename plonk_fixedpoint_ceil<BlueprintFieldType, ArithmetizationParams>::input_type
+                const typename plonk_fixedpoint_ceil<BlueprintFieldType>::input_type
                     instance_input,
                 const std::uint32_t start_row_index) {
                 auto floor = component.get_floor_component();
                 auto result =
                     generate_assignments(floor, assignment, instance_input, start_row_index, component.get_offset());
-                return typename plonk_fixedpoint_ceil<BlueprintFieldType, ArithmetizationParams>::result_type(result);
+                return typename plonk_fixedpoint_ceil<BlueprintFieldType>::result_type(result);
             }
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
-            typename plonk_fixedpoint_ceil<BlueprintFieldType, ArithmetizationParams>::result_type generate_circuit(
-                const plonk_fixedpoint_ceil<BlueprintFieldType, ArithmetizationParams> &component,
-                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
-                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+            template<typename BlueprintFieldType>
+            typename plonk_fixedpoint_ceil<BlueprintFieldType>::result_type generate_circuit(
+                const plonk_fixedpoint_ceil<BlueprintFieldType> &component,
+                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>> &bp,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                     &assignment,
-                const typename plonk_fixedpoint_ceil<BlueprintFieldType, ArithmetizationParams>::input_type
+                const typename plonk_fixedpoint_ceil<BlueprintFieldType>::input_type
                     &instance_input,
                 const std::size_t start_row_index) {
 
                 auto floor = component.get_floor_component();
                 auto result =
                     generate_circuit(floor, bp, assignment, instance_input, start_row_index, component.get_offset());
-                return typename plonk_fixedpoint_ceil<BlueprintFieldType, ArithmetizationParams>::result_type(result);
+                return typename plonk_fixedpoint_ceil<BlueprintFieldType>::result_type(result);
             }
 
         }    // namespace components

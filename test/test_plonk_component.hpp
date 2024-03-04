@@ -281,7 +281,7 @@ namespace nil {
                 // We may start from zero if component doesn't use ordinary constants.
                 auto start_index = 1;
                 if constexpr (!blueprint::components::is_component_stretcher<
-                              BlueprintFieldType, ArithmetizationParams, ComponentType>::value) {
+                              BlueprintFieldType, ComponentType>::value) {
                     start_index = component_type::constants_amount;
                 }
                 std::vector<size_t> lookup_columns_indices;

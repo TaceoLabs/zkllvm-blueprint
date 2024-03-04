@@ -23,24 +23,25 @@ namespace nil {
             template<typename ArithmetizationType, typename FieldType, typename NonNativePolicyType>
             class fix_atanh;
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams, typename NonNativePolicyType>
-            class fix_atanh<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+            template<typename BlueprintFieldType, typename NonNativePolicyType>
+            class fix_atanh<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                             BlueprintFieldType, NonNativePolicyType>
-                : public plonk_component<BlueprintFieldType, ArithmetizationParams, 2, 0> {
+                : public plonk_component<BlueprintFieldType> {
 
             public:
+                static const int constants_amount = 2;
                 using value_type = typename BlueprintFieldType::value_type;
 
                 using atanh_div_by_pos_component = fix_atanh_div_by_pos<
-                    crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                    crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                     BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
                 using log_component =
-                    fix_log<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                    fix_log<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                             BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
                 using div_by_pos_component = fix_div_by_pos<
-                    crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                    crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                     BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
             private:
@@ -141,7 +142,7 @@ namespace nil {
                     return div;
                 }
 
-                using component_type = plonk_component<BlueprintFieldType, ArithmetizationParams, 2, 0>;
+                using component_type = plonk_component<BlueprintFieldType>;
 
                 using var = typename component_type::var;
                 using manifest_type = plonk_component_manifest;
@@ -213,7 +214,7 @@ namespace nil {
                         output = div_res.output;
                     }
 
-                    std::vector<var> all_vars() const {
+                    std::vector<std::reference_wrapper<var>> all_vars() {
                         return {output};
                     }
                 };
@@ -260,24 +261,24 @@ namespace nil {
                     div(instantiate_div(m1, m2)), m1(m1), m2(m2) {};
             };
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            template<typename BlueprintFieldType>
             using plonk_fixedpoint_atanh =
-                fix_atanh<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                fix_atanh<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                           BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
-            typename plonk_fixedpoint_atanh<BlueprintFieldType, ArithmetizationParams>::result_type
+            template<typename BlueprintFieldType>
+            typename plonk_fixedpoint_atanh<BlueprintFieldType>::result_type
                 generate_assignments(
-                    const plonk_fixedpoint_atanh<BlueprintFieldType, ArithmetizationParams> &component,
-                    assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                    const plonk_fixedpoint_atanh<BlueprintFieldType> &component,
+                    assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                         &assignment,
-                    const typename plonk_fixedpoint_atanh<BlueprintFieldType, ArithmetizationParams>::input_type
+                    const typename plonk_fixedpoint_atanh<BlueprintFieldType>::input_type
                         instance_input,
                     const std::uint32_t start_row_index) {
 
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
                 using value_type = typename BlueprintFieldType::value_type;
-                using var = typename plonk_fixedpoint_atanh<BlueprintFieldType, ArithmetizationParams>::var;
+                using var = typename plonk_fixedpoint_atanh<BlueprintFieldType>::var;
 
                 assignment.constant(splat(var_pos.two_const)) = value_type(component.get_delta() * 2);
 
@@ -285,71 +286,66 @@ namespace nil {
                 auto log_comp = component.get_log_component();
                 auto div_comp = component.get_div_component();
 
-                typename plonk_fixedpoint_atanh<
-                    BlueprintFieldType, ArithmetizationParams>::atanh_div_by_pos_component::input_type atanh_div_input;
+                typename plonk_fixedpoint_atanh<BlueprintFieldType>::atanh_div_by_pos_component::input_type atanh_div_input;
                 atanh_div_input.x = instance_input.x;
 
                 auto atanh_div_res =
                     generate_assignments(atanh_div_comp, assignment, atanh_div_input, var_pos.atanh_div_row);
 
-                typename plonk_fixedpoint_atanh<BlueprintFieldType, ArithmetizationParams>::log_component::input_type
+                typename plonk_fixedpoint_atanh<BlueprintFieldType>::log_component::input_type
                     log_input;
                 log_input.x = atanh_div_res.output;
 
                 auto log_res = generate_assignments(log_comp, assignment, log_input, var_pos.log_row);
-                typename plonk_fixedpoint_atanh<BlueprintFieldType,
-                                                ArithmetizationParams>::div_by_pos_component::input_type div_input;
+                typename plonk_fixedpoint_atanh<BlueprintFieldType>::div_by_pos_component::input_type div_input;
                 div_input.x = log_res.output;
                 div_input.y = var(splat(var_pos.two_const), false, var::column_type::constant);
 
                 generate_assignments(div_comp, assignment, div_input, var_pos.div_row);
 
-                return typename plonk_fixedpoint_atanh<BlueprintFieldType, ArithmetizationParams>::result_type(
+                return typename plonk_fixedpoint_atanh<BlueprintFieldType>::result_type(
                     component, start_row_index);
             }
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
-            typename plonk_fixedpoint_atanh<BlueprintFieldType, ArithmetizationParams>::result_type generate_circuit(
-                const plonk_fixedpoint_atanh<BlueprintFieldType, ArithmetizationParams> &component,
-                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
-                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+            template<typename BlueprintFieldType>
+            typename plonk_fixedpoint_atanh<BlueprintFieldType>::result_type generate_circuit(
+                const plonk_fixedpoint_atanh<BlueprintFieldType> &component,
+                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>> &bp,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                     &assignment,
-                const typename plonk_fixedpoint_atanh<BlueprintFieldType, ArithmetizationParams>::input_type
+                const typename plonk_fixedpoint_atanh<BlueprintFieldType>::input_type
                     &instance_input,
                 const std::size_t start_row_index) {
 
                 const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
-                using var = typename plonk_fixedpoint_atanh<BlueprintFieldType, ArithmetizationParams>::var;
+                using var = typename plonk_fixedpoint_atanh<BlueprintFieldType>::var;
                 auto atanh_div_comp = component.get_atanh_div_component();
                 auto log_comp = component.get_log_component();
                 auto div_comp = component.get_div_component();
 
-                typename plonk_fixedpoint_atanh<
-                    BlueprintFieldType, ArithmetizationParams>::atanh_div_by_pos_component::input_type atanh_div_input;
+                typename plonk_fixedpoint_atanh<BlueprintFieldType>::atanh_div_by_pos_component::input_type atanh_div_input;
                 atanh_div_input.x = instance_input.x;
 
                 generate_circuit(atanh_div_comp, bp, assignment, atanh_div_input, var_pos.atanh_div_row);
 
-                typename plonk_fixedpoint_atanh<BlueprintFieldType,
-                                                ArithmetizationParams>::atanh_div_by_pos_component::result_type
+                typename plonk_fixedpoint_atanh<BlueprintFieldType>::atanh_div_by_pos_component::result_type
                     atanh_div_res(atanh_div_comp, static_cast<std::size_t>(var_pos.atanh_div_row));
-                typename plonk_fixedpoint_atanh<BlueprintFieldType, ArithmetizationParams>::log_component::input_type
+                typename plonk_fixedpoint_atanh<BlueprintFieldType>::log_component::input_type
                     log_input;
                 log_input.x = atanh_div_res.output;
 
                 generate_circuit(log_comp, bp, assignment, log_input, var_pos.log_row);
 
-                typename plonk_fixedpoint_atanh<BlueprintFieldType, ArithmetizationParams>::log_component::result_type
+                typename plonk_fixedpoint_atanh<BlueprintFieldType>::log_component::result_type
                     log_res(log_comp, static_cast<std::size_t>(var_pos.log_row));
 
-                typename plonk_fixedpoint_atanh<BlueprintFieldType,
-                                                ArithmetizationParams>::div_by_pos_component::input_type div_input;
+                typename plonk_fixedpoint_atanh<BlueprintFieldType>::div_by_pos_component::input_type div_input;
                 div_input.x = log_res.output;
                 div_input.y = var(splat(var_pos.two_const), false, var::column_type::constant);
 
                 generate_circuit(div_comp, bp, assignment, div_input, var_pos.div_row);
 
-                return typename plonk_fixedpoint_atanh<BlueprintFieldType, ArithmetizationParams>::result_type(
+                return typename plonk_fixedpoint_atanh<BlueprintFieldType>::result_type(
                     component, start_row_index);
             }
 

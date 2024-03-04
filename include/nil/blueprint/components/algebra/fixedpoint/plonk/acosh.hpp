@@ -23,20 +23,21 @@ namespace nil {
             template<typename ArithmetizationType, typename FieldType, typename NonNativePolicyType>
             class fix_acosh;
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams, typename NonNativePolicyType>
-            class fix_acosh<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+            template<typename BlueprintFieldType, typename NonNativePolicyType>
+            class fix_acosh<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                             BlueprintFieldType, NonNativePolicyType>
-                : public plonk_component<BlueprintFieldType, ArithmetizationParams, 1, 0> {
+                : public plonk_component<BlueprintFieldType> {
 
             public:
+                static const int constants_amount = 1;
                 using value_type = typename BlueprintFieldType::value_type;
 
                 using hyperbol_sqrt_component = fix_hyperbol_sqrt<
-                    crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                    crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                     BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
                 using hyperbol_log_component = fix_hyperbol_log<
-                    crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                    crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                     BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
             private:
@@ -121,7 +122,7 @@ namespace nil {
                     return log;
                 }
 
-                using component_type = plonk_component<BlueprintFieldType, ArithmetizationParams, 1, 0>;
+                using component_type = plonk_component<BlueprintFieldType>;
 
                 using var = typename component_type::var;
                 using manifest_type = plonk_component_manifest;
@@ -189,7 +190,7 @@ namespace nil {
                         output = log_res.output;
                     }
 
-                    std::vector<var> all_vars() const {
+                    std::vector<std::reference_wrapper<var>> all_vars() {
                         return {output};
                     }
                 };
@@ -230,18 +231,18 @@ namespace nil {
                     acosh_sqrt(instantiate_sqrt(m1, m2)), log(instantiate_log(m1, m2)), m1(m1), m2(m2) {};
             };
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
+            template<typename BlueprintFieldType>
             using plonk_fixedpoint_acosh =
-                fix_acosh<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>,
+                fix_acosh<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>,
                           BlueprintFieldType, basic_non_native_policy<BlueprintFieldType>>;
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
-            typename plonk_fixedpoint_acosh<BlueprintFieldType, ArithmetizationParams>::result_type
+            template<typename BlueprintFieldType>
+            typename plonk_fixedpoint_acosh<BlueprintFieldType>::result_type
                 generate_assignments(
-                    const plonk_fixedpoint_acosh<BlueprintFieldType, ArithmetizationParams> &component,
-                    assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+                    const plonk_fixedpoint_acosh<BlueprintFieldType> &component,
+                    assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                         &assignment,
-                    const typename plonk_fixedpoint_acosh<BlueprintFieldType, ArithmetizationParams>::input_type
+                    const typename plonk_fixedpoint_acosh<BlueprintFieldType>::input_type
                         instance_input,
                     const std::uint32_t start_row_index) {
 
@@ -250,30 +251,28 @@ namespace nil {
                 auto acosh_sqrt_comp = component.get_hyperbol_sqrt_component();
                 auto log_comp = component.get_hyperbol_log_component();
 
-                typename plonk_fixedpoint_acosh<
-                    BlueprintFieldType, ArithmetizationParams>::hyperbol_sqrt_component::input_type acosh_sqrt_input;
+                typename plonk_fixedpoint_acosh<BlueprintFieldType>::hyperbol_sqrt_component::input_type acosh_sqrt_input;
                 acosh_sqrt_input.x = instance_input.x;
 
                 auto acosh_sqrt_res =
                     generate_assignments(acosh_sqrt_comp, assignment, acosh_sqrt_input, var_pos.acosh_sqrt_row);
 
-                typename plonk_fixedpoint_acosh<BlueprintFieldType,
-                                                ArithmetizationParams>::hyperbol_log_component::input_type log_input;
+                typename plonk_fixedpoint_acosh<BlueprintFieldType>::hyperbol_log_component::input_type log_input;
                 log_input.x = acosh_sqrt_res.output;
 
                 generate_assignments(log_comp, assignment, log_input, var_pos.log_row);
 
-                return typename plonk_fixedpoint_acosh<BlueprintFieldType, ArithmetizationParams>::result_type(
+                return typename plonk_fixedpoint_acosh<BlueprintFieldType>::result_type(
                     component, start_row_index);
             }
 
-            template<typename BlueprintFieldType, typename ArithmetizationParams>
-            typename plonk_fixedpoint_acosh<BlueprintFieldType, ArithmetizationParams>::result_type generate_circuit(
-                const plonk_fixedpoint_acosh<BlueprintFieldType, ArithmetizationParams> &component,
-                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>> &bp,
-                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType, ArithmetizationParams>>
+            template<typename BlueprintFieldType>
+            typename plonk_fixedpoint_acosh<BlueprintFieldType>::result_type generate_circuit(
+                const plonk_fixedpoint_acosh<BlueprintFieldType> &component,
+                circuit<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>> &bp,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>>
                     &assignment,
-                const typename plonk_fixedpoint_acosh<BlueprintFieldType, ArithmetizationParams>::input_type
+                const typename plonk_fixedpoint_acosh<BlueprintFieldType>::input_type
                     &instance_input,
                 const std::size_t start_row_index) {
 
@@ -281,22 +280,19 @@ namespace nil {
                 auto acosh_sqrt_comp = component.get_hyperbol_sqrt_component();
                 auto log_comp = component.get_hyperbol_log_component();
 
-                typename plonk_fixedpoint_acosh<
-                    BlueprintFieldType, ArithmetizationParams>::hyperbol_sqrt_component::input_type acosh_sqrt_input;
+                typename plonk_fixedpoint_acosh<BlueprintFieldType>::hyperbol_sqrt_component::input_type acosh_sqrt_input;
                 acosh_sqrt_input.x = instance_input.x;
 
                 generate_circuit(acosh_sqrt_comp, bp, assignment, acosh_sqrt_input, var_pos.acosh_sqrt_row);
 
-                typename plonk_fixedpoint_acosh<BlueprintFieldType,
-                                                ArithmetizationParams>::hyperbol_sqrt_component::result_type
+                typename plonk_fixedpoint_acosh<BlueprintFieldType>::hyperbol_sqrt_component::result_type
                     acosh_sqrt_res(acosh_sqrt_comp, static_cast<std::size_t>(var_pos.acosh_sqrt_row));
-                typename plonk_fixedpoint_acosh<BlueprintFieldType,
-                                                ArithmetizationParams>::hyperbol_log_component::input_type log_input;
+                typename plonk_fixedpoint_acosh<BlueprintFieldType>::hyperbol_log_component::input_type log_input;
                 log_input.x = acosh_sqrt_res.output;
 
                 generate_circuit(log_comp, bp, assignment, log_input, var_pos.log_row);
 
-                return typename plonk_fixedpoint_acosh<BlueprintFieldType, ArithmetizationParams>::result_type(
+                return typename plonk_fixedpoint_acosh<BlueprintFieldType>::result_type(
                     component, start_row_index);
             }
 
