@@ -77,8 +77,8 @@ namespace nil {
                     if (m1 == 2) {
                         pos.tan_row += rem.rows_amount;
                         pos.rem_pos = rem.get_var_pos(pos.rem_row);
-                        pos.two_pi = CellPosition(this->C(0), pos.tan_row);
                     }
+                    pos.two_pi = CellPosition(this->C(0), pos.tan_row);
                     pos.div_row = pos.tan_row + 1;
 
                     // trace layout constant (1 col(s), 1 row(s))
@@ -988,9 +988,21 @@ namespace nil {
                 }
 #endif
                 generate_copy_constraints(component, bp, assignment, instance_input, start_row_index);
+                generate_assignments_constant(component, assignment, instance_input, start_row_index);
 
                 return typename plonk_fixedpoint_tan<BlueprintFieldType>::result_type(
                     component, start_row_index);
+            }
+
+            template<typename BlueprintFieldType>
+            void generate_assignments_constant(
+                const plonk_fixedpoint_tan<BlueprintFieldType> &component,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>> &assignment,
+                const typename plonk_fixedpoint_tan<BlueprintFieldType>::input_type &instance_input,
+                const std::size_t start_row_index) {
+
+                const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
+                assignment.constant(splat(var_pos.two_pi)) = component.two_pi;
             }
 
         }    // namespace components

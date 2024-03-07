@@ -291,7 +291,6 @@ namespace nil {
                     }
                 }
                 value_type one_for_formula = component.get_one_for_formula();
-                assignment.constant(splat(var_pos.one_f_frml)) = one_for_formula;
                 auto sqrt_in = x_val * x_val + one_for_formula * delta_internal;    // x^2 +- 1
                 auto y_val = FixedPointHelper<BlueprintFieldType>::sqrt(sqrt_in);
                 auto y_val_floor = FixedPointHelper<BlueprintFieldType>::sqrt(sqrt_in, true);
@@ -504,10 +503,22 @@ namespace nil {
 #endif
 
                 generate_copy_constraints(component, bp, assignment, instance_input, start_row_index);
+                generate_assignments_constant(component, assignment, instance_input, start_row_index);
 
                 return
                     typename fixplonk_fixedpoint_hyperbol_sqrt<BlueprintFieldType>::result_type(
                         component, start_row_index);
+            }
+
+            template<typename BlueprintFieldType>
+            void generate_assignments_constant(
+                const fixplonk_fixedpoint_hyperbol_sqrt<BlueprintFieldType> &component,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>> &assignment,
+                const typename fixplonk_fixedpoint_hyperbol_sqrt<BlueprintFieldType>::input_type &instance_input,
+                const std::size_t start_row_index) {
+
+                const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
+                assignment.constant(splat(var_pos.one_f_frml)) = component.get_one_for_formula();
             }
 
         }    // namespace components

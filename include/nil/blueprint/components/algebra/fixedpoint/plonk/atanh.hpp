@@ -344,9 +344,22 @@ namespace nil {
                 div_input.y = var(splat(var_pos.two_const), false, var::column_type::constant);
 
                 generate_circuit(div_comp, bp, assignment, div_input, var_pos.div_row);
+                generate_assignments_constant(component, assignment, instance_input, start_row_index);
 
                 return typename plonk_fixedpoint_atanh<BlueprintFieldType>::result_type(
                     component, start_row_index);
+            }
+
+            template<typename BlueprintFieldType>
+            void generate_assignments_constant(
+                const plonk_fixedpoint_atanh<BlueprintFieldType> &component,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>> &assignment,
+                const typename plonk_fixedpoint_atanh<BlueprintFieldType>::input_type &instance_input,
+                const std::size_t start_row_index) {
+                using value_type = typename BlueprintFieldType::value_type;
+
+                const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
+                assignment.constant(splat(var_pos.two_const)) = value_type(component.get_delta() * 2);
             }
 
         }    // namespace components

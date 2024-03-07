@@ -282,7 +282,6 @@ namespace nil {
                 auto one = value_type::one();
                 auto zero = value_type::zero();
                 value_type n_val = BitwiseHelper<BlueprintFieldType>::get_n(m);
-                assignment.constant(splat(var_pos.n)) = n_val;
 
                 auto x_val = var_value(assignment, instance_input.x);
                 auto y_val = var_value(assignment, instance_input.y);
@@ -499,9 +498,22 @@ namespace nil {
                 assignment.enable_selector(lookup_selector_index, start_row_index + component.rows_amount - 1);
 #endif    // TEST_WITHOUT_LOOKUP_TABLES
                 generate_copy_constraints(component, bp, assignment, instance_input, start_row_index);
+                generate_assignments_constant(component, assignment, instance_input, start_row_index);
 
                 return typename plonk_bitwise_or<BlueprintFieldType>::result_type(
                     component, start_row_index);
+            }
+
+            template<typename BlueprintFieldType>
+            void generate_assignments_constant(
+                const plonk_bitwise_or<BlueprintFieldType> &component,
+                assignment<crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>> &assignment,
+                const typename plonk_bitwise_or<BlueprintFieldType>::input_type &instance_input,
+                const std::size_t start_row_index) {
+
+                const auto var_pos = component.get_var_pos(static_cast<int64_t>(start_row_index));
+
+                assignment.constant(splat(var_pos.n)) = BitwiseHelper<BlueprintFieldType>::get_n(component.get_m());
             }
 
         }    // namespace components
